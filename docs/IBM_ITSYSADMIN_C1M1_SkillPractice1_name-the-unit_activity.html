@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Is this one asset, or four?</title>
+<style>
+  :root {
+    --bg: #F5F6F0;
+    --surface: #FFFFFF;
+    --surface-alt: #ECEEE5;
+    --ink: #20261F;
+    --ink-soft: #54594C;
+    --line: #D3D6C8;
+    --accent-recorded: #24594B;
+    --accent-recorded-bg: #E4EEE9;
+    --accent-gap: #8A4A17;
+    --accent-gap-bg: #F5E9DC;
+    --accent-wrong: #9C3B2E;
+    --accent-wrong-bg: #F5E6E3;
+    --accent-focus: #1D5FBF;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
+  }
+
+  body { padding: 28px 20px 48px; }
+
+  main { max-width: 600px; margin: 0 auto; }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.45rem;
+    line-height: 1.3;
+    margin: 0 0 14px;
+  }
+
+  h2 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.98rem;
+    margin: 0 0 10px;
+  }
+
+  p { font-size: 0.97rem; line-height: 1.55; margin: 0 0 14px; }
+
+  .lede { color: var(--ink-soft); }
+
+  .rule-box {
+    background: var(--surface-alt);
+    border-left: 3px solid var(--accent-recorded);
+    padding: 13px 15px;
+    border-radius: 0 3px 3px 0;
+    margin-bottom: 24px;
+  }
+
+  .rule-box p { margin: 0; font-size: 0.94rem; }
+
+  .rule-box .rule-label {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--accent-recorded);
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  hr.rule {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 28px 0;
+  }
+
+  .bundle-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: none;
+    margin-bottom: 8px;
+  }
+
+  .item-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--surface);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+
+  .item-row .item-name {
+    flex: 1 1 220px;
+    font-size: 0.93rem;
+    line-height: 1.4;
+  }
+
+  .item-row .item-name strong { display: block; }
+  .item-row .item-name span { display: block; color: var(--ink-soft); font-size: 0.85rem; margin-top: 1px; }
+
+  select {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--surface);
+    color: var(--ink);
+    flex: 0 0 auto;
+  }
+
+  .item-row.correct { border-color: var(--accent-recorded); background: var(--accent-recorded-bg); }
+  .item-row.wrong { border-color: var(--accent-wrong); background: var(--accent-wrong-bg); }
+
+  .item-feedback {
+    flex-basis: 100%;
+    font-size: 0.85rem;
+    margin-top: 4px;
+    display: none;
+  }
+
+  .item-row.wrong .item-feedback { display: block; color: var(--accent-wrong); }
+  .item-row.correct .item-feedback { display: block; color: var(--accent-recorded); }
+
+  .tally {
+    display: flex;
+    justify-content: space-between;
+    background: var(--surface-alt);
+    border-radius: 3px;
+    padding: 11px 14px;
+    margin: 16px 0 20px;
+    font-size: 0.92rem;
+  }
+
+  .tally .value { font-family: var(--font-display); font-weight: 700; }
+
+  button {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: 3px;
+    border: 1px solid var(--accent-recorded);
+    background: var(--accent-recorded);
+    color: #FFFFFF;
+    cursor: pointer;
+    margin-top: 6px;
+    margin-right: 10px;
+  }
+
+  button.secondary {
+    background: var(--surface);
+    color: var(--accent-recorded);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--accent-focus);
+    outline-offset: 2px;
+  }
+
+  #summary-message {
+    font-size: 0.95rem;
+    padding: 13px 15px;
+    border-radius: 3px;
+    margin: 18px 0;
+    display: none;
+  }
+
+  #summary-message.all-correct {
+    display: block;
+    background: var(--accent-recorded-bg);
+    color: var(--accent-recorded);
+  }
+
+  #summary-message.has-errors {
+    display: block;
+    background: var(--accent-wrong-bg);
+    color: var(--accent-wrong);
+  }
+
+  #pass2 { display: none; }
+  #pass2.shown { display: block; }
+
+  @media (max-width: 480px) {
+    body { padding: 20px 14px 40px; }
+    h1 { font-size: 1.28rem; }
+    .item-row { flex-direction: column; align-items: stretch; }
+    select { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Is this one asset, or four?</h1>
+  <p class="lede">The same underlying machine can be counted as one entry or several, depending on what your organization has agreed counts as an asset. Below are two bundles from the estate. Classify every item using the rule stated first.</p>
+
+  <div class="rule-box" id="rule-box-1">
+    <span class="rule-label">This organization's counting rule</span>
+    <p>Count each virtual machine and each independently deployed service as its own asset. Don't count an operating system or an attached volume separately — they travel with whichever machine they belong to.</p>
+  </div>
+
+  <div id="pass1">
+
+    <p class="bundle-label">Bundle A &mdash; the storefront web host</p>
+    <div class="item-row" data-key="separate">
+      <div class="item-name"><strong>Storefront web host</strong><span>The virtual machine itself</span></div>
+      <select aria-label="Classify: Storefront web host">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="part">
+      <div class="item-name"><strong>Its operating system</strong><span>Runs on the storefront web host</span></div>
+      <select aria-label="Classify: Storefront web host operating system">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="separate">
+      <div class="item-name"><strong>Checkout service</strong><span>Deployed independently, runs on the storefront web host</span></div>
+      <select aria-label="Classify: Checkout service">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="part">
+      <div class="item-name"><strong>Web-edge data volume</strong><span>Attached storage on the storefront web host</span></div>
+      <select aria-label="Classify: Web-edge data volume">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+
+    <p class="bundle-label" style="margin-top:20px;">Bundle B &mdash; the head office file server</p>
+    <div class="item-row" data-key="separate">
+      <div class="item-name"><strong>Head office file server</strong><span>The virtual machine itself</span></div>
+      <select aria-label="Classify: Head office file server">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="part">
+      <div class="item-name"><strong>Its operating system</strong><span>Runs on the head office file server</span></div>
+      <select aria-label="Classify: Head office file server operating system">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="separate">
+      <div class="item-name"><strong>Shared drive service</strong><span>Deployed independently, runs on the head office file server</span></div>
+      <select aria-label="Classify: Shared drive service">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="part">
+      <div class="item-name"><strong>File server backup volume</strong><span>Attached storage on the head office file server</span></div>
+      <select aria-label="Classify: File server backup volume">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+
+    <div class="tally">
+      <span>Assets counted under this rule</span>
+      <span class="value" id="tally-1">&mdash;</span>
+    </div>
+
+    <div id="summary-message"></div>
+
+    <button type="button" id="check-btn-1">Check my answers</button>
+  </div>
+
+  <hr class="rule">
+
+  <div id="pass2">
+    <h2>Now the organization changes one thing</h2>
+    <div class="rule-box" id="rule-box-2">
+      <span class="rule-label">Updated counting rule</span>
+      <p>The security team now tracks each attached volume separately, since a volume carries its own retention and backup policy. Everything else about the rule is unchanged: virtual machines and independently deployed services still count on their own; an operating system still travels with its host.</p>
+    </div>
+    <p class="lede">Nothing about the estate changed. Only the rule did. Reclassify the two volumes below.</p>
+
+    <div class="item-row" data-key="separate">
+      <div class="item-name"><strong>Web-edge data volume</strong><span>Attached storage on the storefront web host</span></div>
+      <select aria-label="Reclassify: Web-edge data volume">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+    <div class="item-row" data-key="separate">
+      <div class="item-name"><strong>File server backup volume</strong><span>Attached storage on the head office file server</span></div>
+      <select aria-label="Reclassify: File server backup volume">
+        <option value="">Choose one&hellip;</option>
+        <option value="separate">Separate asset</option>
+        <option value="part">Part of another asset</option>
+      </select>
+      <div class="item-feedback"></div>
+    </div>
+
+    <div class="tally">
+      <span>Assets counted under the updated rule</span>
+      <span class="value" id="tally-2">&mdash;</span>
+    </div>
+
+    <div id="summary-message-2" style="display:none; padding:13px 15px; border-radius:3px; margin:18px 0; font-size:0.95rem;"></div>
+
+    <button type="button" id="check-btn-2">Check my answers</button>
+  </div>
+
+</main>
+
+<script>
+(function () {
+  var pass1 = document.getElementById('pass1');
+  var pass2 = document.getElementById('pass2');
+  var checkBtn1 = document.getElementById('check-btn-1');
+  var checkBtn2 = document.getElementById('check-btn-2');
+  var summary1 = document.getElementById('summary-message');
+  var summary2 = document.getElementById('summary-message-2');
+  var tally1 = document.getElementById('tally-1');
+  var tally2 = document.getElementById('tally-2');
+
+  var reasons = {
+    part_marked_separate: 'This one travels with its host under the stated rule; it doesn\u2019t get its own row.',
+    separate_marked_part: 'This one is deployed and managed on its own, so the rule counts it as its own row.'
+  };
+
+  function grade(container, tallyEl, summaryEl, onAllCorrect) {
+    var rows = container.querySelectorAll('.item-row');
+    var allAnswered = true;
+    var allCorrect = true;
+    var wrongCount = 0;
+    var separateCount = 0;
+
+    rows.forEach(function (row) {
+      var select = row.querySelector('select');
+      var feedback = row.querySelector('.item-feedback');
+      var value = select.value;
+      var key = row.getAttribute('data-key');
+
+      if (!value) {
+        allAnswered = false;
+        return;
+      }
+
+      if (value === 'separate') separateCount++;
+
+      row.classList.remove('correct', 'wrong');
+      if (value === key) {
+        row.classList.add('correct');
+        feedback.textContent = 'Correct \u2014 this matches the stated rule.';
+      } else {
+        row.classList.add('wrong');
+        allCorrect = false;
+        wrongCount++;
+        var reasonKey = key === 'part' ? 'part_marked_separate' : 'separate_marked_part';
+        feedback.textContent = reasons[reasonKey];
+      }
+    });
+
+    if (!allAnswered) {
+      summaryEl.className = 'has-errors';
+      summaryEl.style.display = 'block';
+      summaryEl.textContent = 'Classify every item before checking.';
+      return;
+    }
+
+    tallyEl.textContent = separateCount.toLocaleString('en-US');
+
+    if (allCorrect) {
+      summaryEl.className = 'all-correct';
+      summaryEl.style.display = 'block';
+      summaryEl.textContent = 'Correct. Every item matches the stated rule, and the same rule was applied consistently across both bundles.';
+      if (onAllCorrect) onAllCorrect();
+    } else if (wrongCount === 1) {
+      summaryEl.className = 'has-errors';
+      summaryEl.style.display = 'block';
+      summaryEl.textContent = 'Close. One item breaks the stated rule \u2014 check the row marked below.';
+    } else {
+      summaryEl.className = 'has-errors';
+      summaryEl.style.display = 'block';
+      summaryEl.textContent = wrongCount.toLocaleString('en-US') + ' items don\u2019t match the stated rule \u2014 check the rows marked below.';
+    }
+  }
+
+  checkBtn1.addEventListener('click', function () {
+    grade(pass1, tally1, summary1, function () {
+      pass2.classList.add('shown');
+    });
+  });
+
+  checkBtn2.addEventListener('click', function () {
+    grade(pass2, tally2, summary2, null);
+  });
+})();
+</script>
+
+</body>
+</html>

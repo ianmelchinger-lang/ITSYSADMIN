@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where does this count stop?</title>
+<style>
+  :root {
+    --bg: #F5F6F0;
+    --surface: #FFFFFF;
+    --surface-alt: #ECEEE5;
+    --ink: #20261F;
+    --ink-soft: #54594C;
+    --line: #D3D6C8;
+    --accent-recorded: #24594B;
+    --accent-recorded-bg: #E4EEE9;
+    --accent-wrong: #9C3B2E;
+    --accent-wrong-bg: #F5E6E3;
+    --accent-focus: #1D5FBF;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+  body { padding: 28px 20px 48px; }
+  main { max-width: 600px; margin: 0 auto; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; line-height: 1.3; margin: 0 0 14px; }
+  h2 { font-family: var(--font-body); font-weight: 600; font-size: 0.98rem; margin: 0 0 4px; }
+  p { font-size: 0.97rem; line-height: 1.55; margin: 0 0 14px; }
+  .lede { color: var(--ink-soft); }
+  .boundary-box { background: var(--surface-alt); border-left: 3px solid var(--accent-recorded); padding: 13px 15px; border-radius: 0 3px 3px 0; margin-bottom: 18px; }
+  .boundary-box .boundary-label { font-weight: 600; font-size: 0.82rem; color: var(--accent-recorded); display: block; margin-bottom: 5px; }
+  .boundary-box p { margin: 0; font-size: 0.95rem; }
+  .register { border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: var(--surface); margin-bottom: 6px; }
+  .register-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .register-row:last-child { border-bottom: none; }
+  .register-row input[type="checkbox"] { margin-top: 3px; accent-color: var(--accent-recorded); flex-shrink: 0; }
+  .register-row .name { flex: 1; }
+  .register-row .name strong { display: block; font-size: 0.94rem; }
+  .register-row .name span { display: block; font-size: 0.85rem; color: var(--ink-soft); margin-top: 1px; }
+  .register-row.correct { background: var(--accent-recorded-bg); }
+  .register-row.wrong { background: var(--accent-wrong-bg); }
+  .row-note { display: none; font-size: 0.82rem; margin-top: 4px; }
+  .register-row.correct .row-note { display: block; color: var(--accent-recorded); }
+  .register-row.wrong .row-note { display: block; color: var(--accent-wrong); }
+  .tally { display: flex; justify-content: space-between; align-items: baseline; background: var(--surface-alt); border-radius: 3px; padding: 11px 14px; margin: 14px 0 18px; font-size: 0.92rem; }
+  .tally .value { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; }
+  button { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; padding: 11px 20px; border-radius: 3px; border: 1px solid var(--accent-recorded); background: var(--accent-recorded); color: #FFFFFF; cursor: pointer; margin-top: 4px; }
+  #summary { display: none; font-size: 0.95rem; padding: 13px 15px; border-radius: 3px; margin: 16px 0; }
+  #summary.correct { display: block; background: var(--accent-recorded-bg); color: var(--accent-recorded); }
+  #summary.wrong { display: block; background: var(--accent-wrong-bg); color: var(--accent-wrong); }
+  #summary-2 { display: none; font-size: 0.95rem; padding: 13px 15px; border-radius: 3px; margin: 16px 0; }
+  #summary-2.correct { display: block; background: var(--accent-recorded-bg); color: var(--accent-recorded); }
+  #summary-2.wrong { display: block; background: var(--accent-wrong-bg); color: var(--accent-wrong); }
+  :focus-visible { outline: 3px solid var(--accent-focus); outline-offset: 2px; }
+  hr.rule { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+  #round2 { display: none; }
+  #round2.shown { display: block; }
+  @media (max-width: 480px) {
+    body { padding: 20px 14px 40px; }
+    h1 { font-size: 1.28rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Where does this count stop?</h1>
+  <p class="lede">The same five components can produce different correct totals, depending on which boundary you're told to count against. Read the boundary below, then check every component that falls inside it.</p>
+
+  <div id="round1">
+    <div class="boundary-box">
+      <span class="boundary-label">Stated boundary</span>
+      <p>This register covers only what's hosted on the cloud platform.</p>
+    </div>
+
+    <div class="register" id="register-1">
+      <div class="register-row" data-key="in">
+        <input type="checkbox" id="r1-web" aria-describedby="r1-web-note">
+        <div class="name"><label for="r1-web"><strong>Storefront web host</strong><span>Runs on the cloud platform</span></label><div class="row-note" id="r1-web-note"></div></div>
+      </div>
+      <div class="register-row" data-key="in">
+        <input type="checkbox" id="r1-checkout" aria-describedby="r1-checkout-note">
+        <div class="name"><label for="r1-checkout"><strong>Checkout service</strong><span>Runs on the cloud platform, on the same host</span></label><div class="row-note" id="r1-checkout-note"></div></div>
+      </div>
+      <div class="register-row" data-key="out">
+        <input type="checkbox" id="r1-print" aria-describedby="r1-print-note">
+        <div class="name"><label for="r1-print"><strong>Warehouse print and label host</strong><span>On-premises, north warehouse</span></label><div class="row-note" id="r1-print-note"></div></div>
+      </div>
+      <div class="register-row" data-key="out">
+        <input type="checkbox" id="r1-file" aria-describedby="r1-file-note">
+        <div class="name"><label for="r1-file"><strong>Head office file server</strong><span>On-premises, head office</span></label><div class="row-note" id="r1-file-note"></div></div>
+      </div>
+      <div class="register-row" data-key="out">
+        <input type="checkbox" id="r1-stage" aria-describedby="r1-stage-note">
+        <div class="name"><label for="r1-stage"><strong>Old staging host</strong><span>On-premises, mostly idle</span></label><div class="row-note" id="r1-stage-note"></div></div>
+      </div>
+    </div>
+
+    <div class="tally">
+      <span>Checked as inside the boundary</span>
+      <span class="value" id="tally-1">0</span>
+    </div>
+
+    <div id="summary"></div>
+
+    <button type="button" id="check-btn-1">Check my boundary</button>
+  </div>
+
+  <hr class="rule">
+
+  <div id="round2">
+    <h2>Now the boundary changes</h2>
+    <p class="lede" style="margin-bottom:14px;">Nothing about the five components changed. Only the stated boundary did.</p>
+
+    <div class="boundary-box">
+      <span class="boundary-label">Updated boundary</span>
+      <p>This register covers everything on-premises, including anything not yet in production.</p>
+    </div>
+
+    <div class="register" id="register-2">
+      <div class="register-row" data-key="out">
+        <input type="checkbox" id="r2-web" aria-describedby="r2-web-note">
+        <div class="name"><label for="r2-web"><strong>Storefront web host</strong><span>Runs on the cloud platform</span></label><div class="row-note" id="r2-web-note"></div></div>
+      </div>
+      <div class="register-row" data-key="out">
+        <input type="checkbox" id="r2-checkout" aria-describedby="r2-checkout-note">
+        <div class="name"><label for="r2-checkout"><strong>Checkout service</strong><span>Runs on the cloud platform, on the same host</span></label><div class="row-note" id="r2-checkout-note"></div></div>
+      </div>
+      <div class="register-row" data-key="in">
+        <input type="checkbox" id="r2-print" aria-describedby="r2-print-note">
+        <div class="name"><label for="r2-print"><strong>Warehouse print and label host</strong><span>On-premises, north warehouse</span></label><div class="row-note" id="r2-print-note"></div></div>
+      </div>
+      <div class="register-row" data-key="in">
+        <input type="checkbox" id="r2-file" aria-describedby="r2-file-note">
+        <div class="name"><label for="r2-file"><strong>Head office file server</strong><span>On-premises, head office</span></label><div class="row-note" id="r2-file-note"></div></div>
+      </div>
+      <div class="register-row" data-key="in">
+        <input type="checkbox" id="r2-stage" aria-describedby="r2-stage-note">
+        <div class="name"><label for="r2-stage"><strong>Old staging host</strong><span>On-premises, not yet in production</span></label><div class="row-note" id="r2-stage-note"></div></div>
+      </div>
+    </div>
+
+    <div class="tally">
+      <span>Checked as inside the boundary</span>
+      <span class="value" id="tally-2">0</span>
+    </div>
+
+    <div id="summary-2"></div>
+
+    <button type="button" id="check-btn-2">Check my boundary</button>
+  </div>
+
+</main>
+
+<script>
+(function () {
+  function wireRegister(registerId, tallyId, btnId, summaryId, revealId) {
+    var register = document.getElementById(registerId);
+    var tally = document.getElementById(tallyId);
+    var btn = document.getElementById(btnId);
+    var summary = document.getElementById(summaryId);
+    var checkboxes = register.querySelectorAll('input[type="checkbox"]');
+
+    function updateTally() {
+      var count = 0;
+      checkboxes.forEach(function (cb) { if (cb.checked) count++; });
+      tally.textContent = count.toLocaleString('en-US');
+    }
+
+    checkboxes.forEach(function (cb) { cb.addEventListener('change', updateTally); });
+
+    btn.addEventListener('click', function () {
+      var wrongCount = 0;
+      var rows = register.querySelectorAll('.register-row');
+      rows.forEach(function (row) {
+        var cb = row.querySelector('input[type="checkbox"]');
+        var note = row.querySelector('.row-note');
+        var key = row.getAttribute('data-key');
+        var shouldBeChecked = key === 'in';
+        row.classList.remove('correct', 'wrong');
+
+        if (cb.checked === shouldBeChecked) {
+          row.classList.add('correct');
+          note.textContent = shouldBeChecked
+            ? 'Correctly included \u2014 falls inside this boundary.'
+            : 'Correctly left out \u2014 falls outside this boundary.';
+        } else {
+          row.classList.add('wrong');
+          wrongCount++;
+          note.textContent = shouldBeChecked
+            ? 'This one belongs inside the boundary as stated \u2014 it was left unchecked.'
+            : 'This one falls outside the boundary as stated \u2014 it shouldn\u2019t be checked.';
+        }
+        cb.disabled = true;
+      });
+
+      var correctTotal = Array.prototype.filter.call(rows, function (r) { return r.getAttribute('data-key') === 'in'; }).length;
+      updateTally();
+
+      summary.className = wrongCount === 0 ? 'correct' : 'wrong';
+      if (wrongCount === 0) {
+        summary.textContent = 'Correct. ' + correctTotal.toLocaleString('en-US') + ' components fall inside this boundary, computed directly from the boundary as stated.';
+      } else if (wrongCount === 1) {
+        summary.textContent = 'Close. One component doesn\u2019t match the stated boundary \u2014 check the row marked below.';
+      } else {
+        summary.textContent = wrongCount.toLocaleString('en-US') + ' components don\u2019t match the stated boundary \u2014 check the rows marked below.';
+      }
+
+      btn.disabled = true;
+
+      if (revealId && wrongCount === 0) {
+        document.getElementById(revealId).classList.add('shown');
+      }
+    });
+  }
+
+  wireRegister('register-1', 'tally-1', 'check-btn-1', 'summary', 'round2');
+  wireRegister('register-2', 'tally-2', 'check-btn-2', 'summary-2', null);
+})();
+</script>
+
+</body>
+</html>

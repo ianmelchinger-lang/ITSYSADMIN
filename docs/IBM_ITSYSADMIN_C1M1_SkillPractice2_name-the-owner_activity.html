@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Who actually owns this?</title>
+<style>
+  :root {
+    --bg: #F5F6F0;
+    --surface: #FFFFFF;
+    --surface-alt: #ECEEE5;
+    --ink: #20261F;
+    --ink-soft: #54594C;
+    --line: #D3D6C8;
+    --accent-recorded: #24594B;
+    --accent-recorded-bg: #E4EEE9;
+    --accent-wrong: #9C3B2E;
+    --accent-wrong-bg: #F5E6E3;
+    --accent-focus: #1D5FBF;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+  body { padding: 28px 20px 48px; }
+  main { max-width: 600px; margin: 0 auto; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; line-height: 1.3; margin: 0 0 14px; }
+  h2 { font-family: var(--font-body); font-weight: 600; font-size: 0.98rem; margin: 26px 0 10px; }
+  p { font-size: 0.97rem; line-height: 1.55; margin: 0 0 14px; }
+  .lede { color: var(--ink-soft); }
+  .asset-card { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 14px 16px; margin-bottom: 20px; }
+  .asset-card .asset-name { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+  .asset-card .asset-detail { color: var(--ink-soft); font-size: 0.88rem; }
+  fieldset { border: none; padding: 0; margin: 0; }
+  legend { font-family: var(--font-body); font-weight: 600; font-size: 0.92rem; margin-bottom: 10px; padding: 0; }
+  .candidate { display: block; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); padding: 12px 14px; margin-bottom: 8px; }
+  .candidate label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .candidate input[type="radio"] { margin-top: 3px; accent-color: var(--accent-recorded); flex-shrink: 0; }
+  .candidate-text strong { display: block; font-size: 0.95rem; margin-bottom: 2px; }
+  .candidate-text span { display: block; font-size: 0.87rem; color: var(--ink-soft); line-height: 1.4; }
+  .candidate.correct { border-color: var(--accent-recorded); background: var(--accent-recorded-bg); }
+  .candidate.wrong { border-color: var(--accent-wrong); background: var(--accent-wrong-bg); }
+  .candidate-feedback { display: none; font-size: 0.85rem; margin-top: 8px; padding-left: 24px; }
+  .candidate.correct .candidate-feedback { display: block; color: var(--accent-recorded); }
+  .candidate.wrong .candidate-feedback { display: block; color: var(--accent-wrong); }
+  button { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; padding: 11px 20px; border-radius: 3px; border: 1px solid var(--accent-recorded); background: var(--accent-recorded); color: #FFFFFF; cursor: pointer; margin-top: 10px; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid var(--accent-focus); outline-offset: 2px; }
+  hr.rule { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+  #round2 { display: none; }
+  #round2.shown { display: block; }
+  @media (max-width: 480px) {
+    body { padding: 20px 14px 40px; }
+    h1 { font-size: 1.28rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Who actually owns this?</h1>
+  <p class="lede">A component's owner is the role accountable for it &mdash; not whoever uses it most, not whoever paid for it, and not whoever last touched it. Read the record below and pick the one candidate who is genuinely accountable.</p>
+
+  <div id="round1">
+    <div class="asset-card">
+      <div class="asset-name">Head office file server</div>
+      <div class="asset-detail">On-premises, purchased under PO-2291, runs the organization's shared drives.</div>
+    </div>
+
+    <fieldset id="fieldset-1">
+      <legend>Who owns this component?</legend>
+
+      <div class="candidate" data-key="wrong" data-reason="Marketing pulls reports from this server constantly, but heavy use only means they benefit from it day to day &mdash; it says nothing about who's responsible for its upkeep.">
+        <label>
+          <input type="radio" name="owner-1" value="marketing">
+          <span class="candidate-text"><strong>The marketing team</strong><span>Its analysts are the heaviest daily users of the shared drives.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+
+      <div class="candidate" data-key="wrong" data-reason="Finance raised the purchase order, but a purchase record only shows where the money came from, not who now answers for the thing it bought.">
+        <label>
+          <input type="radio" name="owner-1" value="finance">
+          <span class="candidate-text"><strong>Finance</strong><span>The department that raised PO-2291 to buy the server.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+
+      <div class="candidate" data-key="wrong" data-reason="Fixing a driver issue was incidental contact, not accountability &mdash; being the last person to touch something doesn't make you responsible for its condition or its fate.">
+        <label>
+          <input type="radio" name="owner-1" value="helpdesk">
+          <span class="candidate-text"><strong>A help-desk technician</strong><span>Most recently logged in to fix a printer driver conflict.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+
+      <div class="candidate" data-key="correct" data-reason="Correct. IT Operations is the role recorded as deciding whether this server gets patched, upgraded, or retired &mdash; that decision authority is what ownership means, regardless of who uses it most or who paid for it.">
+        <label>
+          <input type="radio" name="owner-1" value="itops">
+          <span class="candidate-text"><strong>IT Operations</strong><span>Decides if the server gets patched, upgraded, or retired; rarely logs in directly.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+    </fieldset>
+
+    <button type="button" id="check-btn-1" disabled>Check my answer</button>
+  </div>
+
+  <hr class="rule">
+
+  <div id="round2">
+    <h2>Try it once more, with a different component</h2>
+
+    <div class="asset-card">
+      <div class="asset-name">Warehouse print and label host</div>
+      <div class="asset-detail">On-premises at the north warehouse, powered down overnight on a schedule, inherited from a company acquisition.</div>
+    </div>
+
+    <fieldset id="fieldset-2">
+      <legend>Who owns this component?</legend>
+
+      <div class="candidate" data-key="wrong" data-reason="Warehouse staff print labels on this host all shift long, but constant use is not the same fact as being accountable for the machine itself.">
+        <label>
+          <input type="radio" name="owner-2" value="warehouse">
+          <span class="candidate-text"><strong>Warehouse staff</strong><span>Print labels from this host on every shift.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+
+      <div class="candidate" data-key="wrong" data-reason="Whoever wrote the handover note happened to know about this host at the time, but writing a note isn't the same as holding ongoing authority over it.">
+        <label>
+          <input type="radio" name="owner-2" value="previous-admin">
+          <span class="candidate-text"><strong>The previous administrator</strong><span>Mentioned this host in a handover note before leaving.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+
+      <div class="candidate" data-key="correct" data-reason="Correct. Even though this host has no purchase order and was never formally logged, IT Operations is still the role that would decide whether to patch, retire, or migrate it &mdash; ownership doesn't depend on how the asset was acquired or documented.">
+        <label>
+          <input type="radio" name="owner-2" value="itops2">
+          <span class="candidate-text"><strong>IT Operations</strong><span>Would decide whether this host gets patched, migrated, or retired.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+
+      <div class="candidate" data-key="wrong" data-reason="This host came over during an acquisition, so no single team requested or budgeted for it &mdash; and even if one had, a budget line doesn't carry accountability for the machine's condition.">
+        <label>
+          <input type="radio" name="owner-2" value="none">
+          <span class="candidate-text"><strong>No one &mdash; it was never formally purchased</strong><span>It has no purchase order or budget line attached to it.</span></span>
+        </label>
+        <div class="candidate-feedback"></div>
+      </div>
+    </fieldset>
+
+    <button type="button" id="check-btn-2" disabled>Check my answer</button>
+  </div>
+
+</main>
+
+<script>
+(function () {
+  function wireRound(fieldsetId, btnId, revealId) {
+    var fieldset = document.getElementById(fieldsetId);
+    var btn = document.getElementById(btnId);
+    var radios = fieldset.querySelectorAll('input[type="radio"]');
+    var candidates = fieldset.querySelectorAll('.candidate');
+
+    radios.forEach(function (r) {
+      r.addEventListener('change', function () { btn.disabled = false; });
+    });
+
+    btn.addEventListener('click', function () {
+      candidates.forEach(function (card) {
+        var radio = card.querySelector('input[type="radio"]');
+        var feedback = card.querySelector('.candidate-feedback');
+        card.classList.remove('correct', 'wrong');
+        if (radio.checked) {
+          var key = card.getAttribute('data-key');
+          card.classList.add(key === 'correct' ? 'correct' : 'wrong');
+          feedback.textContent = card.getAttribute('data-reason');
+        }
+      });
+      btn.disabled = true;
+      radios.forEach(function (r) { r.disabled = true; });
+
+      if (revealId) {
+        var checkedCorrect = fieldset.querySelector('.candidate.correct input:checked');
+        if (checkedCorrect) {
+          document.getElementById(revealId).classList.add('shown');
+        }
+      }
+    });
+  }
+
+  wireRound('fieldset-1', 'check-btn-1', 'round2');
+  wireRound('fieldset-2', 'check-btn-2', null);
+})();
+</script>
+
+</body>
+</html>

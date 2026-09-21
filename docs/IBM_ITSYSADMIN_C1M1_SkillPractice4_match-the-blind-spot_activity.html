@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which route missed this, and why?</title>
+<style>
+  :root {
+    --bg: #F5F6F0;
+    --surface: #FFFFFF;
+    --surface-alt: #ECEEE5;
+    --ink: #20261F;
+    --ink-soft: #54594C;
+    --line: #D3D6C8;
+    --accent-recorded: #24594B;
+    --accent-recorded-bg: #E4EEE9;
+    --accent-wrong: #9C3B2E;
+    --accent-wrong-bg: #F5E6E3;
+    --accent-focus: #1D5FBF;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+  body { padding: 28px 20px 48px; }
+  main { max-width: 620px; margin: 0 auto; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.42rem; line-height: 1.3; margin: 0 0 14px; }
+  h2 { font-family: var(--font-body); font-weight: 600; font-size: 0.98rem; margin: 0 0 4px; }
+  p { font-size: 0.97rem; line-height: 1.55; margin: 0 0 14px; }
+  .lede { color: var(--ink-soft); }
+  .routes-key { background: var(--surface-alt); border-radius: 3px; padding: 13px 15px; margin-bottom: 22px; }
+  .routes-key .routes-key-label { font-weight: 600; font-size: 0.82rem; color: var(--accent-recorded); display: block; margin-bottom: 8px; }
+  .routes-key ul { margin: 0; padding-left: 18px; }
+  .routes-key li { font-size: 0.9rem; margin-bottom: 5px; color: var(--ink-soft); line-height: 1.4; }
+  .scenario-card { border: 1px solid var(--line); border-radius: 3px; background: var(--surface); padding: 14px 16px; margin-bottom: 10px; }
+  .scenario-card .scenario-name { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; margin-bottom: 4px; }
+  .scenario-card .scenario-detail { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 12px; }
+  .scenario-card label.select-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  select { width: 100%; font-family: var(--font-body); font-size: 0.92rem; padding: 9px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); }
+  .scenario-card.correct { border-color: var(--accent-recorded); background: var(--accent-recorded-bg); }
+  .scenario-card.wrong { border-color: var(--accent-wrong); background: var(--accent-wrong-bg); }
+  .scenario-feedback { display: none; font-size: 0.87rem; margin-top: 10px; }
+  .scenario-card.correct .scenario-feedback { display: block; color: var(--accent-recorded); }
+  .scenario-card.wrong .scenario-feedback { display: block; color: var(--accent-wrong); }
+  button { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; padding: 11px 20px; border-radius: 3px; border: 1px solid var(--accent-recorded); background: var(--accent-recorded); color: #FFFFFF; cursor: pointer; margin-top: 8px; }
+  #summary { display: none; font-size: 0.95rem; padding: 13px 15px; border-radius: 3px; margin: 16px 0; }
+  #summary.correct { display: block; background: var(--accent-recorded-bg); color: var(--accent-recorded); }
+  #summary.wrong { display: block; background: var(--accent-wrong-bg); color: var(--accent-wrong); }
+  #summary-2 { display: none; font-size: 0.95rem; padding: 13px 15px; border-radius: 3px; margin: 16px 0; }
+  #summary-2.correct { display: block; background: var(--accent-recorded-bg); color: var(--accent-recorded); }
+  #summary-2.wrong { display: block; background: var(--accent-wrong-bg); color: var(--accent-wrong); }
+  hr.rule { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+  :focus-visible { outline: 3px solid var(--accent-focus); outline-offset: 2px; }
+  #round2 { display: none; }
+  #round2.shown { display: block; }
+  @media (max-width: 480px) {
+    body { padding: 20px 14px 40px; }
+    h1 { font-size: 1.24rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Which route missed this, and why?</h1>
+  <p class="lede">Every way of discovering what exists in an environment has a blind spot built into how it works. Read what happened in each case, then pick the route whose specific limit explains the miss.</p>
+
+  <div class="routes-key">
+    <span class="routes-key-label">The four routes</span>
+    <ul>
+      <li><strong>A system reporting on itself</strong> &mdash; only visible while it's switched on and reachable.</li>
+      <li><strong>A platform's own listing</strong> &mdash; only shows what runs on that specific platform.</li>
+      <li><strong>A purchase record</strong> &mdash; only shows what was bought through the channel it tracks.</li>
+      <li><strong>A handover note from a previous colleague</strong> &mdash; only reflects what they knew on the day they wrote it.</li>
+    </ul>
+  </div>
+
+  <div id="round1">
+
+    <div class="scenario-card" data-key="self-report">
+      <div class="scenario-name">Warehouse print and label host</div>
+      <div class="scenario-detail">Checked at 9 a.m. using a tool that asks each machine to report its own status. This host is powered down overnight on a fixed schedule and hadn't come back online yet &mdash; it didn't appear anywhere in the results.</div>
+      <label class="select-label" for="s1-select">Which route's blind spot explains this miss?</label>
+      <select id="s1-select">
+        <option value="">Choose one&hellip;</option>
+        <option value="self-report">A system reporting on itself</option>
+        <option value="platform">A platform's own listing</option>
+        <option value="purchase">A purchase record</option>
+        <option value="handover">A handover note from a previous colleague</option>
+      </select>
+      <div class="scenario-feedback"></div>
+    </div>
+
+    <div class="scenario-card" data-key="platform">
+      <div class="scenario-name">Head office file server</div>
+      <div class="scenario-detail">Someone opened the cloud platform's account and read off every resource it listed. This server runs entirely on-premises, so it never appeared in that list at all &mdash; not because it was hidden, but because the list only covers that one platform.</div>
+      <label class="select-label" for="s2-select">Which route's blind spot explains this miss?</label>
+      <select id="s2-select">
+        <option value="">Choose one&hellip;</option>
+        <option value="self-report">A system reporting on itself</option>
+        <option value="platform">A platform's own listing</option>
+        <option value="purchase">A purchase record</option>
+        <option value="handover">A handover note from a previous colleague</option>
+      </select>
+      <div class="scenario-feedback"></div>
+    </div>
+
+    <div class="scenario-card" data-key="purchase">
+      <div class="scenario-name">Checkout service</div>
+      <div class="scenario-detail">This service shows up fine in the cloud platform's listing, since it runs there. But procurement has no record of it anywhere &mdash; a contractor built it under a fixed-fee contract that never itemized individual services, so no purchase order was ever raised for it specifically.</div>
+      <label class="select-label" for="s3-select">Which route's blind spot explains this miss?</label>
+      <select id="s3-select">
+        <option value="">Choose one&hellip;</option>
+        <option value="self-report">A system reporting on itself</option>
+        <option value="platform">A platform's own listing</option>
+        <option value="purchase">A purchase record</option>
+        <option value="handover">A handover note from a previous colleague</option>
+      </select>
+      <div class="scenario-feedback"></div>
+    </div>
+
+    <div class="scenario-card" data-key="handover">
+      <div class="scenario-name">Old staging host</div>
+      <div class="scenario-detail">A handover note written eighteen months ago describes this host accurately for that date. It doesn't mention that the host was quietly repurposed for a different project last quarter, and there's no way to go back and ask the note anything further.</div>
+      <label class="select-label" for="s4-select">Which route's blind spot explains this miss?</label>
+      <select id="s4-select">
+        <option value="">Choose one&hellip;</option>
+        <option value="self-report">A system reporting on itself</option>
+        <option value="platform">A platform's own listing</option>
+        <option value="purchase">A purchase record</option>
+        <option value="handover">A handover note from a previous colleague</option>
+      </select>
+      <div class="scenario-feedback"></div>
+    </div>
+
+    <div id="summary"></div>
+    <button type="button" id="check-btn-1">Check my matches</button>
+  </div>
+
+  <hr class="rule">
+
+  <div id="round2">
+    <h2>One more, on its own</h2>
+    <p class="lede" style="margin-bottom: 14px;">Same four routes. A new component this time.</p>
+
+    <div class="scenario-card" data-key="self-report">
+      <div class="scenario-name">Regional kiosk terminal</div>
+      <div class="scenario-detail">A self-service kiosk at a store location connects to the network only during business hours. Checked overnight using a tool that asks devices to report their own status, it looked as if it didn't exist at all.</div>
+      <label class="select-label" for="s5-select">Which route's blind spot explains this miss?</label>
+      <select id="s5-select">
+        <option value="">Choose one&hellip;</option>
+        <option value="self-report">A system reporting on itself</option>
+        <option value="platform">A platform's own listing</option>
+        <option value="purchase">A purchase record</option>
+        <option value="handover">A handover note from a previous colleague</option>
+      </select>
+      <div class="scenario-feedback"></div>
+    </div>
+
+    <div id="summary-2"></div>
+    <button type="button" id="check-btn-2">Check my match</button>
+  </div>
+
+</main>
+
+<script>
+(function () {
+  var reasons = {
+    "self-report": "A system that only reports on itself is invisible while it's off or unreachable \u2014 checking again later, or checking harder, won't change that; you need a route that doesn't depend on the machine being awake.",
+    "platform": "A platform's listing was built to show what runs on that platform, and nothing past its own edge \u2014 no amount of re-checking that same list will surface something hosted somewhere else.",
+    "purchase": "A purchase record only shows what moved through the channel it tracks \u2014 anything acquired another way, including work folded into a contract that was never itemized, has no row there at all.",
+    "handover": "A handover note is a snapshot of what one person knew on the day they wrote it \u2014 it can't be rerun to check whether anything has changed since, so it goes stale the moment reality moves past it."
+  };
+
+  function wireRound(containerId, btnId, summaryId, revealId) {
+    var container = document.getElementById(containerId);
+    var btn = document.getElementById(btnId);
+    var summary = document.getElementById(summaryId);
+    var cards = container.querySelectorAll('.scenario-card');
+
+    btn.addEventListener('click', function () {
+      var allAnswered = true;
+      var wrongCount = 0;
+
+      cards.forEach(function (card) {
+        var select = card.querySelector('select');
+        var feedback = card.querySelector('.scenario-feedback');
+        var key = card.getAttribute('data-key');
+        var value = select.value;
+
+        if (!value) { allAnswered = false; return; }
+
+        card.classList.remove('correct', 'wrong');
+        if (value === key) {
+          card.classList.add('correct');
+          feedback.textContent = 'Correct \u2014 ' + reasons[key];
+        } else {
+          card.classList.add('wrong');
+          wrongCount++;
+          feedback.textContent = 'Not quite. ' + reasons[key];
+        }
+      });
+
+      if (!allAnswered) {
+        summary.className = 'wrong';
+        summary.textContent = 'Choose a route for every scenario before checking.';
+        return;
+      }
+
+      summary.className = wrongCount === 0 ? 'correct' : 'wrong';
+      if (wrongCount === 0) {
+        summary.textContent = 'Correct on all counts. Each miss traces back to a different structural limit, not a mistake anyone made.';
+        if (revealId) document.getElementById(revealId).classList.add('shown');
+      } else if (wrongCount === 1) {
+        summary.textContent = 'Close. One match doesn\u2019t fit \u2014 see the reasoning marked below.';
+      } else {
+        summary.textContent = wrongCount.toLocaleString('en-US') + ' matches don\u2019t fit \u2014 see the reasoning marked below.';
+      }
+    });
+  }
+
+  wireRound('round1', 'check-btn-1', 'summary', 'round2');
+  wireRound('round2', 'check-btn-2', 'summary-2', null);
+})();
+</script>
+
+</body>
+</html>

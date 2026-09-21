@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Put the process together</title>
+<style>
+  :root {
+    --bg: #F5F6F0;
+    --surface: #FFFFFF;
+    --surface-alt: #ECEEE5;
+    --ink: #20261F;
+    --ink-soft: #54594C;
+    --line: #D3D6C8;
+    --accent-recorded: #24594B;
+    --accent-recorded-bg: #E4EEE9;
+    --accent-wrong: #9C3B2E;
+    --accent-wrong-bg: #F5E6E3;
+    --accent-focus: #1D5FBF;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+  body { padding: 28px 20px 48px; }
+  main { max-width: 600px; margin: 0 auto; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; line-height: 1.3; margin: 0 0 14px; }
+  p { font-size: 0.97rem; line-height: 1.55; margin: 0 0 14px; }
+  .lede { color: var(--ink-soft); }
+  .step-card { display: flex; align-items: center; gap: 14px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); padding: 13px 15px; margin-bottom: 9px; }
+  .step-card .step-text { flex: 1; }
+  .step-card .step-text strong { display: block; font-size: 0.96rem; }
+  .step-card .step-text span { display: block; font-size: 0.86rem; color: var(--ink-soft); margin-top: 2px; line-height: 1.4; }
+  .step-card select { flex: 0 0 auto; width: 64px; font-family: var(--font-body); font-size: 0.95rem; padding: 8px 6px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); text-align: center; }
+  .step-card.correct { border-color: var(--accent-recorded); background: var(--accent-recorded-bg); }
+  .step-card.wrong { border-color: var(--accent-wrong); background: var(--accent-wrong-bg); }
+  .step-label { flex: 0 0 64px; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); text-align: center; }
+  .violation-list { display: none; margin: 16px 0; padding: 0; list-style: none; }
+  .violation-list.shown { display: block; }
+  .violation-list li { background: var(--accent-wrong-bg); color: var(--accent-wrong); border-radius: 3px; padding: 11px 14px; margin-bottom: 8px; font-size: 0.9rem; line-height: 1.4; }
+  #summary { display: none; font-size: 0.95rem; padding: 13px 15px; border-radius: 3px; margin: 16px 0; }
+  #summary.correct { display: block; background: var(--accent-recorded-bg); color: var(--accent-recorded); }
+  #summary.wrong { display: block; background: var(--accent-wrong-bg); color: var(--accent-wrong); }
+  button { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; padding: 11px 20px; border-radius: 3px; border: 1px solid var(--accent-recorded); background: var(--accent-recorded); color: #FFFFFF; cursor: pointer; margin-top: 6px; margin-right: 10px; }
+  button.secondary { background: var(--surface); color: var(--accent-recorded); }
+  :focus-visible { outline: 3px solid var(--accent-focus); outline-offset: 2px; }
+  .col-heading { display: flex; gap: 14px; margin-bottom: 8px; padding: 0 15px; }
+  .col-heading .step-text-heading { flex: 1; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
+  .col-heading .position-heading { flex: 0 0 64px; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); text-align: center; }
+  @media (max-width: 480px) {
+    body { padding: 20px 14px 40px; }
+    h1 { font-size: 1.28rem; }
+    .step-card { flex-wrap: wrap; }
+    .step-card select { flex: 0 0 100%; width: 100%; margin-top: 8px; }
+    .col-heading { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Put the process together</h1>
+  <p class="lede">You've worked through reading and inventorying an environment nobody had documented. Assign each move a position from 1 to 5. More than one order can be correct &mdash; the check is whether you've placed anything before something it genuinely depends on.</p>
+
+  <div class="col-heading">
+    <span class="step-text-heading">Move</span>
+    <span class="position-heading">Position</span>
+  </div>
+
+  <div id="steps">
+    <div class="step-card" data-id="boundary">
+      <div class="step-text"><strong>State the boundary</strong><span>Decide and record which parts of the organization this count covers.</span></div>
+      <select aria-label="Position for: State the boundary">
+        <option value="">&mdash;</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+    <div class="step-card" data-id="define">
+      <div class="step-text"><strong>Define what counts as one asset</strong><span>Fix the rule for what one entry in the register represents, before anything gets counted.</span></div>
+      <select aria-label="Position for: Define what counts as one asset">
+        <option value="">&mdash;</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+    <div class="step-card" data-id="routes">
+      <div class="step-text"><strong>Work each discovery route</strong><span>Check self-reporting systems, platform listings, purchase records, and handover notes, and record which route supplied each row.</span></div>
+      <select aria-label="Position for: Work each discovery route">
+        <option value="">&mdash;</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+    <div class="step-card" data-id="owner">
+      <div class="step-text"><strong>Identify the owner and business function</strong><span>For each in-scope asset found, ask who is accountable for it and what it's for.</span></div>
+      <select aria-label="Position for: Identify the owner and business function">
+        <option value="">&mdash;</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+    <div class="step-card" data-id="handback">
+      <div class="step-text"><strong>Hand back the register, gaps marked</strong><span>Deliver the completed register, with anything still unconfirmed clearly flagged rather than guessed at.</span></div>
+      <select aria-label="Position for: Hand back the register with gaps marked">
+        <option value="">&mdash;</option>
+        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      </select>
+    </div>
+  </div>
+
+  <ul class="violation-list" id="violation-list"></ul>
+  <div id="summary"></div>
+
+  <button type="button" id="check-btn">Check my order</button>
+  <button type="button" class="secondary" id="reset-btn">Clear and try again</button>
+
+</main>
+
+<script>
+(function () {
+  var steps = document.querySelectorAll('.step-card');
+  var checkBtn = document.getElementById('check-btn');
+  var resetBtn = document.getElementById('reset-btn');
+  var summary = document.getElementById('summary');
+  var violationList = document.getElementById('violation-list');
+
+  var constraints = [
+    { before: 'boundary', after: 'routes', message: 'The boundary has to be recorded before you work the discovery routes \u2014 otherwise there\u2019s no way to tell whether something a route turns up even falls inside what you\u2019re counting.' },
+    { before: 'define', after: 'owner', message: 'What counts as one asset has to be settled before you assign an owner \u2014 you can\u2019t hold someone accountable for an entry that hasn\u2019t been defined as one thing yet.' },
+    { before: 'routes', after: 'owner', message: 'The discovery routes have to run before owners get assigned \u2014 you need to know what actually exists before you can ask who\u2019s accountable for it.' },
+    { before: 'routes', after: 'handback', message: 'The discovery routes have to run before the register goes out \u2014 otherwise you\u2019re handing back a register that was never checked against reality.' },
+    { before: 'owner', after: 'handback', message: 'Owner and business function need to be on the register before it\u2019s handed back \u2014 that\u2019s part of what makes a row actionable rather than just a name on a list.' }
+  ];
+
+  function getPositions() {
+    var positions = {};
+    steps.forEach(function (card) {
+      var id = card.getAttribute('data-id');
+      var select = card.querySelector('select');
+      positions[id] = select.value ? Number(select.value) : null;
+    });
+    return positions;
+  }
+
+  function clearMarks() {
+    steps.forEach(function (card) { card.classList.remove('correct', 'wrong'); });
+    violationList.innerHTML = '';
+    violationList.classList.remove('shown');
+    summary.className = '';
+    summary.style.display = 'none';
+  }
+
+  checkBtn.addEventListener('click', function () {
+    clearMarks();
+    var positions = getPositions();
+    var ids = Object.keys(positions);
+
+    var allFilled = ids.every(function (id) { return positions[id] !== null; });
+    if (!allFilled) {
+      summary.className = 'wrong';
+      summary.style.display = 'block';
+      summary.textContent = 'Give every move a position from 1 to 5 before checking.';
+      return;
+    }
+
+    var usedValues = ids.map(function (id) { return positions[id]; });
+    var distinct = new Set(usedValues).size === usedValues.length;
+    if (!distinct) {
+      summary.className = 'wrong';
+      summary.style.display = 'block';
+      summary.textContent = 'Each position from 1 to 5 should be used exactly once \u2014 two moves currently share a position.';
+      return;
+    }
+
+    var violated = [];
+    var flaggedIds = {};
+
+    constraints.forEach(function (c) {
+      if (positions[c.before] > positions[c.after]) {
+        violated.push(c.message);
+        flaggedIds[c.before] = true;
+        flaggedIds[c.after] = true;
+      }
+    });
+
+    steps.forEach(function (card) {
+      var id = card.getAttribute('data-id');
+      card.classList.add(flaggedIds[id] ? 'wrong' : 'correct');
+    });
+
+    if (violated.length === 0) {
+      summary.className = 'correct';
+      summary.style.display = 'block';
+      summary.textContent = 'Correct. This order respects every real dependency in the process \u2014 more than one valid arrangement exists, and yours is one of them.';
+    } else {
+      violationList.innerHTML = violated.map(function (msg) { return '<li>' + msg + '</li>'; }).join('');
+      violationList.classList.add('shown');
+      summary.className = 'wrong';
+      summary.style.display = 'block';
+      summary.textContent = violated.length === 1
+        ? 'One dependency is out of order \u2014 see below.'
+        : violated.length.toLocaleString('en-US') + ' dependencies are out of order \u2014 see below.';
+    }
+  });
+
+  resetBtn.addEventListener('click', function () {
+    steps.forEach(function (card) {
+      card.querySelector('select').value = '';
+    });
+    clearMarks();
+  });
+})();
+</script>
+
+</body>
+</html>
