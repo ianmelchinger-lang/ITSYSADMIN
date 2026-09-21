@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The File Didn't Change. Its Reach Did.</title>
+<style>
+:root{
+  --paper:#EDE7D9;
+  --paper-2:#E4DCC6;
+  --panel:#F5F1E6;
+  --ink:#262420;
+  --ink-soft:#5B564A;
+  --ink-faint:#8C8672;
+  --line:#C7BEA3;
+  --line-strong:#A89A72;
+  --brick:#8A3B26;
+  --brick-wash:#E7D4C8;
+  --pine:#2F5D46;
+  --pine-wash:#D9E3D6;
+  --slate:#35506B;
+  --slate-wash:#DCE3E9;
+  --focus:#1D4ED8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+}
+.wrap{max-width:700px;margin:0 auto;padding:48px 24px 72px}
+h1,h2{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-weight:600;
+  color:var(--ink);
+  margin:0 0 10px;
+}
+h1{font-size:28px;line-height:1.22;letter-spacing:-0.01em}
+h2{font-size:18px;line-height:1.3}
+p{margin:0 0 14px}
+.lede{color:var(--ink-soft);font-size:16.5px;max-width:60ch}
+.rule{border:0;border-top:1px solid var(--line);margin:34px 0}
+
+.frame{
+  font-size:15px;
+  color:var(--ink-soft);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-left:4px solid var(--slate);
+  border-radius:2px;
+  padding:16px 18px;
+  margin-bottom:26px;
+}
+.frame b{color:var(--ink)}
+
+.path{
+  font-family:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  font-size:13.5px;
+}
+
+.lever{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:26px;
+}
+.lever .lbl{font-size:14px;color:var(--ink-faint);font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden}
+.seg button{
+  font:inherit;font-weight:600;font-size:14px;cursor:pointer;border:0;
+  background:var(--paper-2);color:var(--ink-soft);padding:10px 15px;
+}
+.seg button + button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:3px solid var(--focus);outline-offset:-2px}
+
+.panes{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  margin-bottom:8px;
+}
+.pane{
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:var(--panel);
+  overflow:hidden;
+}
+.pane .tag{
+  font-size:12.5px;
+  font-weight:700;
+  padding:10px 16px;
+  background:var(--slate-wash);
+  color:var(--slate);
+  border-bottom:1px solid var(--line);
+}
+.pane .body{padding:16px}
+
+dl.rec{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:14px}
+dl.rec dt{color:var(--ink-faint);font-weight:500}
+dl.rec dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+
+.loc{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+  font-size:13.5px;
+}
+.loc .label{color:var(--ink-faint);display:block;margin-bottom:3px}
+
+.reader-id{font-size:15px;font-weight:600;margin-bottom:3px}
+.reader-group{font-size:13.5px;color:var(--ink-soft);margin-bottom:16px}
+.canopen{
+  border-radius:4px;
+  padding:13px 15px;
+  text-align:center;
+}
+.canopen .q{font-size:12.5px;color:var(--ink-faint);display:block;margin-bottom:5px}
+.canopen .a{font-size:18px;font-weight:700}
+.canopen.yes{background:var(--pine-wash)}
+.canopen.yes .a{color:var(--pine)}
+.canopen.no{background:var(--brick-wash)}
+.canopen.no .a{color:var(--brick)}
+
+.unchanged-note{
+  font-size:13px;
+  color:var(--ink-faint);
+  margin:14px 0 30px;
+  text-align:center;
+}
+
+.second{display:none;margin-top:8px}
+.second.show{display:block}
+.second-note{font-size:13px;color:var(--ink-faint);margin-top:14px}
+
+.close p:last-child{color:var(--ink);font-weight:500}
+
+@media (max-width:600px){
+  .panes{grid-template-columns:1fr}
+  h1{font-size:24px}
+  .wrap{padding:36px 18px 56px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>The File Didn't Change. Its Reach Did.</h1>
+    <p class="lede">One file, two candidate directories, one reader. Before you touch anything: a file's own record — its name, its size, everything that describes the file itself — never changes when it moves. What can change is who the directory it's sitting in lets reach it. Move the file and watch which side actually moves.</p>
+  </header>
+
+  <div class="frame">There's nothing to get right here and nothing is scored. Move the file back and forth as many times as you like, and watch the two panes below. One of them will hold still the whole time.</div>
+
+  <div class="lever">
+    <span class="lbl">File is currently in:</span>
+    <div class="seg" role="group" aria-label="Move the file">
+      <button type="button" id="dirA" data-dir="A" aria-pressed="true">shared/finance-wip</button>
+      <button type="button" id="dirB" data-dir="B" aria-pressed="false">archive/ops-only</button>
+    </div>
+  </div>
+
+  <div class="panes">
+    <div class="pane">
+      <div class="tag">The file</div>
+      <div class="body">
+        <dl class="rec">
+          <dt>Name</dt><dd>Q3_vendor_terms.xlsx</dd>
+          <dt>Size</dt><dd>312&nbsp;KB</dd>
+          <dt>Modified</dt><dd>Sep&nbsp;16, 3:47&nbsp;pm</dd>
+        </dl>
+        <div class="loc">
+          <span class="label">Current path</span>
+          <span class="path" id="curPath"></span>
+        </div>
+      </div>
+    </div>
+    <div class="pane">
+      <div class="tag">The reader</div>
+      <div class="body">
+        <div class="reader-id" id="readerId"></div>
+        <div class="reader-group" id="readerGroup"></div>
+        <div class="canopen" id="canopen">
+          <span class="q">Can this reader open the file right now?</span>
+          <span class="a" id="canopenAnswer"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="unchanged-note">Every field in the left pane stays exactly the same, move after move. Watch the right pane instead.</p>
+
+  <div class="second" id="second">
+    <hr class="rule">
+    <h2>Now move a second assumption: who's asking</h2>
+    <p>Same lever, same file. This time, swap the reader and try the same two directories again.</p>
+    <div class="lever">
+      <span class="lbl">Reader:</span>
+      <div class="seg" role="group" aria-label="Choose a reader">
+        <button type="button" data-reader="1" aria-pressed="true">Storefront reporting analyst</button>
+        <button type="button" data-reader="2" aria-pressed="false">IT operations technician</button>
+      </div>
+    </div>
+    <p class="second-note">Set the reader, then use the file lever above again. The same move that let one reader in is the move that shuts the other one out \u2014 the directory didn't pick a side, it just has one audience, and whoever matches it gets through.</p>
+  </div>
+
+  <hr class="rule">
+
+  <div class="close">
+    <p>Nothing about the file ever explained who could open it. That answer came from one level up, every time \u2014 and it changed the moment the file crossed into a directory with a different audience, with no error, no warning, and nothing in the file's own record to show for it.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var directories = {
+    A: { path: "/srv/storefront/shared/finance-wip", audience: "Finance" },
+    B: { path: "/srv/archive/ops-only", audience: "IT operations" }
+  };
+
+  var readers = {
+    "1": { id: "Storefront reporting analyst", group: "Finance" },
+    "2": { id: "IT operations technician", group: "IT operations" }
+  };
+
+  var currentDir = "A";
+  var currentReader = "1";
+  var movedOnce = false;
+
+  var curPath = document.getElementById('curPath');
+  var readerId = document.getElementById('readerId');
+  var readerGroup = document.getElementById('readerGroup');
+  var canopen = document.getElementById('canopen');
+  var canopenAnswer = document.getElementById('canopenAnswer');
+  var second = document.getElementById('second');
+
+  function render(){
+    var dir = directories[currentDir];
+    var reader = readers[currentReader];
+    curPath.textContent = dir.path + "/Q3_vendor_terms.xlsx";
+    readerId.textContent = reader.id;
+    readerGroup.textContent = "Member of: " + reader.group;
+    var can = (dir.audience === reader.group);
+    canopen.className = 'canopen ' + (can ? 'yes' : 'no');
+    canopenAnswer.textContent = can ? 'Yes' : 'No';
+  }
+
+  document.querySelectorAll('.lever .seg button[data-dir]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentDir = btn.getAttribute('data-dir');
+      document.querySelectorAll('.lever .seg button[data-dir]').forEach(function(b){
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      render();
+      if(!movedOnce){
+        movedOnce = true;
+        second.classList.add('show');
+      }
+    });
+  });
+
+  document.querySelectorAll('.second .seg button[data-reader]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentReader = btn.getAttribute('data-reader');
+      document.querySelectorAll('.second .seg button[data-reader]').forEach(function(b){
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      render();
+    });
+  });
+
+  render();
+
+})();
+</script>
+
+</body>
+</html>

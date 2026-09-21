@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Category Beats Resemblance</title>
+<style>
+:root{
+  --paper:#EDE7D9;
+  --paper-2:#E4DCC6;
+  --panel:#F5F1E6;
+  --ink:#262420;
+  --ink-soft:#5B564A;
+  --ink-faint:#8C8672;
+  --line:#C7BEA3;
+  --line-strong:#A89A72;
+  --brick:#8A3B26;
+  --brick-wash:#E7D4C8;
+  --pine:#2F5D46;
+  --pine-wash:#D9E3D6;
+  --slate:#35506B;
+  --slate-wash:#DCE3E9;
+  --focus:#1D4ED8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+}
+.wrap{max-width:680px;margin:0 auto;padding:48px 24px 72px}
+h1,h2{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-weight:600;
+  color:var(--ink);
+  margin:0 0 10px;
+}
+h1{font-size:28px;line-height:1.22;letter-spacing:-0.01em}
+h2{font-size:18px;line-height:1.3}
+p{margin:0 0 14px}
+.lede{color:var(--ink-soft);font-size:16.5px;max-width:60ch}
+.rule{border:0;border-top:1px solid var(--line);margin:34px 0}
+
+.frame{
+  font-size:15px;
+  color:var(--ink-soft);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:16px 18px;
+  margin-bottom:22px;
+}
+.frame b{color:var(--ink)}
+.axes{
+  display:flex;
+  gap:20px;
+  font-size:14px;
+  color:var(--ink-soft);
+  margin-top:10px;
+  flex-wrap:wrap;
+}
+.axes span b{color:var(--ink)}
+
+.item{
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:var(--panel);
+  padding:16px 18px;
+  margin-bottom:12px;
+}
+.item p.desc{
+  margin:0 0 13px;
+  font-size:15px;
+}
+.qrow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  padding:8px 0;
+}
+.qrow + .qrow{border-top:1px solid var(--line)}
+.qlabel{font-size:13.5px;color:var(--ink-faint);flex:1 1 200px}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden;flex:0 0 auto}
+.seg button{
+  font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border:0;
+  background:var(--paper-2);color:var(--ink-soft);padding:8px 13px;
+}
+.seg button + button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:3px solid var(--focus);outline-offset:-2px}
+
+.item-fb{display:none;margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:14px}
+.item.checked .item-fb{display:block}
+.fb-line{margin-bottom:6px}
+.fb-line:last-child{margin-bottom:0}
+.fb-line.ok{color:var(--pine)}
+.fb-line.bad{color:var(--brick)}
+.mark{font-weight:700;margin-right:5px}
+.quadname{
+  display:inline-block;
+  font-size:12.5px;
+  font-weight:700;
+  background:var(--pine-wash);
+  color:var(--pine);
+  padding:3px 9px;
+  border-radius:20px;
+  margin-top:6px;
+}
+
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:18px 0 8px}
+.btn{
+  font:inherit;font-weight:600;font-size:15.5px;background:var(--ink);color:var(--paper);
+  border:0;border-radius:4px;padding:12px 22px;cursor:pointer;
+}
+.btn:hover{background:#3a362f}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong)}
+.btn.ghost:hover{background:var(--paper-2)}
+.btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.summary{font-size:15px;font-weight:600}
+.summary.ok{color:var(--pine)}
+.summary.near{color:#8A6A1C}
+.summary.off{color:var(--brick)}
+
+.callout{
+  border:1px solid var(--line-strong);border-radius:4px;background:var(--paper-2);
+  padding:16px 18px;font-size:15px;margin:22px 0;display:none;
+}
+.callout.show{display:block}
+.callout .k{font-weight:600;display:block;margin-bottom:5px}
+
+.second{display:none;margin-top:8px}
+.second.show{display:block}
+.second .item{margin-bottom:0}
+.second .seg button{padding:10px 16px}
+.second-readout{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--line);
+  font-size:15px;
+}
+.second-readout .quadname{font-size:13px}
+.second-note{font-size:13px;color:var(--ink-faint);margin-top:12px}
+
+.close p:last-child{color:var(--ink);font-weight:500}
+
+@media (max-width:560px){
+  h1{font-size:24px}
+  .wrap{padding:36px 18px 56px}
+  .qrow{flex-direction:column;align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Category Beats Resemblance</h1>
+    <p class="lede">Eight files from the storefront estate, described by what they are and how they behave — never by what they're called. For each one, answer the two questions that actually decide where it belongs.</p>
+  </header>
+
+  <div class="frame">
+    <b>Can other hosts use this file's contents as-is?</b> and <b>does its content change while the system is running?</b> Answer both for each file below.
+    <div class="axes">
+      <span><b>Shareable</b> — identical, useful copy on another host</span>
+      <span><b>Static</b> — doesn't change outside a deliberate admin action</span>
+    </div>
+  </div>
+
+  <div id="items"></div>
+
+  <div class="actions">
+    <button class="btn" id="checkBtn" type="button">Check my answers</button>
+    <button class="btn ghost" id="resetBtn" type="button">Reset</button>
+    <span class="summary" id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div class="callout" id="callout"></div>
+
+  <div class="second" id="second">
+    <hr class="rule">
+    <h2>Now move one assumption</h2>
+    <p>Same reference dataset from above — product specifications pushed out to every storefront node. Nothing about what it <em>is</em> changes. Only how often it's touched does.</p>
+    <div class="item">
+      <p class="desc" id="secondDesc"></p>
+      <div class="qrow">
+        <span class="qlabel">Publish cadence</span>
+        <div class="seg" role="group" aria-label="Choose publish cadence">
+          <button type="button" data-cadence="season" aria-pressed="true">Once a season</button>
+          <button type="button" data-cadence="daily" aria-pressed="false">Several times a day</button>
+        </div>
+      </div>
+      <div class="second-readout" id="secondReadout"></div>
+    </div>
+    <p class="second-note">The share answer never moves — it's still read by every node in the fleet either way. Only the change answer moves, and moving it alone is enough to send the same file to a different branch. The category follows the behavior, not the file's identity.</p>
+  </div>
+
+  <hr class="rule">
+
+  <div class="close">
+    <p>A directory's name tells you nothing reliable about what belongs inside it. These two questions do — and they give the same answer whether you ask them on this host or the next one.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var items = [
+    {
+      id:1,
+      desc:"The application binaries that run the storefront's checkout service \u2014 installed once, upgraded only during a scheduled maintenance window, and identical whether you're looking at this host or any other storefront node in the fleet.",
+      share:"yes", change:"static",
+      shareReason:"Identical whether you're looking at this host or another storefront node \u2014 that's what shareable means: the content doesn't depend on which host holds it.",
+      changeReason:"Upgraded only on a scheduled maintenance window \u2014 content that doesn't change during normal operation is static, even though an admin changes it occasionally on purpose."
+    },
+    {
+      id:2,
+      desc:"The host's own network interface settings \u2014 how this particular machine reaches the network. A second storefront host needs its own, different, copy.",
+      share:"no", change:"static",
+      shareReason:"A second host needs its own, different, copy \u2014 content that has to differ per host is not shareable, even when it's a few lines of plain text.",
+      changeReason:"Rarely touched once it's set \u2014 static, the same test as the binaries above."
+    },
+    {
+      id:3,
+      desc:"Each logged-in operator's personal working files \u2014 spreadsheets, half-finished notes \u2014 portable enough that the same account's files should look identical whether they log into this host or the next one, and edited constantly through the day.",
+      share:"yes", change:"variable",
+      shareReason:"Portable enough to look identical from any host the same account logs into \u2014 that's shareable, regardless of who owns the file.",
+      changeReason:"Edited constantly through the day \u2014 variable, because it changes during normal operation, not just at a maintenance window."
+    },
+    {
+      id:4,
+      desc:"The lock files a running service writes to make sure two copies of itself don't start at once on this host \u2014 meaningless anywhere else, and rewritten every time the service starts or stops.",
+      share:"no", change:"variable",
+      shareReason:"Meaningless anywhere else \u2014 tied to this one running instance on this one host, which is what makes it unshareable.",
+      changeReason:"Rewritten every time the service starts or stops \u2014 variable."
+    },
+    {
+      id:5,
+      desc:"A reference dataset \u2014 product specifications \u2014 pushed out from this host and read by every storefront node in the fleet; nobody edits it once it's published for the season.",
+      share:"yes", change:"static",
+      shareReason:"Read by every storefront node in the fleet \u2014 shareable.",
+      changeReason:"Nobody edits it once it's published for the season \u2014 static, even though it will eventually be replaced next season."
+    },
+    {
+      id:6,
+      desc:"The scheduled task definitions that only apply to this one host's maintenance window \u2014 set once when the host was provisioned and rarely touched again.",
+      share:"no", change:"static",
+      shareReason:"Only applies to this one host's maintenance window \u2014 unshareable.",
+      changeReason:"Set once at provisioning and rarely touched \u2014 static."
+    },
+    {
+      id:7,
+      desc:"The mail queue for order-confirmation emails, waiting to send \u2014 the same queue format any mail-enabled host would recognize, and constantly filling and draining as orders come in.",
+      share:"yes", change:"variable",
+      shareReason:"The same queue format any mail-enabled host would recognize \u2014 shareable.",
+      changeReason:"Constantly filling and draining as orders come in \u2014 variable."
+    },
+    {
+      id:8,
+      desc:"Today's application log for the checkout service on this host \u2014 meaningful only in the context of what ran here, and growing continuously.",
+      share:"no", change:"variable",
+      shareReason:"Meaningful only in the context of what ran on this host \u2014 unshareable.",
+      changeReason:"Growing continuously \u2014 variable."
+    }
+  ];
+
+  function quadName(share, change){
+    var s = share === 'yes' ? 'Shareable' : 'Not shareable';
+    var c = change === 'static' ? 'static' : 'variable';
+    return s + ' + ' + c;
+  }
+
+  var selections = {};
+  var checkedOnce = false;
+
+  var itemsEl = document.getElementById('items');
+  items.forEach(function(it){
+    var div = document.createElement('div');
+    div.className = 'item';
+    div.id = 'item-' + it.id;
+    div.innerHTML =
+      '<p class="desc">' + it.desc + '</p>' +
+      '<div class="qrow">' +
+        '<span class="qlabel">Can other hosts use this as-is?</span>' +
+        '<div class="seg" role="group" aria-label="Shareable or not, item ' + it.id + '">' +
+          '<button type="button" data-item="' + it.id + '" data-axis="share" data-val="yes" aria-pressed="false">Shareable</button>' +
+          '<button type="button" data-item="' + it.id + '" data-axis="share" data-val="no" aria-pressed="false">Not shareable</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="qrow">' +
+        '<span class="qlabel">Does it change while the system runs?</span>' +
+        '<div class="seg" role="group" aria-label="Static or variable, item ' + it.id + '">' +
+          '<button type="button" data-item="' + it.id + '" data-axis="change" data-val="static" aria-pressed="false">Static</button>' +
+          '<button type="button" data-item="' + it.id + '" data-axis="change" data-val="variable" aria-pressed="false">Variable</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="item-fb"></div>';
+    itemsEl.appendChild(div);
+  });
+
+  itemsEl.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-item]');
+    if(!btn) return;
+    var id = btn.getAttribute('data-item');
+    var axis = btn.getAttribute('data-axis');
+    var val = btn.getAttribute('data-val');
+    selections[id] = selections[id] || {};
+    selections[id][axis] = val;
+    var group = btn.parentElement.querySelectorAll('button');
+    group.forEach(function(b){ b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+    var itemDiv = document.getElementById('item-' + id);
+    itemDiv.classList.remove('checked');
+    itemDiv.querySelector('.item-fb').innerHTML = '';
+  });
+
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var summary = document.getElementById('summary');
+  var callout = document.getElementById('callout');
+  var second = document.getElementById('second');
+
+  checkBtn.addEventListener('click', function(){
+    var incomplete = items.filter(function(it){
+      var s = selections[it.id];
+      return !s || !s.share || !s.change;
+    }).length;
+    if(incomplete > 0){
+      summary.textContent = 'Answer both questions for every file first \u2014 ' + incomplete + ' left.';
+      summary.className = 'summary near';
+      return;
+    }
+
+    var wrongAxes = 0;
+    items.forEach(function(it){
+      var s = selections[it.id];
+      var div = document.getElementById('item-' + it.id);
+      var fb = div.querySelector('.item-fb');
+      div.classList.add('checked');
+      var lines = '';
+      var shareOk = s.share === it.share;
+      var changeOk = s.change === it.change;
+      if(!shareOk){ wrongAxes++; }
+      if(!changeOk){ wrongAxes++; }
+      lines += '<div class="fb-line ' + (shareOk ? 'ok' : 'bad') + '"><span class="mark">' + (shareOk ? '\u2713' : '\u2717') + '</span>' + it.shareReason + '</div>';
+      lines += '<div class="fb-line ' + (changeOk ? 'ok' : 'bad') + '"><span class="mark">' + (changeOk ? '\u2713' : '\u2717') + '</span>' + it.changeReason + '</div>';
+      if(shareOk && changeOk){
+        lines += '<span class="quadname">' + quadName(it.share, it.change) + '</span>';
+      }
+      fb.innerHTML = lines;
+    });
+
+    var totalAxes = items.length * 2;
+    if(wrongAxes === 0){
+      summary.textContent = 'All 8 files, both questions each \u2014 correct.';
+      summary.className = 'summary ok';
+      callout.innerHTML = '<span class="k">Correct.</span>None of these files were sorted by what they sounded like \u2014 each landed by answering the same two questions, in the same order, every time.';
+      callout.classList.add('show');
+    } else if(wrongAxes <= 4){
+      summary.textContent = (totalAxes - wrongAxes) + ' of ' + totalAxes + ' answers correct.';
+      summary.className = 'summary near';
+      callout.innerHTML = '<span class="k">Close.</span>Most of your answers hold up. Where one is marked \u2717 below, re-read that file\u2019s behavior \u2014 not its name \u2014 against the question it\u2019s attached to.';
+      callout.classList.add('show');
+    } else {
+      summary.textContent = (totalAxes - wrongAxes) + ' of ' + totalAxes + ' answers correct.';
+      summary.className = 'summary off';
+      callout.innerHTML = '<span class="k">Worth another pass.</span>Two tests, applied to each file in turn: would a copy of this on another host still be useful as-is? And does its content change during normal operation, or only when an administrator deliberately changes it?';
+      callout.classList.add('show');
+    }
+
+    if(!checkedOnce){
+      checkedOnce = true;
+      second.classList.add('show');
+      renderSecond();
+    }
+  });
+
+  resetBtn.addEventListener('click', function(){
+    selections = {};
+    items.forEach(function(it){
+      var div = document.getElementById('item-' + it.id);
+      div.classList.remove('checked');
+      div.querySelector('.item-fb').innerHTML = '';
+      div.querySelectorAll('button[data-item]').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+    });
+    summary.textContent = '';
+    summary.className = 'summary';
+    callout.classList.remove('show');
+  });
+
+  var cadence = 'season';
+  var secondDesc = document.getElementById('secondDesc');
+  var secondReadout = document.getElementById('secondReadout');
+
+  function renderSecond(){
+    var base = "A reference dataset \u2014 product specifications \u2014 pushed out from this host and read by every storefront node in the fleet";
+    if(cadence === 'season'){
+      secondDesc.textContent = base + "; nobody edits it once it's published for the season.";
+      secondReadout.innerHTML = 'Share: <b>Shareable</b> \u00b7 Change: <b>Static</b> &nbsp; <span class="quadname">Shareable + static</span>';
+    } else {
+      secondDesc.textContent = base + "; the merchandising team now pushes price and stock corrections into it several times a day.";
+      secondReadout.innerHTML = 'Share: <b>Shareable</b> \u00b7 Change: <b>Variable</b> &nbsp; <span class="quadname">Shareable + variable</span>';
+    }
+  }
+
+  document.querySelectorAll('.second .seg button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      cadence = btn.getAttribute('data-cadence');
+      document.querySelectorAll('.second .seg button').forEach(function(b){
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      renderSecond();
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Command That Said Nothing</title>
+<style>
+:root{
+  /* Literal colors only. */
+  --paper:#EDE7D9;
+  --paper-2:#E4DCC6;
+  --panel:#F5F1E6;
+  --ink:#262420;
+  --ink-soft:#5B564A;
+  --ink-faint:#8C8672;
+  --line:#C7BEA3;
+  --line-strong:#A89A72;
+  --brick:#8A3B26;
+  --brick-wash:#E7D4C8;
+  --pine:#2F5D46;
+  --pine-wash:#D9E3D6;
+  --slate:#35506B;
+  --slate-wash:#DCE3E9;
+  --focus:#1D4ED8;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+}
+.wrap{
+  max-width:640px;
+  margin:0 auto;
+  padding:48px 24px 72px;
+}
+h1,h2{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-weight:600;
+  color:var(--ink);
+  margin:0 0 10px;
+}
+h1{
+  font-size:30px;
+  line-height:1.22;
+  letter-spacing:-0.01em;
+}
+h2{
+  font-size:19px;
+  line-height:1.3;
+}
+p{margin:0 0 14px}
+.lede{
+  color:var(--ink-soft);
+  font-size:16.5px;
+  max-width:56ch;
+}
+.rule{
+  border:0;
+  border-top:1px solid var(--line);
+  margin:36px 0;
+}
+.context{
+  font-size:13.5px;
+  color:var(--ink-faint);
+  margin:0 0 6px;
+}
+.path{
+  font-family:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  font-size:14.5px;
+  background:var(--paper-2);
+  border:1px solid var(--line);
+  padding:1px 6px;
+  border-radius:3px;
+  white-space:nowrap;
+}
+.scenario{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-left:4px solid var(--slate);
+  border-radius:2px;
+  padding:20px 22px;
+  margin:0 0 22px;
+}
+.scenario p:last-child{margin-bottom:0}
+.command-line{
+  font-family:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  font-size:14.5px;
+  background:var(--ink);
+  color:#EDE7D9;
+  padding:10px 14px;
+  border-radius:3px;
+  margin:14px 0;
+  overflow-x:auto;
+}
+.command-line .prompt{color:#9AA79C;margin-right:6px}
+.silence{
+  color:var(--ink-faint);
+  font-style:italic;
+  font-size:14.5px;
+  margin:8px 0 0;
+}
+
+fieldset{
+  border:0;
+  padding:0;
+  margin:0 0 18px;
+}
+legend{
+  font-weight:600;
+  font-size:16px;
+  padding:0;
+  margin-bottom:12px;
+  color:var(--ink);
+}
+.choice{
+  display:flex;
+  gap:11px;
+  align-items:flex-start;
+  padding:11px 14px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  margin-bottom:9px;
+  background:var(--panel);
+  cursor:pointer;
+}
+.choice:hover{border-color:var(--line-strong)}
+.choice input{
+  margin-top:4px;
+  flex:0 0 auto;
+  accent-color:var(--slate);
+  width:17px;
+  height:17px;
+}
+.choice input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.choice label{
+  cursor:pointer;
+  font-size:15.5px;
+}
+
+.btn{
+  font:inherit;
+  font-weight:600;
+  font-size:15.5px;
+  background:var(--ink);
+  color:var(--paper);
+  border:0;
+  border-radius:4px;
+  padding:12px 22px;
+  cursor:pointer;
+}
+.btn:hover{background:#3a362f}
+.btn:disabled{background:var(--ink-faint);cursor:not-allowed}
+.btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+.reveal{
+  display:none;
+  margin-top:30px;
+}
+.reveal.show{display:block}
+
+.frame{
+  font-size:15px;
+  color:var(--ink-soft);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:16px 18px;
+  margin-bottom:22px;
+}
+.frame b{color:var(--ink)}
+
+.records{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:20px;
+}
+.record{
+  border:1px solid var(--line);
+  border-radius:4px;
+  overflow:hidden;
+  background:var(--panel);
+}
+.record .tag{
+  font-size:12.5px;
+  font-weight:600;
+  padding:9px 14px;
+  border-bottom:1px solid var(--line);
+}
+.record.before .tag{background:var(--slate-wash);color:var(--slate)}
+.record.after .tag{background:var(--slate-wash);color:var(--slate)}
+.record dl{
+  margin:0;
+  padding:13px 14px;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:8px 10px;
+  font-size:14px;
+}
+.record dt{
+  color:var(--ink-faint);
+  font-weight:500;
+}
+.record dd{
+  margin:0;
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
+.record .who{
+  border-top:1px solid var(--line);
+  margin:4px -14px -13px;
+  padding:12px 14px;
+  font-size:14px;
+}
+.record .who .label{
+  color:var(--ink-faint);
+  display:block;
+  margin-bottom:3px;
+  font-size:12.5px;
+}
+.record.before .who .val{color:var(--pine);font-weight:600}
+.record.after .who .val{color:var(--brick);font-weight:600}
+
+.callout{
+  border:1px solid var(--line-strong);
+  border-radius:4px;
+  background:var(--paper-2);
+  padding:16px 18px;
+  font-size:15px;
+  margin-bottom:22px;
+}
+.callout .k{
+  font-weight:600;
+  display:block;
+  margin-bottom:5px;
+}
+
+.close p{font-size:16px}
+.close p:last-child{
+  color:var(--ink);
+  font-weight:500;
+}
+
+@media (max-width:560px){
+  .records{grid-template-columns:1fr}
+  h1{font-size:26px}
+  .wrap{padding:36px 18px 56px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>The Command That Said Nothing</h1>
+    <p class="lede">A storefront host is behind on patching with a seasonal peak closing in. Before anything else, you've been asked to clear space — move one shared working file out of a crowded directory and into an archive branch elsewhere on the host.</p>
+  </header>
+
+  <section class="scenario">
+    <p class="context">What you typed</p>
+    <div class="command-line"><span class="prompt">$</span>mv Q3_vendor_terms.xlsx <span></span>/srv/archive/finance/</div>
+    <p class="silence">No output. No error. Just the prompt again, waiting for the next command.</p>
+    <p>The file moved from a shared working directory that the whole storefront team can reach — <span class="path">/srv/storefront/shared/finance-wip</span> — into an archive branch you picked because it had room — <span class="path">/srv/archive/finance</span>.</p>
+  </section>
+
+  <fieldset id="predictGroup">
+    <legend>Before you check anything — can Finance still open this file?</legend>
+    <div class="choice">
+      <input type="radio" name="predict" id="p-yes" value="yes">
+      <label for="p-yes">Yes — nothing about the file changed, so nothing about who can open it changed either.</label>
+    </div>
+    <div class="choice">
+      <input type="radio" name="predict" id="p-no" value="no">
+      <label for="p-no">No — moving it into a different directory could have shut Finance out.</label>
+    </div>
+    <div class="choice">
+      <input type="radio" name="predict" id="p-unsure" value="unsure">
+      <label for="p-unsure">Can't tell from what's here.</label>
+    </div>
+  </fieldset>
+
+  <button class="btn" id="revealBtn" type="button" disabled>See what actually happened</button>
+
+  <div class="reveal" id="reveal">
+
+    <hr class="rule">
+
+    <div class="frame" id="frameText"></div>
+
+    <div class="records">
+      <div class="record before">
+        <div class="tag">Before the move</div>
+        <dl>
+          <dt>Name</dt><dd>Q3_vendor_terms.xlsx</dd>
+          <dt>Size</dt><dd>312&nbsp;KB</dd>
+          <dt>Modified</dt><dd>Sep&nbsp;16, 3:47&nbsp;pm</dd>
+        </dl>
+        <div class="who">
+          <span class="label">Who can open it</span>
+          <span class="val">Finance, storefront ops, IT</span>
+        </div>
+      </div>
+      <div class="record after">
+        <div class="tag">After the move</div>
+        <dl>
+          <dt>Name</dt><dd>Q3_vendor_terms.xlsx</dd>
+          <dt>Size</dt><dd>312&nbsp;KB</dd>
+          <dt>Modified</dt><dd>Sep&nbsp;16, 3:47&nbsp;pm</dd>
+        </dl>
+        <div class="who">
+          <span class="label">Who can open it</span>
+          <span class="val">IT only</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="k">What the command never checked</span>
+      The file's own record is identical in both columns — same name, same size, same modified time. What changed sits one level up: the archive branch is restricted to IT, and that restriction reached down onto everything placed inside it, including a file that had nothing to do with the restriction and never asked for one.
+    </div>
+
+    <div class="close">
+      <p>A command that returns without complaint is telling you the operation finished. It was never in a position to tell you whether finishing was correct — that depends on something outside the command entirely: what the destination allows.</p>
+      <p>That's the piece this module builds: for any file on a host, knowing what it inherits from the branch you put it in, before someone has to tell you it's missing.</p>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var predictValue = null;
+  var revealed = false;
+
+  var radios = document.querySelectorAll('input[name="predict"]');
+  var revealBtn = document.getElementById('revealBtn');
+  var reveal = document.getElementById('reveal');
+  var frameText = document.getElementById('frameText');
+
+  radios.forEach(function(r){
+    r.addEventListener('change', function(){
+      predictValue = r.value;
+      revealBtn.disabled = false;
+    });
+  });
+
+  var frames = {
+    yes: "You predicted Finance could still open it — the file's own record, below, would seem to back that up. It didn't. What decided the answer never showed up in that record at all.",
+    no: "You predicted Finance would lose access. You're ahead of most people on this one — the file's own record still won't show you why. That part sits in the directory, not the file.",
+    unsure: "Fair call — nothing in a completed command could have told you either way. Here's what actually decided it."
+  };
+
+  revealBtn.addEventListener('click', function(){
+    if(revealed || !predictValue) return;
+    revealed = true;
+    frameText.innerHTML = '<b>' + (predictValue === 'yes' ? 'Your prediction: yes.' : predictValue === 'no' ? 'Your prediction: no.' : 'Your prediction: not sure.') + '</b> ' + frames[predictValue];
+    reveal.classList.add('show');
+    revealBtn.disabled = true;
+    reveal.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'});
+  });
+
+})();
+</script>
+
+</body>
+</html>

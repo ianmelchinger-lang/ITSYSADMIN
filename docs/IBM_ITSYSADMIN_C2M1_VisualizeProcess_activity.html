@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Put the Moves in an Order That Actually Works</title>
+<style>
+:root{
+  --paper:#EDE7D9;
+  --paper-2:#E4DCC6;
+  --panel:#F5F1E6;
+  --ink:#262420;
+  --ink-soft:#5B564A;
+  --ink-faint:#8C8672;
+  --line:#C7BEA3;
+  --line-strong:#A89A72;
+  --brick:#8A3B26;
+  --brick-wash:#E7D4C8;
+  --pine:#2F5D46;
+  --pine-wash:#D9E3D6;
+  --slate:#35506B;
+  --slate-wash:#DCE3E9;
+  --focus:#1D4ED8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+}
+.wrap{max-width:680px;margin:0 auto;padding:48px 24px 72px}
+h1,h2{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-weight:600;
+  color:var(--ink);
+  margin:0 0 10px;
+}
+h1{font-size:28px;line-height:1.22;letter-spacing:-0.01em}
+h2{font-size:18px;line-height:1.3}
+p{margin:0 0 14px}
+.lede{color:var(--ink-soft);font-size:16.5px;max-width:60ch}
+.rule{border:0;border-top:1px solid var(--line);margin:34px 0}
+
+.frame{
+  font-size:15px;
+  color:var(--ink-soft);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-left:4px solid var(--slate);
+  border-radius:2px;
+  padding:16px 18px;
+  margin-bottom:24px;
+}
+.frame b{color:var(--ink)}
+
+ol#steps{
+  list-style:none;
+  margin:0 0 8px;
+  padding:0;
+  counter-reset:step;
+}
+.step{
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:var(--panel);
+  padding:14px 16px;
+  margin-bottom:9px;
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+}
+.step .num{
+  flex:0 0 auto;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  background:var(--ink);
+  color:var(--paper);
+  font-weight:700;
+  font-size:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-top:2px;
+}
+.step .content{flex:1 1 auto;min-width:0}
+.step .title{font-weight:700;font-size:15.5px;margin-bottom:3px}
+.step .desc{font-size:14px;color:var(--ink-soft)}
+.step .fb{
+  display:none;
+  margin-top:9px;
+  padding-top:9px;
+  border-top:1px solid var(--line);
+  font-size:13.5px;
+}
+.step.checked.ok .fb{display:block;color:var(--pine)}
+.step.checked.bad .fb{display:block;color:var(--brick)}
+.step.checked.ok{border-color:var(--pine)}
+.step.checked.bad{border-color:var(--brick)}
+.mark{font-weight:700;margin-right:5px}
+.movebtns{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.movebtns button{
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  width:30px;
+  height:26px;
+  border:1px solid var(--line-strong);
+  background:var(--paper-2);
+  color:var(--ink);
+  border-radius:4px;
+  cursor:pointer;
+}
+.movebtns button:hover{background:var(--ink);color:var(--paper)}
+.movebtns button:disabled{opacity:.35;cursor:not-allowed}
+.movebtns button:hover:disabled{background:var(--paper-2);color:var(--ink)}
+.movebtns button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:18px 0 8px}
+.btn{
+  font:inherit;font-weight:600;font-size:15.5px;background:var(--ink);color:var(--paper);
+  border:0;border-radius:4px;padding:12px 22px;cursor:pointer;
+}
+.btn:hover{background:#3a362f}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong)}
+.btn.ghost:hover{background:var(--paper-2)}
+.btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.summary{font-size:15px;font-weight:600}
+.summary.ok{color:var(--pine)}
+.summary.near{color:#8A6A1C}
+.summary.off{color:var(--brick)}
+
+.callout{
+  border:1px solid var(--line-strong);border-radius:4px;background:var(--paper-2);
+  padding:16px 18px;font-size:15px;margin:22px 0;display:none;
+}
+.callout.show{display:block}
+.callout .k{font-weight:600;display:block;margin-bottom:5px}
+.callout ul{margin:8px 0 0;padding-left:20px}
+.callout li{margin-bottom:6px}
+
+.close p:last-child{color:var(--ink);font-weight:500}
+
+@media (max-width:560px){
+  h1{font-size:24px}
+  .wrap{padding:36px 18px 56px}
+  .step{gap:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Put the Moves in an Order That Actually Works</h1>
+    <p class="lede">A working file on the storefront host needs to end up at its documented home, with something to show a colleague that it landed correctly. Here are the six moves that get there, out of order. Arrange them into a sequence that could actually be carried out — some orders simply can't be, no matter how you argue for them.</p>
+  </header>
+
+  <div class="frame">Use the arrows to reorder the list, then check it. A move is out of place when it depends on something that hasn't happened yet in your sequence — that's what gets flagged, not a single fixed answer.</div>
+
+  <ol id="steps"></ol>
+
+  <div class="actions">
+    <button class="btn" id="checkBtn" type="button">Check my sequence</button>
+    <button class="btn ghost" id="resetBtn" type="button">Shuffle and reset</button>
+    <span class="summary" id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div class="callout" id="callout"></div>
+
+  <hr class="rule">
+
+  <div class="close">
+    <p>None of these six moves is hard on its own. What makes the sequence real is that each one supplies something the next one needs — a destination you can't check against a target you never stated, a record of a change you never verified. Get the order right and a colleague can follow it without asking you anything. Get it wrong and the sequence breaks somewhere it's easy not to notice.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var steps = [
+    { id:"tree", title:"Read the tree", desc:"Open hier(7) and the vendor's documentation to see what each candidate branch is actually for." },
+    { id:"locate", title:"Locate the file", desc:"Write down where it sits right now, as an absolute path \u2014 the form that means the same thing to anyone who reads it." },
+    { id:"destination", title:"Establish the destination", desc:"Answer whether the file can be shared and whether it changes while running, let the category name the branch, and state what correct will look like once it's there." },
+    { id:"change", title:"Make the change", desc:"Move the file to that destination." },
+    { id:"check", title:"Check against the target state", desc:"Confirm what you stated beforehand is actually true now. A command that returns without complaint is not this step \u2014 it's evidence the step still has to happen." },
+    { id:"record", title:"Record it", desc:"Write down the file, both paths, the destination's purpose, and who could read it before and after." }
+  ];
+
+  // a must appear before b
+  var deps = [
+    ["tree", "destination", "you can't establish a destination from a branch you haven't read the purpose of yet"],
+    ["locate", "destination", "you can't pick a destination for a file whose current location you haven't pinned down"],
+    ["destination", "change", "you can't move a file to a destination you haven't established yet"],
+    ["change", "check", "you can't check a move against the target state before the move has happened"],
+    ["check", "record", "you'd be recording an outcome you haven't actually confirmed"]
+  ];
+
+  var order = [];
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for(var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function byId(id){ return steps.filter(function(s){ return s.id === id; })[0]; }
+
+  var list = document.getElementById('steps');
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var summary = document.getElementById('summary');
+  var callout = document.getElementById('callout');
+
+  function render(){
+    list.innerHTML = '';
+    order.forEach(function(id, idx){
+      var s = byId(id);
+      var li = document.createElement('li');
+      li.className = 'step';
+      li.setAttribute('data-id', id);
+      li.innerHTML =
+        '<div class="num">' + (idx + 1) + '</div>' +
+        '<div class="content">' +
+          '<div class="title">' + s.title + '</div>' +
+          '<div class="desc">' + s.desc + '</div>' +
+          '<div class="fb"></div>' +
+        '</div>' +
+        '<div class="movebtns">' +
+          '<button type="button" data-dir="up" data-id="' + id + '" aria-label="Move ' + s.title + ' up" ' + (idx === 0 ? 'disabled' : '') + '>\u2191</button>' +
+          '<button type="button" data-dir="down" data-id="' + id + '" aria-label="Move ' + s.title + ' down" ' + (idx === order.length - 1 ? 'disabled' : '') + '>\u2193</button>' +
+        '</div>';
+      list.appendChild(li);
+    });
+  }
+
+  list.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-dir]');
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    var dir = btn.getAttribute('data-dir');
+    var i = order.indexOf(id);
+    var j = dir === 'up' ? i - 1 : i + 1;
+    if(j < 0 || j >= order.length) return;
+    var t = order[i]; order[i] = order[j]; order[j] = t;
+    clearChecks();
+    render();
+  });
+
+  function clearChecks(){
+    document.querySelectorAll('.step').forEach(function(li){
+      li.classList.remove('checked','ok','bad');
+      li.querySelector('.fb').textContent = '';
+    });
+    summary.textContent = '';
+    summary.className = 'summary';
+    callout.classList.remove('show');
+  }
+
+  checkBtn.addEventListener('click', function(){
+    var violations = [];
+    deps.forEach(function(d){
+      var a = d[0], b = d[1], why = d[2];
+      if(order.indexOf(a) > order.indexOf(b)){
+        violations.push({ a:a, b:b, why:why });
+      }
+    });
+
+    document.querySelectorAll('.step').forEach(function(li){
+      var id = li.getAttribute('data-id');
+      var brokenAsA = violations.filter(function(v){ return v.b === id; });
+      li.classList.add('checked');
+      var fb = li.querySelector('.fb');
+      if(brokenAsA.length){
+        li.classList.add('bad');
+        li.classList.remove('ok');
+        fb.innerHTML = brokenAsA.map(function(v){
+          return '<span class="mark">\u2717</span>This needs \u201c' + byId(v.a).title + '\u201d to happen first \u2014 ' + v.why + '.';
+        }).join('<br>');
+      } else {
+        li.classList.add('ok');
+        li.classList.remove('bad');
+        fb.innerHTML = '<span class="mark">\u2713</span>Everything this step depends on already happened above it.';
+      }
+    });
+
+    if(violations.length === 0){
+      summary.textContent = 'No broken dependencies.';
+      summary.className = 'summary ok';
+      callout.innerHTML = '<span class="k">This sequence holds.</span>Every step here only needed what already happened above it \u2014 that\u2019s what makes it something a colleague could follow without asking you to fill in a gap.';
+      callout.classList.add('show');
+    } else if(violations.length <= 2){
+      summary.textContent = violations.length + ' step' + (violations.length > 1 ? 's' : '') + ' out of place.';
+      summary.className = 'summary near';
+      callout.innerHTML = '<span class="k">Close.</span>The shape is mostly right. Look at the steps marked \u2717 below \u2014 each names exactly what it was still waiting on.';
+      callout.classList.add('show');
+    } else {
+      summary.textContent = violations.length + ' dependencies broken.';
+      summary.className = 'summary off';
+      var list_html = '<ul>' + violations.slice(0,4).map(function(v){
+        return '<li>\u201c' + byId(v.b).title + '\u201d is sitting above \u201c' + byId(v.a).title + '\u201d, but ' + v.why + '.</li>';
+      }).join('') + '</ul>';
+      callout.innerHTML = '<span class="k">Worth another pass.</span>For each step, ask what it needs already sitting above it before it could actually run.' + list_html;
+      callout.classList.add('show');
+    }
+  });
+
+  resetBtn.addEventListener('click', function(){
+    order = shuffle(steps.map(function(s){ return s.id; }));
+    clearChecks();
+    render();
+  });
+
+  order = shuffle(steps.map(function(s){ return s.id; }));
+  render();
+
+})();
+</script>
+
+</body>
+</html>

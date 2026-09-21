@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checked, or Just Familiar</title>
+<style>
+:root{
+  --paper:#EDE7D9;
+  --paper-2:#E4DCC6;
+  --panel:#F5F1E6;
+  --ink:#262420;
+  --ink-soft:#5B564A;
+  --ink-faint:#8C8672;
+  --line:#C7BEA3;
+  --line-strong:#A89A72;
+  --brick:#8A3B26;
+  --brick-wash:#E7D4C8;
+  --pine:#2F5D46;
+  --pine-wash:#D9E3D6;
+  --slate:#35506B;
+  --slate-wash:#DCE3E9;
+  --focus:#1D4ED8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+}
+.wrap{max-width:680px;margin:0 auto;padding:48px 24px 72px}
+h1,h2{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-weight:600;
+  color:var(--ink);
+  margin:0 0 10px;
+}
+h1{font-size:28px;line-height:1.22;letter-spacing:-0.01em}
+h2{font-size:18px;line-height:1.3}
+p{margin:0 0 14px}
+.lede{color:var(--ink-soft);font-size:16.5px;max-width:60ch}
+.rule{border:0;border-top:1px solid var(--line);margin:34px 0}
+
+.frame{
+  font-size:15px;
+  color:var(--ink-soft);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:16px 18px;
+  margin-bottom:22px;
+}
+.frame b{color:var(--ink)}
+
+.item{
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:var(--panel);
+  padding:14px 16px;
+  margin-bottom:10px;
+}
+.item p.desc{margin:0 0 12px;font-size:15px}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden}
+.seg button{
+  font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border:0;
+  background:var(--paper-2);color:var(--ink-soft);padding:8px 13px;
+}
+.seg button + button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:3px solid var(--focus);outline-offset:-2px}
+
+.item-fb{display:none;margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:14px}
+.item.checked .item-fb{display:block}
+.item.checked.correct{border-color:var(--pine)}
+.item.checked.wrong{border-color:var(--brick)}
+.item.checked.correct .item-fb{color:var(--pine)}
+.item.checked.wrong .item-fb{color:var(--brick)}
+.mark{font-weight:700;margin-right:5px}
+
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:18px 0 8px}
+.btn{
+  font:inherit;font-weight:600;font-size:15.5px;background:var(--ink);color:var(--paper);
+  border:0;border-radius:4px;padding:12px 22px;cursor:pointer;
+}
+.btn:hover{background:#3a362f}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong)}
+.btn.ghost:hover{background:var(--paper-2)}
+.btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.summary{font-size:15px;font-weight:600}
+.summary.ok{color:var(--pine)}
+.summary.near{color:#8A6A1C}
+.summary.off{color:var(--brick)}
+
+.callout{
+  border:1px solid var(--line-strong);border-radius:4px;background:var(--paper-2);
+  padding:16px 18px;font-size:15px;margin:22px 0;display:none;
+}
+.callout.show{display:block}
+.callout .k{font-weight:600;display:block;margin-bottom:5px}
+
+.second{display:none;margin-top:8px}
+.second.show{display:block}
+.second .item{margin-bottom:0}
+.second .seg button{padding:10px 16px}
+.second-readout{
+  margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:15px;
+}
+.tag{
+  display:inline-block;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:20px;
+}
+.tag.grounded{background:var(--pine-wash);color:var(--pine)}
+.tag.guess{background:var(--brick-wash);color:var(--brick)}
+.second-note{font-size:13px;color:var(--ink-faint);margin-top:12px}
+
+.close p:last-child{color:var(--ink);font-weight:500}
+
+@media (max-width:560px){
+  h1{font-size:24px}
+  .wrap{padding:36px 18px 56px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Checked, or Just Familiar</h1>
+    <p class="lede">Eight moments from admins settling where a file belongs on the storefront host. Some of them checked something written down. Some of them didn't — even when the reasoning sounds confident. Sort by which is which.</p>
+  </header>
+
+  <div class="frame">The layout wasn't invented by this host or this vendor, and it's written down in a document you can open yourself. Sort each moment into <b>checked against documentation</b> or <b>guessed from resemblance or habit</b> — regardless of whether you think the admin landed in the right place.</div>
+
+  <div id="items"></div>
+
+  <div class="actions">
+    <button class="btn" id="checkBtn" type="button">Check my sort</button>
+    <button class="btn ghost" id="resetBtn" type="button">Reset</button>
+    <span class="summary" id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div class="callout" id="callout"></div>
+
+  <div class="second" id="second">
+    <hr class="rule">
+    <h2>Now move one assumption</h2>
+    <p>Same admin, same destination directory, same startup scripts. Only one thing changes: whether anything got checked before the file landed there.</p>
+    <div class="item">
+      <p class="desc" id="secondDesc"></p>
+      <div class="seg" role="group" aria-label="Choose whether the admin checked documentation">
+        <button type="button" data-checked="yes" aria-pressed="true">Opened hier(7) first</button>
+        <button type="button" data-checked="no" aria-pressed="false">Skipped straight to filing it</button>
+      </div>
+      <div class="second-readout" id="secondReadout"></div>
+    </div>
+    <p class="second-note">The file ends up in the exact same directory either way. What moves is only whether that placement is something you could defend to a colleague by pointing at a document, or something you'd have to defend by saying it felt right.</p>
+  </div>
+
+  <hr class="rule">
+
+  <div class="close">
+    <p>A directory's purpose is something you look up, not something you land on by how confident the reasoning sounds. Wherever documentation was actually opened, the placement can be checked by anyone. Wherever it wasn't, the placement only holds up as long as nobody asks why.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var items = [
+    {
+      id:1,
+      desc:"Before filing the new service's startup scripts, the admin opened hier(7) on the host and read what the standard says that branch is reserved for.",
+      correct:"grounded",
+      reason:"Opened hier(7) and read what the standard states \u2014 checked against documentation, on the admin's own host."
+    },
+    {
+      id:2,
+      desc:"Unsure where session-cache files belonged, the admin checked the vendor's Storage Administration Guide, in the chapter on shareable versus unshareable directories, before picking a branch.",
+      correct:"grounded",
+      reason:"Checked the vendor's own documentation before deciding \u2014 grounded, even though it isn't hier(7) itself. The standard and the vendor's documentation both count; neither alone covers everything."
+    },
+    {
+      id:3,
+      desc:"The admin found the destination named in the software's own package documentation, and filed the file where that documentation said the package expects it.",
+      correct:"grounded",
+      reason:"Followed what the package's own documentation states \u2014 grounded. Where the published standard is silent, the vendor or package documentation is exactly what's supposed to fill the gap."
+    },
+    {
+      id:4,
+      desc:"Reading hier(7) on this exact host, the admin noted the specific version of the standard it cited, rather than assuming a version from memory.",
+      correct:"grounded",
+      reason:"Read the version straight off the host's own manual page instead of asserting one from memory \u2014 checked, and checked on the host it actually applies to."
+    },
+    {
+      id:5,
+      desc:"The directory's name sounded like \u201cvariable,\u201d so the admin assumed constantly changing files belonged there and moved on without reading anything further.",
+      correct:"guess",
+      reason:"Nothing was opened or read \u2014 the name merely sounded right. That's resemblance, not a check, whatever the name actually turns out to mean."
+    },
+    {
+      id:6,
+      desc:"A colleague at a previous job always used a directory with a similar-sounding name for working files, so the admin used the directory with that same name here.",
+      correct:"guess",
+      reason:"A habit carried over from a different job, on a different host, with no documentation for this one consulted \u2014 a habit isn't a check."
+    },
+    {
+      id:7,
+      desc:"The admin picked the shortest name in the root listing, reasoning that the shortest name was probably the general-purpose one.",
+      correct:"guess",
+      reason:"That's a rule of thumb about names, not a reference to anything published \u2014 confident-sounding reasoning is still a guess if nothing was actually looked up."
+    },
+    {
+      id:8,
+      desc:"It felt like the kind of file that belonged with the other \u201cstuff\u201d directories, so the admin dropped it there without checking what any of them were actually for.",
+      correct:"guess",
+      reason:"A feeling about which directories go together, with no check of what any of them are actually for \u2014 resemblance."
+    }
+  ];
+
+  var selections = {};
+  var checkedOnce = false;
+
+  var itemsEl = document.getElementById('items');
+  items.forEach(function(it){
+    var div = document.createElement('div');
+    div.className = 'item';
+    div.id = 'item-' + it.id;
+    div.innerHTML =
+      '<p class="desc">' + it.desc + '</p>' +
+      '<div class="seg" role="group" aria-label="Classify moment ' + it.id + '">' +
+        '<button type="button" data-item="' + it.id + '" data-val="grounded" aria-pressed="false">Checked documentation</button>' +
+        '<button type="button" data-item="' + it.id + '" data-val="guess" aria-pressed="false">Guessed from resemblance</button>' +
+      '</div>' +
+      '<div class="item-fb"></div>';
+    itemsEl.appendChild(div);
+  });
+
+  itemsEl.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-item]');
+    if(!btn) return;
+    var id = btn.getAttribute('data-item');
+    var val = btn.getAttribute('data-val');
+    selections[id] = val;
+    var group = btn.parentElement.querySelectorAll('button');
+    group.forEach(function(b){ b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+    var itemDiv = document.getElementById('item-' + id);
+    itemDiv.classList.remove('checked','correct','wrong');
+    itemDiv.querySelector('.item-fb').textContent = '';
+  });
+
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var summary = document.getElementById('summary');
+  var callout = document.getElementById('callout');
+  var second = document.getElementById('second');
+
+  checkBtn.addEventListener('click', function(){
+    var answered = items.filter(function(it){ return selections[it.id]; }).length;
+    if(answered < items.length){
+      summary.textContent = 'Sort all eight first \u2014 ' + (items.length - answered) + ' left.';
+      summary.className = 'summary near';
+      return;
+    }
+    var wrong = [];
+    items.forEach(function(it){
+      var div = document.getElementById('item-' + it.id);
+      var fb = div.querySelector('.item-fb');
+      div.classList.add('checked');
+      if(selections[it.id] === it.correct){
+        div.classList.add('correct');
+        div.classList.remove('wrong');
+        fb.innerHTML = '<span class="mark">\u2713</span>' + it.reason;
+      } else {
+        div.classList.add('wrong');
+        div.classList.remove('correct');
+        fb.innerHTML = '<span class="mark">\u2717</span>' + it.reason;
+        wrong.push(it);
+      }
+    });
+
+    if(wrong.length === 0){
+      summary.textContent = 'All eight sorted correctly.';
+      summary.className = 'summary ok';
+      callout.innerHTML = '<span class="k">Correct.</span>Every guess in this set sounded at least as confident as every check \u2014 the only thing that actually separated them was whether something written down got opened.';
+      callout.classList.add('show');
+    } else if(wrong.length <= 2){
+      summary.textContent = (items.length - wrong.length) + ' of 8 correct.';
+      summary.className = 'summary near';
+      callout.innerHTML = '<span class="k">Close.</span>Look again at the ones marked \u2717 \u2014 in each, ask whether a document was actually opened, not whether the reasoning sounds reasonable.';
+      callout.classList.add('show');
+    } else {
+      summary.textContent = (items.length - wrong.length) + ' of 8 correct.';
+      summary.className = 'summary off';
+      callout.innerHTML = '<span class="k">Worth another pass.</span>One test, applied the same way every time: does the moment name something written down and read \u2014 hier(7), a vendor guide, a package\u2019s own documentation \u2014 or does it name a name, a habit, or a feeling instead?';
+      callout.classList.add('show');
+    }
+
+    if(!checkedOnce){
+      checkedOnce = true;
+      second.classList.add('show');
+      renderSecond();
+    }
+  });
+
+  resetBtn.addEventListener('click', function(){
+    selections = {};
+    items.forEach(function(it){
+      var div = document.getElementById('item-' + it.id);
+      div.classList.remove('checked','correct','wrong');
+      div.querySelector('.item-fb').textContent = '';
+      div.querySelectorAll('button[data-item]').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+    });
+    summary.textContent = '';
+    summary.className = 'summary';
+    callout.classList.remove('show');
+  });
+
+  var checkedFlag = 'yes';
+  var secondDesc = document.getElementById('secondDesc');
+  var secondReadout = document.getElementById('secondReadout');
+
+  function renderSecond(){
+    if(checkedFlag === 'yes'){
+      secondDesc.textContent = "Before filing the new service's startup scripts, the admin opened hier(7) on the host and read what the standard says that branch is reserved for \u2014 then filed the scripts there.";
+      secondReadout.innerHTML = '<span class="tag grounded">Checked documentation</span>';
+    } else {
+      secondDesc.textContent = "The admin filed the new service's startup scripts in that same branch \u2014 this time without opening anything, because it looked like the obvious place.";
+      secondReadout.innerHTML = '<span class="tag guess">Guessed from resemblance</span>';
+    }
+  }
+
+  document.querySelectorAll('.second .seg button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      checkedFlag = btn.getAttribute('data-checked');
+      document.querySelectorAll('.second .seg button').forEach(function(b){
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      renderSecond();
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
