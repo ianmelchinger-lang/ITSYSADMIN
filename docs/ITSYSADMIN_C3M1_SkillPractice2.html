@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Requested, present, or running?</title>
+<style>
+  :root{
+    --bg:#12161c;--surface:#1a2029;--surface-2:#212a35;--line:#2c3743;
+    --text:#e8ecf2;--muted:#9aa6b6;--accent:#7aa2f7;--accent-soft:#26314a;
+    --flag:#d8a657;--flag-soft:#2f2a1c;--ok:#7bc4a4;--ok-soft:#1c2b25;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --measure:42rem;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:17px;line-height:1.62;padding:2.5rem 1.25rem 4rem;}
+  .wrap{max-width:var(--measure);margin:0 auto;}
+  .kicker{color:var(--muted);font-size:.9rem;margin:0 0 .35rem;}
+  h1{font-size:1.6rem;line-height:1.25;font-weight:650;margin:0 0 1.3rem;letter-spacing:-.01em;}
+  p{margin:0 0 1.05rem;}
+  .lede{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:1.3rem 1.35rem;margin-bottom:1.6rem;color:#dfe5ee;}
+  .lede p:last-child{margin-bottom:0;}
+  .lede strong{color:var(--text);font-weight:640;}
+
+  .claim{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:0 0 1.7rem;}
+  .claim .tag{color:var(--muted);font-size:.85rem;margin:0 0 .25rem;}
+  .claim .txt{margin:0;font-size:1.08rem;color:var(--text);font-weight:520;}
+
+  .ev{background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:1rem 1.1rem;margin:0 0 .85rem;}
+  .ev legend{padding:0;color:var(--muted);font-size:.9rem;}
+  .ev .rec{font-family:var(--mono);font-size:.95rem;color:#cfd8e6;background:var(--surface-2);
+    border-radius:7px;padding:.55rem .8rem;margin:.5rem 0 .85rem;display:block;}
+  .ev .said{font-style:italic;color:#cfd8e6;background:transparent;border:1px dashed var(--line);
+    border-radius:7px;padding:.55rem .8rem;margin:.5rem 0 .85rem;display:block;}
+  .seg{display:flex;flex-wrap:wrap;gap:.5rem;}
+  .seg-opt{flex:1 1 46%;position:relative;}
+  .seg-opt input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none;}
+  .seg-opt span{display:block;text-align:center;padding:.55rem .5rem;border-radius:8px;
+    background:var(--surface-2);border:1px solid var(--line);color:var(--muted);cursor:pointer;
+    user-select:none;font-size:.96rem;transition:background .15s,color .15s,border-color .15s;}
+  .seg-opt input:checked + span{background:var(--accent);border-color:var(--accent);color:#0c1b3a;font-weight:600;}
+  .seg-opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px;}
+  fieldset.ev,fieldset.strength{border:1px solid var(--line);margin:0 0 .85rem;}
+
+  .strength{background:var(--surface);border-radius:10px;padding:1.1rem 1.15rem;margin:1.6rem 0 0;}
+  .strength legend{padding:0;font-weight:620;font-size:1.06rem;color:var(--text);}
+  .opt{display:flex;gap:.8rem;align-items:flex-start;background:var(--surface-2);
+    border:1px solid var(--line);border-radius:9px;padding:.8rem .95rem;margin:.7rem 0 0;cursor:pointer;
+    transition:border-color .15s,background .15s;}
+  .opt:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .opt.is-checked{border-color:var(--accent);}
+  .opt input{margin:.28rem 0 0;width:1.05rem;height:1.05rem;accent-color:var(--accent);flex:0 0 auto;}
+  .opt .t{color:#dfe5ee;}
+
+  .locked input{pointer-events:none;} .locked{opacity:.72;}
+
+  .act{margin-top:1.4rem;}
+  button.check{font:inherit;font-weight:600;color:#0c1b3a;background:var(--accent);border:0;
+    border-radius:9px;padding:.8rem 1.3rem;cursor:pointer;transition:filter .15s;}
+  button.check:hover:not(:disabled){filter:brightness(1.07);}
+  button.check:disabled{background:var(--surface-2);color:var(--muted);cursor:not-allowed;}
+  button.check:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .fb{margin-top:1.4rem;border-radius:10px;padding:1.05rem 1.2rem;border:1px solid var(--line);
+    background:var(--surface);color:#dfe5ee;outline:none;}
+  .fb[hidden]{display:none;}
+  .fb h2,.fb h3{margin:0 0 .5rem;font-size:1.06rem;font-weight:640;color:var(--text);}
+  .fb p{margin:0;} .fb p + p{margin-top:.6rem;}
+  .fb em{color:var(--text);font-style:italic;}
+  .fb.ok{border-left:3px solid var(--ok);background:var(--ok-soft);}
+  .fb.near{border-left:3px solid var(--flag);background:var(--flag-soft);}
+  .fb.no{border-left:3px solid var(--flag);}
+
+  .pass2[hidden]{display:none;}
+  .pass2{margin-top:2.4rem;}
+  .rule{height:1px;background:var(--line);border:0;margin:0 0 1.8rem;}
+  .pass2 > h2{font-size:1.3rem;font-weight:640;margin:0 0 .6rem;}
+  .pass2 .setup{color:#dfe5ee;margin-bottom:1rem;}
+  .changed{font-family:var(--mono);font-size:.95rem;color:var(--ok);background:var(--ok-soft);
+    border-radius:7px;padding:.55rem .8rem;display:block;margin:0 0 1.1rem;}
+
+  @media (max-width:480px){body{font-size:16px;padding:1.9rem 1rem 3rem;}h1{font-size:1.42rem;}}
+  @media (min-width:560px){.seg-opt{flex:1 1 0;}}
+  @media (prefers-reduced-motion:no-preference){
+    .pass2.revealing{animation:rise .45s ease both;}
+    @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="kicker">Skill practice</p>
+  <h1>Requested, present, or running?</h1>
+
+  <div class="lede">
+    <p>A record that says "done" and a machine that is done are not the same thing, and the gap between them has a shape worth knowing.</p>
+    <p>Three separate facts sit behind "the capability is there," each written in a different place. What was <strong>requested</strong> lives in the tool you installed with. What is <strong>present</strong> lives on the host itself — you learn it by asking the host which roles it provides. Whether it is <strong>running</strong> can wait on a restart, a third moment with its own record. Because they are recorded separately, they can disagree.</p>
+    <p>Here is the claim on the ticket, and the evidence in front of you. Trace each piece to the fact it actually speaks to, then say how strongly the claim can be written.</p>
+  </div>
+
+  <div class="claim">
+    <p class="tag">The claim on the ticket</p>
+    <p class="txt">File and Storage Services is present and running on this host. The drive is ready.</p>
+  </div>
+
+  <form id="p1"></form>
+
+  <fieldset class="strength" id="strength">
+    <legend>So how strongly can the claim — present and running — be written right now?</legend>
+    <label class="opt"><input type="radio" name="strength" value="confirmed"><span class="t">Confirmed: present and running.</span></label>
+    <label class="opt"><input type="radio" name="strength" value="present-not-running"><span class="t">Present, but running not yet confirmed.</span></label>
+    <label class="opt"><input type="radio" name="strength" value="not-present"><span class="t">Not established as present. The records show the install was requested; the host's own answer says the role is not there, so it cannot be written as present, let alone running.</span></label>
+    <label class="opt"><input type="radio" name="strength" value="nothing"><span class="t">Nothing can be said either way.</span></label>
+  </fieldset>
+
+  <div class="act"><button class="check" id="check1" type="button" disabled>Check the trace</button></div>
+  <div class="fb" id="fb1" tabindex="-1" hidden></div>
+
+  <section class="pass2" id="pass2" hidden>
+    <hr class="rule">
+    <h2 id="p2head" tabindex="-1">Now one record changes</h2>
+    <p class="setup">Nothing else moves. You run the query against the host again — and this time the reply is different:</p>
+    <code class="changed">The host now lists File and Storage Services among the roles it provides.</code>
+    <p class="setup">The restart is still pending. How strongly can the claim be written now?</p>
+    <fieldset class="strength" id="strength2" style="margin-top:0;">
+      <legend class="visually-legend" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Claim strength after the host reports the role present</legend>
+      <label class="opt"><input type="radio" name="strength2" value="confirmed"><span class="t">Confirmed: present and running.</span></label>
+      <label class="opt"><input type="radio" name="strength2" value="present-not-running"><span class="t">Present, but running not yet confirmed.</span></label>
+      <label class="opt"><input type="radio" name="strength2" value="not-present"><span class="t">Still not established as present.</span></label>
+      <label class="opt"><input type="radio" name="strength2" value="nothing"><span class="t">Nothing can be said either way.</span></label>
+    </fieldset>
+    <div class="act"><button class="check" id="check2" type="button" disabled>Check</button></div>
+    <div class="fb" id="fb2" tabindex="-1" hidden></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  // --- Evidence spread and key, traceable to the Concepts item, Problem, and Dialogue case study ---
+  // requested -> the install tool's record of what it was asked to do
+  // present   -> the host's own report of what it provides (the only evidence about presence)
+  // running   -> settled by the restart (a third, later record)
+  // none      -> speaks to none of the three (hearsay / adjacent), cannot settle the host's state
+  var EV = [
+    {id:'wiz',    kind:'rec',  label:"The install wizard's final screen",         text:"File and Storage Services — installation succeeded.",                 key:'requested'},
+    {id:'query',  kind:'rec',  label:"You ask the host which roles it provides",  text:"The reply lists several roles. File and Storage Services is not among them.", key:'present'},
+    {id:'restart',kind:'rec',  label:"A line in the change record",               text:"Restart pending — not yet applied.",                                  key:'running'},
+    {id:'msg',    kind:'said', label:"A colleague's message",                     text:"Yeah, I set that up last week. It's done.",                           key:'none'}
+  ];
+  var LAB = {}; EV.forEach(function(e){ LAB[e.id]=e.label; });
+  var TRACE_OPTS = [
+    {v:'requested', s:'Requested'},
+    {v:'present',   s:'Present (on the host)'},
+    {v:'running',   s:'Running'},
+    {v:'none',      s:'None of these'}
+  ];
+
+  function evRow(e){
+    var opts = TRACE_OPTS.map(function(o){
+      return '<label class="seg-opt"><input type="radio" name="tr-'+e.id+'" value="'+o.v+'"><span>'+o.s+'</span></label>';
+    }).join('');
+    var body = '<'+(e.kind==='said'?'span class="said"':'code class="rec"')+'>'+e.text+'</'+(e.kind==='said'?'span':'code')+'>';
+    return '<fieldset class="ev" id="ev-'+e.id+'"><legend>'+e.label+'</legend>'
+      + body + '<div class="seg">'+opts+'</div></fieldset>';
+  }
+
+  var p1 = document.getElementById('p1');
+  p1.innerHTML = EV.map(evRow).join('');
+
+  var strengthForm = document.getElementById('strength');
+  var check1 = document.getElementById('check1');
+  var fb1 = document.getElementById('fb1');
+  var pass2 = document.getElementById('pass2');
+  var p2head = document.getElementById('p2head');
+
+  function readTraces(){
+    var t = {};
+    EV.forEach(function(e){
+      var sel = p1.querySelector('input[name="tr-'+e.id+'"]:checked');
+      t[e.id] = sel ? sel.value : null;
+    });
+    return t;
+  }
+  function readStrength(){
+    var sel = strengthForm.querySelector('input[name="strength"]:checked');
+    return sel ? sel.value : null;
+  }
+  function allChosen(){
+    var t = readTraces();
+    for(var k in t){ if(!t[k]) return false; }
+    return !!readStrength();
+  }
+
+  function refreshCheck(){ check1.disabled = !allChosen(); }
+  p1.addEventListener('change', function(){
+    if(p1.classList.contains('locked')) return;
+    refreshCheck();
+  });
+  strengthForm.addEventListener('change', function(e){
+    strengthForm.querySelectorAll('.opt').forEach(function(o){ o.classList.remove('is-checked'); });
+    var lab = e.target.closest('.opt'); if(lab) lab.classList.add('is-checked');
+    refreshCheck();
+  });
+
+  function wrongElements(traces, strength){
+    var w = [];
+    EV.forEach(function(e){ if(traces[e.id] !== e.key) w.push({t:'ev', id:e.id}); });
+    if(strength !== 'not-present') w.push({t:'strength'});
+    return w;
+  }
+
+  function show(fb, cls, html){ fb.className='fb '+cls; fb.innerHTML=html; fb.hidden=false; fb.focus(); }
+
+  check1.addEventListener('click', function(){
+    if(!allChosen()) return;
+    var traces = readTraces(), strength = readStrength();
+    var w = wrongElements(traces, strength);
+
+    if(w.length === 0){
+      show(fb1,'ok',
+        '<h2>That is the trace.</h2>'
+        + '<p>The wizard screen and the colleague\u2019s message both speak to what was asked or claimed, not to the machine. The change-record line speaks only to running. And the one record that can settle whether the role is <em>present</em> \u2014 the host\u2019s own answer \u2014 says it is not there. So the strongest honest version of the claim is narrow: the install was requested, and the host currently reports the role absent.</p>'
+        + '<p>That habit has a name worth keeping \u2014 validating: to learn what a host provides, you ask the host. Everything else is evidence about something adjacent.</p>');
+      p1.classList.add('locked'); p1.querySelectorAll('input').forEach(function(i){i.disabled=true;});
+      strengthForm.classList.add('locked'); strengthForm.querySelectorAll('input').forEach(function(i){i.disabled=true;});
+      check1.disabled = true;
+      pass2.hidden = false; pass2.classList.add('revealing'); p2head.focus();
+    } else if(w.length === 1){
+      var e = w[0];
+      if(e.t === 'ev'){
+        show(fb1,'near',
+          '<h3>Almost \u2014 one piece is traced to the wrong fact.</h3>'
+          + '<p>Look again at: <em>'+LAB[e.id]+'</em>. Ask the single question: is this the tool reporting what it was asked to do, the host reporting what it actually provides, a restart deciding whether it runs \u2014 or none of those? Re-place it and check again.</p>');
+      } else {
+        show(fb1,'near',
+          '<h3>The traces are right \u2014 the final read is off.</h3>'
+          + '<p>Every record is placed correctly. Now let them decide the claim: the only record that speaks to <em>present</em> is the host\u2019s own answer, and it says the role is not there. Re-read how strongly \u201Cpresent and running\u201D can be written, and check again.</p>');
+      }
+    } else {
+      show(fb1,'no',
+        '<h3>More than one is off.</h3>'
+        + '<p>That usually means two different records are being read as if they answer the same question. They do not. Run this on each piece: is it the <em>tool</em> reporting what it was asked to do (requested), the <em>host</em> reporting what it actually provides (present), a <em>restart</em> deciding whether it runs (running) \u2014 or none of these? Only the host\u2019s own answer can settle \u201Cpresent.\u201D Trace each one again and check.</p>');
+    }
+  });
+
+  // --- Second pass: one input moved (the host now reports the role present) ---
+  var strength2 = document.getElementById('strength2');
+  var check2 = document.getElementById('check2');
+  var fb2 = document.getElementById('fb2');
+
+  strength2.addEventListener('change', function(e){
+    strength2.querySelectorAll('.opt').forEach(function(o){ o.classList.remove('is-checked'); });
+    var lab = e.target.closest('.opt'); if(lab) lab.classList.add('is-checked');
+    check2.disabled = !strength2.querySelector('input[name="strength2"]:checked');
+  });
+
+  check2.addEventListener('click', function(){
+    var sel = strength2.querySelector('input[name="strength2"]:checked');
+    if(!sel) return;
+    var v = sel.value;
+    if(v === 'present-not-running'){
+      show(fb2,'ok',
+        '<h3>Right \u2014 and notice what moved it.</h3>'
+        + '<p>One record changed: the host\u2019s own answer. That is the only record that can move <em>present</em>, because presence is the host\u2019s fact to report \u2014 not the tool\u2019s, not a colleague\u2019s. But running is still its own fact, and the restart is still pending, so the honest claim stops at present, running not yet confirmed.</p>'
+        + '<p>Three facts, three records \u2014 and each one moves only when its own evidence moves.</p>');
+      strength2.classList.add('locked'); strength2.querySelectorAll('input').forEach(function(i){i.disabled=true;});
+      check2.disabled = true;
+    } else if(v === 'confirmed'){
+      show(fb2,'near',
+        '<h3>Present, yes \u2014 but running is a separate fact.</h3>'
+        + '<p>The host now reports the role present, so <em>present</em> is earned. Running is not: the restart is still pending, and that is the record that settles it. The strongest honest claim is present, running not yet confirmed.</p>');
+    } else {
+      show(fb2,'near',
+        '<h3>The host\u2019s answer just changed that.</h3>'
+        + '<p>Presence is the host\u2019s fact to report, and it now lists the role \u2014 so <em>present</em> is established. What is still open is running, because the restart is pending. The honest claim is present, running not yet confirmed.</p>');
+    }
+  });
+})();
+</script>
+</body>
+</html>

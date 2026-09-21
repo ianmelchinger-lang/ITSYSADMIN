@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The share, or its access list?</title>
+<style>
+  :root{
+    --bg:#12161c;--surface:#1a2029;--surface-2:#212a35;--line:#2c3743;
+    --text:#e8ecf2;--muted:#9aa6b6;--accent:#7aa2f7;--accent-soft:#26314a;
+    --flag:#d8a657;--flag-soft:#2f2a1c;--ok:#7bc4a4;--ok-soft:#1c2b25;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --measure:42rem;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:17px;line-height:1.62;padding:2.5rem 1.25rem 4rem;}
+  .wrap{max-width:var(--measure);margin:0 auto;}
+  .kicker{color:var(--muted);font-size:.9rem;margin:0 0 .35rem;}
+  h1{font-size:1.6rem;line-height:1.25;font-weight:650;margin:0 0 1.3rem;letter-spacing:-.01em;}
+  p{margin:0 0 1.05rem;}
+  .lede{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:1.3rem 1.35rem;margin-bottom:1.6rem;color:#dfe5ee;}
+  .lede p:last-child{margin-bottom:0;}
+  .lede strong{color:var(--text);font-weight:640;}
+
+  .reccard{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 .4rem;}
+  .reccard .head{background:var(--surface-2);color:var(--muted);font-size:.85rem;
+    padding:.6rem 1rem;border-bottom:1px solid var(--line);}
+  .line{display:block;width:100%;text-align:left;font:inherit;color:#dfe5ee;
+    background:var(--surface);border:0;border-bottom:1px solid var(--line);
+    padding:.85rem 1rem .85rem 2.4rem;position:relative;cursor:pointer;
+    transition:background .14s,color .14s;}
+  .line:last-child{border-bottom:0;}
+  .line::before{content:"";position:absolute;left:1rem;top:1.15rem;width:.85rem;height:.85rem;
+    border:1.5px solid var(--muted);border-radius:4px;transition:border-color .14s,background .14s;}
+  .line:hover:not(:disabled){background:var(--surface-2);}
+  .line[aria-pressed="true"]{background:var(--accent-soft);color:var(--text);}
+  .line[aria-pressed="true"]::before{background:var(--accent);border-color:var(--accent);}
+  .line:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .line:disabled{cursor:default;}
+  .hint{color:var(--muted);font-size:.9rem;margin:.2rem 0 0;}
+
+  .act{margin-top:1.3rem;}
+  button.check{font:inherit;font-weight:600;color:#0c1b3a;background:var(--accent);border:0;
+    border-radius:9px;padding:.8rem 1.3rem;cursor:pointer;transition:filter .15s;}
+  button.check:hover:not(:disabled){filter:brightness(1.07);}
+  button.check:disabled{background:var(--surface-2);color:var(--muted);cursor:not-allowed;}
+  button.check:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .fb{margin-top:1.4rem;border-radius:10px;padding:1.05rem 1.2rem;border:1px solid var(--line);
+    background:var(--surface);color:#dfe5ee;outline:none;}
+  .fb[hidden]{display:none;}
+  .fb h2,.fb h3{margin:0 0 .5rem;font-size:1.06rem;font-weight:640;color:var(--text);}
+  .fb p{margin:0;} .fb p + p{margin-top:.6rem;}
+  .fb em{color:var(--text);font-style:italic;}
+  .fb.ok{border-left:3px solid var(--ok);background:var(--ok-soft);}
+  .fb.near{border-left:3px solid var(--flag);background:var(--flag-soft);}
+  .fb.no{border-left:3px solid var(--flag);}
+
+  .pass2[hidden]{display:none;}
+  .pass2{margin-top:2.4rem;}
+  .rule{height:1px;background:var(--line);border:0;margin:0 0 1.8rem;}
+  .pass2 > h2{font-size:1.3rem;font-weight:640;margin:0 0 .6rem;}
+  .pass2 .setup{color:#dfe5ee;margin-bottom:1rem;}
+  .lists{display:flex;flex-direction:column;gap:.55rem;margin:0 0 1.2rem;}
+  .listrow{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:.7rem .95rem;}
+  .listrow .k{color:var(--muted);font-size:.85rem;display:block;margin-bottom:.15rem;}
+  .listrow .v{font-family:var(--mono);color:#cfd8e6;}
+  .opt{display:flex;gap:.8rem;align-items:flex-start;background:var(--surface);
+    border:1px solid var(--line);border-radius:9px;padding:.8rem .95rem;margin:.6rem 0 0;cursor:pointer;
+    transition:border-color .15s,background .15s;}
+  .opt:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .opt.is-checked{border-color:var(--accent);background:var(--surface-2);}
+  .opt input{margin:.28rem 0 0;width:1.05rem;height:1.05rem;accent-color:var(--accent);flex:0 0 auto;}
+  .opt .t{color:#dfe5ee;}
+  .locked .line,.locked .opt{opacity:.72;}
+
+  @media (max-width:480px){body{font-size:16px;padding:1.9rem 1rem 3rem;}h1{font-size:1.42rem;}}
+  @media (prefers-reduced-motion:no-preference){
+    .pass2.revealing{animation:rise .45s ease both;}
+    @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="kicker">Skill practice</p>
+  <h1>The share, or its access list?</h1>
+
+  <div class="lede">
+    <p>A <strong>share</strong> is a folder published on the network under a name, so other machines can reach it. Its <strong>access list</strong> is a separate thing: the record of who is allowed to open it. Publishing the folder and naming who may reach it are two different acts, and the second is where restraint lives.</p>
+    <p>That is why hardening guidance can call an over-broad share a finding without knowing anything about the files inside it. The finding is about the list, not the contents.</p>
+    <p>Below is a share as it currently stands. Mark the line that carries the finding.</p>
+  </div>
+
+  <div class="reccard" id="rec">
+    <div class="head">Share record, as configured</div>
+  </div>
+  <p class="hint">Select the line that is the finding, then check. You can change your selection before checking.</p>
+
+  <div class="act"><button class="check" id="check1" type="button" disabled>Check the finding</button></div>
+  <div class="fb" id="fb1" tabindex="-1" hidden></div>
+
+  <section class="pass2" id="pass2" hidden>
+    <hr class="rule">
+    <h2 id="p2head" tabindex="-1">Now look one layer down</h2>
+    <p class="setup">You do the fix: the share's access list now names only the warehouse team. But a share sits on top of a folder, and the folder carries its own access list underneath. Here is how the two stand:</p>
+    <div class="lists">
+      <div class="listrow"><span class="k">The share's access list</span><span class="v">Warehouse team</span></div>
+      <div class="listrow"><span class="k">The folder's own access list, underneath</span><span class="v">Shipping clerks (a smaller group inside the warehouse team)</span></div>
+    </div>
+    <p class="setup">Who can actually open a file in the folder now?</p>
+    <form id="p2">
+      <label class="opt"><input type="radio" name="eff" value="team"><span class="t">The warehouse team — the share's list decides.</span></label>
+      <label class="opt"><input type="radio" name="eff" value="clerks"><span class="t">The shipping clerks — where two lists apply, the narrower one governs.</span></label>
+      <label class="opt"><input type="radio" name="eff" value="union"><span class="t">Everyone named on either list.</span></label>
+    </form>
+    <div class="act"><button class="check" id="check2" type="button" disabled>Check</button></div>
+    <div class="fb" id="fb2" tabindex="-1" hidden></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  // --- The record and key, traceable to the Concepts item, Terms, Win the Role, and the Dialogue case study ---
+  // finding = the access list naming a broad default group. Not the folder's existence, its reachability, or its contents.
+  var LINES = [
+    {id:'exist', role:'existence',   finding:false, text:"A folder named Warehouse has been created on the server."},
+    {id:'reach', role:'reach',       finding:false, text:"It has been published on the network, so other machines can reach it by name."},
+    {id:'list',  role:'finding',     finding:true,  text:"Its access list names the group Everyone."},
+    {id:'files', role:'contents',    finding:false, text:"The folder holds a handful of shipping spreadsheets."},
+    {id:'need',  role:'requirement', finding:false, text:"The warehouse team is the group that needs it."}
+  ];
+  var WHY = {
+    existence:"That is the folder's existence. Creating and publishing a folder is not the problem; the problem is who the list lets in.",
+    reach:"That is reachability. Making it reachable and deciding who may reach it are two different things, and the finding is in the second.",
+    contents:"That is the contents. A hardening review flags an over-broad share without knowing what is inside, because the finding is about the list, not the files.",
+    requirement:"That is the group that should be on the list. The fix names it, but it is not the finding itself."
+  };
+  var ROLE = {}, TEXT = {}; LINES.forEach(function(l){ ROLE[l.id]=l.role; TEXT[l.id]=l.text; });
+
+  var rec = document.getElementById('rec');
+  LINES.forEach(function(l){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'line'; b.setAttribute('aria-pressed','false');
+    b.dataset.id = l.id; b.textContent = l.text;
+    rec.appendChild(b);
+  });
+
+  var check1 = document.getElementById('check1');
+  var fb1 = document.getElementById('fb1');
+  var pass2 = document.getElementById('pass2');
+  var p2head = document.getElementById('p2head');
+  var lineBtns = rec.querySelectorAll('.line');
+
+  function selected(){
+    var s = [];
+    lineBtns.forEach(function(b){ if(b.getAttribute('aria-pressed')==='true') s.push(b.dataset.id); });
+    return s;
+  }
+  rec.addEventListener('click', function(e){
+    var b = e.target.closest('.line'); if(!b || b.disabled) return;
+    var on = b.getAttribute('aria-pressed')==='true';
+    b.setAttribute('aria-pressed', on ? 'false' : 'true');
+    check1.disabled = selected().length === 0;
+  });
+
+  function show(fb, cls, html){ fb.className='fb '+cls; fb.innerHTML=html; fb.hidden=false; fb.focus(); }
+
+  check1.addEventListener('click', function(){
+    var sel = selected();
+    if(sel.length === 0) return;
+    var hasFinding = sel.indexOf('list') !== -1;
+    var extras = sel.filter(function(id){ return id !== 'list'; });
+
+    if(hasFinding && extras.length === 0){
+      show(fb1,'ok',
+        '<h2>That is the finding.</h2>'
+        + '<p>The folder exists and is reachable, and that is fine. What fails is the access list: it names Everyone, a broad default group, not the one team that needs the folder. A hardening review treats that as a finding on its own, without knowing a thing about the files inside, because the finding is about the list, not the contents.</p>'
+        + '<p>The fix is not to the folder but to the list: remove the broad group, and name the warehouse team.</p>');
+      lock(); pass2.hidden=false; pass2.classList.add('revealing'); p2head.focus();
+    } else if(hasFinding && extras.length === 1){
+      show(fb1,'near',
+        '<h3>You found it — one extra mark to clear.</h3>'
+        + '<p>The access list naming Everyone is the finding. You also marked: <em>'+TEXT[extras[0]]+'</em> '+WHY[ROLE[extras[0]]]+' Deselect it and you have it clean.</p>');
+    } else if(!hasFinding && sel.length === 1){
+      show(fb1,'no',
+        '<h3>Not there.</h3>'
+        + '<p>'+WHY[ROLE[sel[0]]]+' The finding is in the access list — what does it name right now? Mark that line and check.</p>');
+    } else if(hasFinding){
+      show(fb1,'no',
+        '<h3>The finding is marked, but so are lines that are not.</h3>'
+        + '<p>The folder existing, being reachable, and what it holds are not the problem. Keep only the line about the access list — the one that names Everyone — and check.</p>');
+    } else {
+      show(fb1,'no',
+        '<h3>Not there.</h3>'
+        + '<p>Walk the record with one question: which line is about who the list lets in? The folder existing and being reachable is not the problem, and neither are the files inside. The finding is the group named on the access list. Mark that line and check.</p>');
+    }
+  });
+
+  function lock(){
+    lineBtns.forEach(function(b){ b.disabled = true; });
+    check1.disabled = true;
+    document.querySelector('.wrap').classList.add('locked');
+  }
+
+  // --- Second pass: a second list underneath, the deciding rule moved to "narrower of the two" ---
+  var p2 = document.getElementById('p2');
+  var check2 = document.getElementById('check2');
+  var fb2 = document.getElementById('fb2');
+
+  p2.addEventListener('change', function(e){
+    p2.querySelectorAll('.opt').forEach(function(o){ o.classList.remove('is-checked'); });
+    var lab = e.target.closest('.opt'); if(lab) lab.classList.add('is-checked');
+    check2.disabled = !p2.querySelector('input[name="eff"]:checked');
+  });
+
+  check2.addEventListener('click', function(){
+    var sel = p2.querySelector('input[name="eff"]:checked');
+    if(!sel) return;
+    if(sel.value === 'clerks'){
+      show(fb2,'ok',
+        '<h3>Right — the effective access is the narrower of the two.</h3>'
+        + '<p>A file opens only for someone on both lists, and the folder\u2019s own list is the smaller, so only the shipping clerks get in. That is why <em>I restricted the share</em> is not the same claim as <em>I restricted access</em>: there is a second list underneath, and it can be tighter, or looser, than the one you set.</p>'
+        + '<p>Check the layer beneath the share, not just the share.</p>');
+      p2.querySelectorAll('input').forEach(function(i){ i.disabled=true; });
+      check2.disabled = true;
+    } else if(sel.value === 'team'){
+      show(fb2,'near',
+        '<h3>That is the list you set — but it is not the only one.</h3>'
+        + '<p>Underneath, the folder\u2019s own list names a smaller group, the shipping clerks. Where two lists apply, the effective access is the narrower of them, so only the clerks get in.</p>');
+    } else {
+      show(fb2,'near',
+        '<h3>It is not a union of the two lists.</h3>'
+        + '<p>A file opens only for someone on <em>both</em> lists, so the narrower one wins. The folder\u2019s own list is the smaller — only the shipping clerks get in.</p>');
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platform, or capability?</title>
+<style>
+  :root{
+    --bg:#12161c;
+    --surface:#1a2029;
+    --surface-2:#212a35;
+    --line:#2c3743;
+    --text:#e8ecf2;
+    --muted:#9aa6b6;
+    --accent:#7aa2f7;
+    --accent-soft:#26314a;
+    --flag:#d8a657;
+    --flag-soft:#2f2a1c;
+    --ok:#7bc4a4;
+    --ok-soft:#1c2b25;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --measure:42rem;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:var(--sans);font-size:17px;line-height:1.62;
+    padding:2.5rem 1.25rem 4rem;
+  }
+  .wrap{max-width:var(--measure);margin:0 auto;}
+  .kicker{color:var(--muted);font-size:.9rem;margin:0 0 .35rem;}
+  h1{font-size:1.6rem;line-height:1.25;font-weight:650;margin:0 0 1.3rem;letter-spacing:-.01em;}
+  p{margin:0 0 1.05rem;}
+  .lede{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:1.3rem 1.35rem;margin-bottom:1.9rem;color:#dfe5ee;}
+  .lede p:last-child{margin-bottom:0;}
+  .lede strong{color:var(--text);font-weight:620;}
+
+  .item{
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:1rem 1.1rem;margin:0 0 .8rem;display:flex;flex-direction:column;gap:.8rem;
+  }
+  .item.locked{opacity:.72;}
+  .stmt{margin:0;padding:0;font-weight:520;color:#e6ebf3;font-size:1.02rem;}
+  .seg{display:flex;gap:.5rem;}
+  .seg-opt{flex:1 1 0;position:relative;}
+  .seg-opt input{
+    position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none;
+  }
+  .seg-opt span{
+    display:block;text-align:center;padding:.6rem .5rem;border-radius:8px;
+    background:var(--surface-2);border:1px solid var(--line);color:var(--muted);
+    cursor:pointer;user-select:none;transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .seg-opt input:checked + span{background:var(--accent);border-color:var(--accent);color:#0c1b3a;font-weight:600;}
+  .seg-opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px;}
+  .item.locked .seg-opt span{cursor:default;}
+
+  .act{margin-top:1.3rem;}
+  button.check{
+    font:inherit;font-weight:600;color:#0c1b3a;background:var(--accent);
+    border:0;border-radius:9px;padding:.8rem 1.3rem;cursor:pointer;transition:filter .15s ease;
+  }
+  button.check:hover:not(:disabled){filter:brightness(1.07);}
+  button.check:disabled{background:var(--surface-2);color:var(--muted);cursor:not-allowed;}
+  button.check:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+  .fb{margin-top:1.4rem;border-radius:10px;padding:1.05rem 1.2rem;border:1px solid var(--line);
+    background:var(--surface);color:#dfe5ee;outline:none;}
+  .fb[hidden]{display:none;}
+  .fb h2,.fb h3{margin:0 0 .5rem;font-size:1.06rem;font-weight:640;color:var(--text);}
+  .fb p{margin:0;}
+  .fb p + p{margin-top:.6rem;}
+  .fb.ok{border-left:3px solid var(--ok);background:var(--ok-soft);}
+  .fb.near{border-left:3px solid var(--flag);background:var(--flag-soft);}
+  .fb.no{border-left:3px solid var(--flag);}
+  .fb .q{color:var(--text);}
+
+  .pass2[hidden]{display:none;}
+  .pass2{margin-top:2.4rem;}
+  .rule{height:1px;background:var(--line);border:0;margin:0 0 1.8rem;}
+  .pass2 > h2{font-size:1.3rem;font-weight:640;margin:0 0 .6rem;}
+  .pass2 .setup{color:#dfe5ee;margin-bottom:1.2rem;}
+
+  @media (max-width:480px){
+    body{font-size:16px;padding:1.9rem 1rem 3rem;}
+    h1{font-size:1.42rem;}
+  }
+  @media (min-width:560px){
+    .item{flex-direction:row;align-items:center;}
+    .stmt{flex:1 1 auto;}
+    .seg{flex:0 0 16rem;}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .pass2.revealing{animation:rise .45s ease both;}
+    @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="kicker">Skill practice</p>
+  <h1>Platform, or capability?</h1>
+
+  <div class="lede">
+    <p>"The server is up" and "the server does this job" sound like one claim. They are two, and keeping them apart is where this starts.</p>
+    <p>A <strong>role</strong> is a named capability you add to a machine so it does a particular job for particular people. Underneath it sits the <strong>platform</strong>: what the operating system gives you the moment it is installed — a machine you can reach and administer, which does no job for anyone until a capability is added.</p>
+    <p>Here are things that might be true of one server. Sort each into what the platform gives you and what someone added as a capability.</p>
+  </div>
+
+  <form id="p1"></form>
+  <div class="act"><button class="check" id="check1" type="button" disabled>Check the split</button></div>
+  <div class="fb" id="fb1" tabindex="-1" hidden></div>
+
+  <section class="pass2" id="pass2" hidden>
+    <hr class="rule">
+    <h2 id="p2head" tabindex="-1">One more — and forget who asked for it</h2>
+    <p class="setup">A background feature is running on the server. Nobody requested it; a vendor's installer switched it on while setting up something else. Platform, or capability?</p>
+    <form id="p2"></form>
+    <div class="act"><button class="check" id="check2" type="button" disabled>Check</button></div>
+    <div class="fb" id="fb2" tabindex="-1" hidden></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  // --- Key, traceable to the module's Concepts item and Terms You Should Know ---
+  // Platform = what the OS gives you on install; does no job for particular people by itself.
+  // Capability (role) = a named job added for particular people; listable, answerable to "who decided, and why".
+  var ITEMS = [
+    {id:'boot',  stmt:'The machine boots, and you can sign in and administer it.',                         key:'platform'},
+    {id:'net',   stmt:'It has a network address and answers when another machine reaches it.',             key:'platform'},
+    {id:'local', stmt:'It can run programs and hold files on its own local disks.',                        key:'platform'},
+    {id:'files', stmt:'It serves a shared folder to the warehouse team over the network.',                 key:'capability'},
+    {id:'names', stmt:'It answers name-lookup requests so client machines can find each other.',           key:'capability'},
+    {id:'auth',  stmt:'It checks whether a person is allowed to sign in, against a central account list.',  key:'capability'}
+  ];
+  var STMT = {}; ITEMS.forEach(function(it){ STMT[it.id]=it.stmt; });
+
+  function optionRow(it){
+    return '<fieldset class="item" id="item-'+it.id+'">'
+      + '<legend class="stmt">'+it.stmt+'</legend>'
+      + '<div class="seg">'
+      +   '<label class="seg-opt"><input type="radio" name="'+it.id+'" value="platform"><span>Platform</span></label>'
+      +   '<label class="seg-opt"><input type="radio" name="'+it.id+'" value="capability"><span>Capability</span></label>'
+      + '</div></fieldset>';
+  }
+
+  var p1 = document.getElementById('p1');
+  p1.innerHTML = ITEMS.map(optionRow).join('');
+
+  var check1 = document.getElementById('check1');
+  var fb1 = document.getElementById('fb1');
+  var pass2 = document.getElementById('pass2');
+  var p2head = document.getElementById('p2head');
+
+  function readAnswers(form, ids){
+    var a = {};
+    ids.forEach(function(id){
+      var sel = form.querySelector('input[name="'+id+'"]:checked');
+      a[id] = sel ? sel.value : null;
+    });
+    return a;
+  }
+  function countChosen(a){ var n=0; for(var k in a){ if(a[k]) n++; } return n; }
+
+  var ids1 = ITEMS.map(function(it){ return it.id; });
+
+  p1.addEventListener('change', function(){
+    if(p1.classList.contains('done')) return;
+    var a = readAnswers(p1, ids1);
+    check1.disabled = countChosen(a) < ids1.length;
+  });
+
+  function grade(answers, key){
+    var wrong = [];
+    for(var id in key){ if(answers[id] !== key[id]) wrong.push(id); }
+    if(wrong.length === 0) return {state:'correct'};
+    if(wrong.length === 1) return {state:'near', item:wrong[0]};
+    return {state:'wrong'};
+  }
+  var KEY1 = {}; ITEMS.forEach(function(it){ KEY1[it.id]=it.key; });
+
+  function show(fb, cls, html){
+    fb.className = 'fb ' + cls;
+    fb.innerHTML = html;
+    fb.hidden = false;
+    fb.focus();
+  }
+
+  check1.addEventListener('click', function(){
+    var a = readAnswers(p1, ids1);
+    if(countChosen(a) < ids1.length){ return; }
+    var r = grade(a, KEY1);
+
+    if(r.state === 'correct'){
+      show(fb1, 'ok',
+        '<h2>That is the split.</h2>'
+        + '<p>Everything on the Capability side is a named job the server was given for particular people — and each one could be written on a list and questioned: who asked for it, and why. Everything on the Platform side comes with the operating system and does no job for anyone on its own.</p>'
+        + '<p>That difference is not bookkeeping. Because capabilities can be listed one by one, a reviewer can go down the list and make each entry justify itself. That is the whole reason "provide only what the work needs" is a rule you can enforce, not just advice.</p>');
+      // lock the established split and open the second pass
+      p1.classList.add('done');
+      p1.querySelectorAll('input').forEach(function(i){ i.disabled = true; });
+      p1.querySelectorAll('.item').forEach(function(el){ el.classList.add('locked'); });
+      check1.disabled = true;
+      pass2.hidden = false;
+      pass2.classList.add('revealing');
+      p2head.focus();
+    } else if(r.state === 'near'){
+      show(fb1, 'near',
+        '<h3>Almost — one is on the wrong side.</h3>'
+        + '<p>Look again at: <span class="q">"'+STMT[r.item]+'"</span></p>'
+        + '<p>Run the single question on it: does the server do this the moment the operating system is installed, or did someone add it so the server does a job for particular people? Move it and check again.</p>');
+    } else {
+      show(fb1, 'no',
+        '<h3>More than one is on the wrong side.</h3>'
+        + '<p>That usually means the sort is running on the wrong question — how useful it sounds, or how technical. Here is the question that decides every item:</p>'
+        + '<p class="q">Does the server do this the moment the operating system is installed (platform), or did someone add it on purpose so the server does a job for particular people (a capability you could list and justify)?</p>'
+        + '<p>Run that on each one and check again.</p>');
+    }
+  });
+
+  // --- Second pass: same instrument, the deciding question moved from intent to countability ---
+  var p2 = document.getElementById('p2');
+  p2.innerHTML = '<fieldset class="item" id="item-vendor">'
+    + '<legend class="stmt visually-legend" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">The background feature the vendor installer switched on: platform or capability?</legend>'
+    + '<div class="seg" style="flex:1 1 auto;">'
+    +   '<label class="seg-opt"><input type="radio" name="vendor" value="platform"><span>Platform</span></label>'
+    +   '<label class="seg-opt"><input type="radio" name="vendor" value="capability"><span>Capability</span></label>'
+    + '</div></fieldset>';
+
+  var check2 = document.getElementById('check2');
+  var fb2 = document.getElementById('fb2');
+
+  p2.addEventListener('change', function(){
+    if(p2.classList.contains('done')) return;
+    var sel = p2.querySelector('input[name="vendor"]:checked');
+    check2.disabled = !sel;
+  });
+
+  check2.addEventListener('click', function(){
+    var sel = p2.querySelector('input[name="vendor"]:checked');
+    if(!sel) return;
+    if(sel.value === 'capability'){
+      show(fb2, 'ok',
+        '<h3>Right — and notice the question that got you there.</h3>'
+        + '<p>Not "did someone ask for it," because no one did. The question was "can it be listed, and can a reviewer demand a reason for it." It can. An unrequested capability is still a capability, and it lands on the same list as every deliberate one.</p>'
+        + '<p>That is exactly why being able to count what a server provides is what makes "only what the work needs" enforceable: the forgotten and the never-requested show up in the same place as everything you chose on purpose.</p>');
+      p2.classList.add('done');
+      p2.querySelectorAll('input').forEach(function(i){ i.disabled = true; });
+      p2.querySelector('.item').classList.add('locked');
+      check2.disabled = true;
+    } else {
+      show(fb2, 'near',
+        '<h3>That is the intuitive call — it just came on, the way the operating system did.</h3>'
+        + '<p>But run the governing question: can a reviewer list this and ask who decided it, and why? Yes. It is a discrete thing added to the machine, not a facility the OS provides.</p>'
+        + '<p>Nobody asking for it does not move it onto the platform. It makes it exactly the kind of entry a least-functionality review exists to catch. Put it in Capability.</p>');
+    }
+  });
+})();
+</script>
+</body>
+</html>
