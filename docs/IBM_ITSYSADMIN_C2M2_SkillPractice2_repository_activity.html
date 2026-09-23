@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — What Does Turning Off a Repository Actually Change?</title>
+<style>
+  :root{
+    --bg:#12181f; --panel:#1a2129; --panel-alt:#212a34; --border:#2a323c;
+    --text:#e8eaed; --text-dim:#8b96a5; --accent:#d9a441; --accent-soft:#3a3020;
+    --good:#4fb286; --good-soft:#16261f; --bad:#e0645a; --bad-soft:#2a1a1a;
+    --near:#c9a53b; --near-soft:#2c2415;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f4f2ee; --panel:#ffffff; --panel-alt:#f0ede7; --border:#d8d3c8;
+      --text:#20211f; --text-dim:#5c5a54; --accent:#93641c; --accent-soft:#f1e3c4;
+      --good:#1f7a52; --good-soft:#e2f3ea; --bad:#a83c33; --bad-soft:#f8e3e0;
+      --near:#8a6a12; --near-soft:#f4ecd2;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{padding:32px 20px 64px;line-height:1.55;}
+  main{max-width:640px;margin:0 auto;}
+  .kicker{font-size:13px;color:var(--text-dim);margin:0 0 6px;}
+  h1{font-size:23px;line-height:1.3;margin:0 0 16px;font-weight:650;}
+  h2{font-size:15px;margin:0 0 10px;font-weight:600;color:var(--text-dim);}
+  p{margin:0 0 16px;font-size:16px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:20px;}
+  fieldset{border:none;margin:0 0 18px;padding:0;}
+  legend{font-size:16px;font-weight:600;margin-bottom:10px;padding:0;}
+  .option{display:block;margin-bottom:8px;}
+  .option label{display:flex;align-items:flex-start;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;font-size:15px;}
+  .option input{margin-top:3px;flex-shrink:0;}
+  .option label:hover{border-color:var(--accent);}
+  input:focus-visible, button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  button{font-family:var(--sans);font-size:15px;font-weight:600;padding:11px 20px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#1a1305;cursor:pointer;margin-right:10px;margin-bottom:10px;}
+  button.ghost{background:transparent;color:var(--accent);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .feedback{display:none;border-radius:8px;padding:16px 18px;margin:16px 0;border-left:4px solid;}
+  .feedback.shown{display:block;}
+  .feedback.correct{background:var(--good-soft);border-color:var(--good);}
+  .feedback.near{background:var(--near-soft);border-color:var(--near);}
+  .feedback.wrong{background:var(--bad-soft);border-color:var(--bad);}
+  .feedback strong{display:block;margin-bottom:6px;font-size:15px;}
+
+  .sandbox{display:none;}
+  .sandbox.shown{display:block;}
+  .repo-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:10px;font-family:var(--mono);font-size:14px;}
+  .repo-row .state{font-size:12px;padding:2px 10px;border-radius:10px;}
+  .state.on{background:var(--good-soft);color:var(--good);}
+  .state.off{background:var(--bad-soft);color:var(--bad);}
+  .toggle-btn{margin:0;padding:6px 14px;font-size:13px;}
+  .readouts{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;}
+  .readout{flex:1 1 240px;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+  .readout h3{margin:0 0 8px;font-size:13px;color:var(--text-dim);font-weight:600;}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;}
+  td{padding:4px 0;border-bottom:1px solid var(--border);}
+  .unchanged-tag{font-size:11px;color:var(--text-dim);}
+  .note{font-size:14px;color:var(--text-dim);margin-top:10px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important;}
+  }
+  @media (max-width:480px){
+    .split, .readouts, .buckets, .choices{flex-direction:column;}
+    .host, .readout, .bucket{flex:1 1 100%;}
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Skill practice — Repository</p>
+  <h1>You're about to flip one switch. Predict what moves.</h1>
+
+  <p>A host has two repositories configured: <code>sem-base</code>, which stays enabled, and <code>sem-security-extras</code>, which you're about to toggle off. Nothing else about the host changes — you're not installing or removing anything.</p>
+
+  <form id="predictForm">
+    <fieldset>
+      <legend>Before you touch the toggle: what will disabling sem-security-extras change?</legend>
+      <div class="option"><label><input type="radio" name="predict" value="installed"> What's currently installed on the host</label></div>
+      <div class="option"><label><input type="radio" name="predict" value="available"> What updates the host can see as available</label></div>
+      <div class="option"><label><input type="radio" name="predict" value="both"> Both of those</label></div>
+      <div class="option"><label><input type="radio" name="predict" value="neither"> Neither — the toggle alone doesn't change anything until you act on it</label></div>
+    </fieldset>
+    <button type="button" id="predictBtn">Lock in my prediction</button>
+  </form>
+
+  <div class="feedback" id="feedback">
+    <strong id="fbHeadline"></strong>
+    <span id="fbBody"></span>
+  </div>
+
+  <div class="sandbox" id="sandbox">
+    <div class="panel">
+      <h2>Now try it yourself</h2>
+      <div class="repo-row">
+        <span>sem-base</span>
+        <span class="state on">always enabled</span>
+      </div>
+      <div class="repo-row">
+        <span id="repoLabel">sem-security-extras</span>
+        <span>
+          <span class="state on" id="repoState">enabled</span>
+          <button type="button" class="toggle-btn" id="toggleBtn">Toggle off</button>
+        </span>
+      </div>
+
+      <div class="readouts">
+        <div class="readout">
+          <h3>Installed packages</h3>
+          <table id="installedTable"></table>
+        </div>
+        <div class="readout">
+          <h3>Available updates</h3>
+          <table id="availableTable"></table>
+        </div>
+      </div>
+      <p class="note" id="sandboxNote">Flip the toggle a few times. Watch which panel moves.</p>
+    </div>
+
+    <div class="panel" id="secondScenario" style="display:none;">
+      <h2>Same mechanism, a second repository</h2>
+      <p style="margin-bottom:10px;">sem-legacy-mirror supplies updates for a different package. Toggle it too and confirm the same pattern holds.</p>
+      <div class="repo-row">
+        <span id="repo2Label">sem-legacy-mirror</span>
+        <span>
+          <span class="state on" id="repo2State">enabled</span>
+          <button type="button" class="toggle-btn" id="toggle2Btn">Toggle off</button>
+        </span>
+      </div>
+      <div class="readouts">
+        <div class="readout">
+          <h3>Installed packages</h3>
+          <table id="installedTable2"></table>
+        </div>
+        <div class="readout">
+          <h3>Available updates</h3>
+          <table id="availableTable2"></table>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="ghost" id="showSecondBtn">Try it again with a different repository and package</button>
+  </div>
+</main>
+
+<script>
+(function(){
+  const predictBtn = document.getElementById('predictBtn');
+  const feedback = document.getElementById('feedback');
+  const fbHeadline = document.getElementById('fbHeadline');
+  const fbBody = document.getElementById('fbBody');
+  const sandbox = document.getElementById('sandbox');
+
+  const installedFixed = [
+    ['httpd', '2.4.57-2'],
+    ['openssl-libs', '3.0.7-2'],
+    ['sem-checkout-svc', '4.1.0-1']
+  ];
+
+  function renderInstalled(tableId){
+    document.getElementById(tableId).innerHTML = installedFixed
+      .map(([n,v]) => `<tr><td>${n}</td><td style="text-align:right;color:var(--text-dim);">${v}</td></tr>`)
+      .join('');
+  }
+  renderInstalled('installedTable');
+  renderInstalled('installedTable2');
+
+  function renderAvailable(tableId, on, pkgName, fromVer, toVer){
+    const el = document.getElementById(tableId);
+    if(on){
+      el.innerHTML = `<tr><td>${pkgName}</td><td style="text-align:right;color:var(--good);">${fromVer} → ${toVer}</td></tr>`;
+    } else {
+      el.innerHTML = `<tr><td colspan="2" style="color:var(--text-dim);border-bottom:none;">nothing offered</td></tr>`;
+    }
+  }
+  renderAvailable('availableTable', true, 'openssl-libs', '3.0.7-2', '3.0.9-1');
+  renderAvailable('availableTable2', true, 'sem-checkout-svc', '4.1.0-1', '4.1.3-1');
+
+  predictBtn.addEventListener('click', () => {
+    const chosen = document.querySelector('input[name="predict"]:checked');
+    if(!chosen) return;
+    document.querySelectorAll('input[name="predict"]').forEach(r => r.disabled = true);
+    predictBtn.disabled = true;
+
+    let cls, headline, body;
+    if(chosen.value === 'available'){
+      cls = 'correct';
+      headline = "Right.";
+      body = "Disabling a repository only changes what the host can see as offered next. What's already installed doesn't move — nothing was installed or removed.";
+    } else if(chosen.value === 'both' || chosen.value === 'installed'){
+      cls = 'wrong';
+      headline = "The installed list won't move.";
+      body = "Toggling a repository doesn't touch what's already on the host — only what it can see as available going forward. Watch the sandbox below to confirm it for yourself.";
+    } else {
+      cls = 'near';
+      headline = "Half right — it does change something, right away.";
+      body = "The toggle alone changes what's available, immediately — no install or update has to run first. What it never touches is what's currently installed.";
+    }
+    fbHeadline.textContent = headline;
+    fbBody.textContent = body;
+    feedback.className = 'feedback shown ' + cls;
+    sandbox.classList.add('shown');
+  });
+
+  let repoOn = true;
+  const toggleBtn = document.getElementById('toggleBtn');
+  const repoState = document.getElementById('repoState');
+  toggleBtn.addEventListener('click', () => {
+    repoOn = !repoOn;
+    repoState.textContent = repoOn ? 'enabled' : 'disabled';
+    repoState.className = 'state ' + (repoOn ? 'on' : 'off');
+    toggleBtn.textContent = repoOn ? 'Toggle off' : 'Toggle on';
+    renderInstalled('installedTable');
+    renderAvailable('availableTable', repoOn, 'openssl-libs', '3.0.7-2', '3.0.9-1');
+    document.getElementById('sandboxNote').textContent = repoOn
+      ? "Enabled again — the available-updates panel changed back. Installed packages never moved, in either direction."
+      : "Disabled — the available-updates panel emptied out. The installed-packages panel is untouched.";
+  });
+
+  document.getElementById('showSecondBtn').addEventListener('click', function(){
+    document.getElementById('secondScenario').style.display = 'block';
+    this.style.display = 'none';
+  });
+
+  let repo2On = true;
+  const toggle2Btn = document.getElementById('toggle2Btn');
+  const repo2State = document.getElementById('repo2State');
+  toggle2Btn.addEventListener('click', () => {
+    repo2On = !repo2On;
+    repo2State.textContent = repo2On ? 'enabled' : 'disabled';
+    repo2State.className = 'state ' + (repo2On ? 'on' : 'off');
+    toggle2Btn.textContent = repo2On ? 'Toggle off' : 'Toggle on';
+    renderInstalled('installedTable2');
+    renderAvailable('availableTable2', repo2On, 'sem-checkout-svc', '4.1.0-1', '4.1.3-1');
+  });
+})();
+</script>
+</body>
+</html>

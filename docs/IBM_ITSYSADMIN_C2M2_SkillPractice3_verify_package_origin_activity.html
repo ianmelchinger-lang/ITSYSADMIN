@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — Was It Actually Verified?</title>
+<style>
+  :root{
+    --bg:#12181f; --panel:#1a2129; --panel-alt:#212a34; --border:#2a323c;
+    --text:#e8eaed; --text-dim:#8b96a5; --accent:#d9a441; --accent-soft:#3a3020;
+    --good:#4fb286; --good-soft:#16261f; --bad:#e0645a; --bad-soft:#2a1a1a;
+    --near:#c9a53b; --near-soft:#2c2415;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f4f2ee; --panel:#ffffff; --panel-alt:#f0ede7; --border:#d8d3c8;
+      --text:#20211f; --text-dim:#5c5a54; --accent:#93641c; --accent-soft:#f1e3c4;
+      --good:#1f7a52; --good-soft:#e2f3ea; --bad:#a83c33; --bad-soft:#f8e3e0;
+      --near:#8a6a12; --near-soft:#f4ecd2;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{padding:32px 20px 64px;line-height:1.55;}
+  main{max-width:640px;margin:0 auto;}
+  .kicker{font-size:13px;color:var(--text-dim);margin:0 0 6px;}
+  h1{font-size:23px;line-height:1.3;margin:0 0 16px;font-weight:650;}
+  h2{font-size:15px;margin:0 0 10px;font-weight:600;color:var(--text-dim);}
+  p{margin:0 0 16px;font-size:16px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:20px;}
+  .conf{font-family:var(--mono);font-size:14px;background:var(--panel-alt);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+  .conf .path{color:var(--text-dim);}
+  .conf div{margin:2px 0;}
+  .scenario{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+  .scenario p.setup{margin:0 0 12px;font-size:15.5px;}
+  .choices{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .choices button{margin:0;padding:8px 14px;font-size:13.5px;font-weight:600;border-radius:7px;border:1px solid var(--border);background:var(--panel-alt);color:var(--text);cursor:pointer;}
+  .choices button:hover{border-color:var(--accent);}
+  .choices button.picked{border-color:var(--accent);background:var(--accent-soft);}
+  .choices button:disabled{cursor:default;}
+  .fb{display:none;border-radius:7px;padding:10px 14px;font-size:14.5px;border-left:3px solid;}
+  .fb.shown{display:block;}
+  .fb.correct{background:var(--good-soft);border-color:var(--good);}
+  .fb.near{background:var(--near-soft);border-color:var(--near);}
+  .fb.wrong{background:var(--bad-soft);border-color:var(--bad);}
+  input:focus-visible, button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mainbtn{font-family:var(--sans);font-size:15px;font-weight:600;padding:11px 20px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#1a1305;cursor:pointer;}
+  .mainbtn.ghost{background:transparent;color:var(--accent);}
+  .mainbtn:disabled{opacity:.4;cursor:not-allowed;}
+  .summary{display:none;margin-top:10px;}
+  .summary.shown{display:block;}
+  .secondpass{display:none;margin-top:26px;padding-top:20px;border-top:1px solid var(--border);}
+  .secondpass.shown{display:block;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important;}
+  }
+  @media (max-width:480px){
+    .split, .readouts, .buckets, .choices{flex-direction:column;}
+    .host, .readout, .bucket{flex:1 1 100%;}
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Skill practice — Verifying a package's origin</p>
+  <h1>Four installs. Which ones were actually verified?</h1>
+
+  <p>Verification isn't about how trustworthy an install looked. It's about whether the matching setting was on when the install ran. Here's the host's current configuration:</p>
+
+  <div class="panel">
+    <div class="conf">
+      <div><span class="path">/etc/dnf/dnf.conf</span></div>
+      <div>gpgcheck=<strong id="gpgVal">1</strong></div>
+      <div>localpkg_gpgcheck=<strong id="localVal">0</strong></div>
+    </div>
+  </div>
+
+  <p>For each install below, mark how strongly you can claim its origin was verified — based only on which setting governs that install path.</p>
+
+  <div id="scenarios"></div>
+
+  <button type="button" class="mainbtn" id="checkAllBtn" disabled>Check my answers</button>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="secondpass" id="secondPass">
+    <h2>One setting moved</h2>
+    <p>Say the team enables local-file checking too, so <code>localpkg_gpgcheck=1</code>. Same four installs — do any answers change?</p>
+    <button type="button" class="mainbtn ghost" id="flipBtn">Flip localpkg_gpgcheck to 1 and re-check</button>
+    <div id="flipResult"></div>
+  </div>
+</main>
+
+<script>
+(function(){
+  const scenarios = [
+    {
+      id: 's1',
+      setup: "You installed sem-reportgen from the sem-base repository, which is configured and enabled on this host.",
+      path: 'repo',
+      choices: ['Verified', 'Not verified', "Can't tell without checking further"]
+    },
+    {
+      id: 's2',
+      setup: "A vendor emailed you an .rpm file directly. The email came from a domain you recognize, and you installed it as a local file.",
+      path: 'local',
+      choices: ['Verified', 'Not verified', "Can't tell without checking further"]
+    },
+    {
+      id: 's3',
+      setup: "You installed sem-salesdash from the sem-security-extras repository, configured the same way as sem-base.",
+      path: 'repo',
+      choices: ['Verified', 'Not verified', "Can't tell without checking further"]
+    },
+    {
+      id: 's4',
+      setup: "A colleague shared an .rpm file over a company drive. You installed it as a local file, the same way as the vendor's email attachment above.",
+      path: 'local',
+      choices: ['Verified', 'Not verified', "Can't tell without checking further"]
+    }
+  ];
+
+  let gpgcheck = 1, localpkg = 0;
+  const answers = {};
+
+  function correctFor(path){
+    const setting = path === 'repo' ? gpgcheck : localpkg;
+    return setting === 1 ? 'Verified' : 'Not verified';
+  }
+
+  function render(){
+    const container = document.getElementById('scenarios');
+    container.innerHTML = '';
+    scenarios.forEach(sc => {
+      const div = document.createElement('div');
+      div.className = 'scenario';
+      div.innerHTML = `
+        <p class="setup">${sc.setup}</p>
+        <div class="choices" data-id="${sc.id}">
+          ${sc.choices.map(c => `<button type="button" data-choice="${c}">${c}</button>`).join('')}
+        </div>
+      `;
+      container.appendChild(div);
+    });
+
+    container.querySelectorAll('.choices').forEach(group => {
+      const id = group.dataset.id;
+      group.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          group.querySelectorAll('button').forEach(b => b.classList.remove('picked'));
+          btn.classList.add('picked');
+          answers[id] = btn.dataset.choice;
+          document.getElementById('checkAllBtn').disabled = Object.keys(answers).length < scenarios.length;
+        });
+      });
+    });
+  }
+  render();
+
+  document.getElementById('checkAllBtn').addEventListener('click', () => {
+    let correctCount = 0, nearCount = 0;
+    const lines = scenarios.map(sc => {
+      const correct = correctFor(sc.path);
+      const given = answers[sc.id];
+      let cls;
+      if(given === correct){ cls = 'correct'; correctCount++; }
+      else if(given === "Can't tell without checking further"){ cls = 'near'; nearCount++; }
+      else { cls = 'wrong'; }
+      const reasonPath = sc.path === 'repo' ? 'gpgcheck' : 'localpkg_gpgcheck';
+      const reasonVal = sc.path === 'repo' ? gpgcheck : localpkg;
+      let msg;
+      if(cls === 'correct'){
+        msg = `Right — ${reasonPath}=${reasonVal} governs this install path, and that's the whole answer, regardless of how the file arrived.`;
+      } else if(cls === 'near'){
+        msg = `This one is actually knowable: ${reasonPath}=${reasonVal} settles it directly — correct answer is "${correct}."`;
+      } else {
+        msg = `How the file arrived (email, a colleague, a familiar domain) isn't the criterion. ${reasonPath}=${reasonVal} is — correct answer is "${correct}."`;
+      }
+      return `<div class="fb shown ${cls}" style="margin-bottom:8px;"><strong>${sc.setup.split('.')[0]}.</strong> ${msg}</div>`;
+    });
+
+    const summary = document.getElementById('summary');
+    let headline;
+    if(correctCount === scenarios.length){
+      headline = "All four settled correctly, from the settings alone.";
+    } else if(nearCount > 0 && correctCount + nearCount === scenarios.length){
+      headline = "You're not asserting anything false — but some of these were fully knowable from the settings shown.";
+    } else {
+      headline = "The criterion here is the setting for that install path, never how the file arrived.";
+    }
+    summary.innerHTML = `<p style="font-weight:600;margin-bottom:10px;">${headline}</p>` + lines.join('');
+    summary.classList.add('shown');
+    document.getElementById('secondPass').classList.add('shown');
+  });
+
+  document.getElementById('flipBtn').addEventListener('click', function(){
+    localpkg = 1;
+    document.getElementById('localVal').textContent = '1';
+    const result = document.getElementById('flipResult');
+    result.innerHTML = `
+      <p style="margin-top:14px;">With <code>localpkg_gpgcheck=1</code>, the two local-file installs — the vendor email and the colleague's shared file — are now both "Verified." The two repository installs don't change, because they were already governed by <code>gpgcheck=1</code> the whole time. Nothing about how any of the four files arrived changed. Only the setting moved, and only the installs that setting governs moved with it.</p>
+    `;
+    this.disabled = true;
+    this.textContent = 'Flipped';
+  });
+})();
+</script>
+</body>
+</html>
