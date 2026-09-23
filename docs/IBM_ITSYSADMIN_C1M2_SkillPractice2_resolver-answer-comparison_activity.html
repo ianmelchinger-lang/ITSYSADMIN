@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where will each client send its request?</title>
+<style>
+:root {
+  --paper: #EDF1F5;
+  --sheet: #FFFFFF;
+  --ink: #1C2630;
+  --ink-soft: #4A5866;
+  --rule: #B9C4CF;
+  --action: #245A8C;
+  --action-ink: #FFFFFF;
+  --focus: #E0A100;
+  --ok: #1E6B45;
+  --ok-wash: #E5F2EA;
+  --near: #8A5A00;
+  --near-wash: #FBF2DE;
+  --bad: #9B2C2C;
+  --bad-wash: #F8E6E6;
+  --changed: #FFF3C4;
+  --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0;
+  padding: 32px 20px 48px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+}
+main { max-width: 800px; margin: 0 auto; }
+h1 { font-family: var(--serif); font-size: 2rem; line-height: 1.2; margin: 0 0 12px; }
+h2 { font-size: 1.1rem; margin: 0 0 10px; line-height: 1.3; }
+h3 { font-size: 1rem; margin: 0 0 8px; }
+p { margin: 0 0 12px; max-width: 66ch; }
+.lead { color: var(--ink-soft); }
+.terms { font-size: 0.95rem; color: var(--ink-soft); margin: 0 0 24px; }
+.terms div { margin-bottom: 4px; max-width: 70ch; }
+.terms dt { font-weight: 700; color: var(--ink); display: inline; }
+.terms dd { display: inline; margin: 0; }
+.addr { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.records { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0 0 28px; }
+.record {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-left: 6px solid var(--ink);
+  padding: 14px 16px 6px;
+}
+.record.service { grid-column: 1 / -1; border-left-color: var(--action); }
+.record.changed { background: var(--changed); }
+.record dl { display: grid; grid-template-columns: 8.5em 1fr; margin: 0; }
+.record dt, .record dd { margin: 0; padding: 6px 0; border-top: 1px solid var(--rule); }
+.record dt { font-size: 0.88rem; color: var(--ink-soft); padding-right: 10px; }
+.record dd { font-family: var(--serif); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.flag { font-size: 0.85rem; font-weight: 700; color: var(--near); margin-left: 6px; }
+
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0 0 16px; }
+fieldset {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 14px 16px 6px;
+  margin: 0;
+  min-width: 0;
+}
+legend { font-weight: 700; padding: 0 4px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 0.95rem; margin-bottom: 4px; }
+.field.off select { border-color: var(--near); box-shadow: 0 0 0 2px var(--near); }
+.field.good select { border-color: var(--ok); }
+.wide { grid-column: 1 / -1; }
+select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 4px;
+  background: var(--sheet);
+  color: var(--ink);
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 4px;
+  border: 2px solid var(--action);
+  background: var(--action);
+  color: var(--action-ink);
+  cursor: pointer;
+}
+button.quiet { background: transparent; color: var(--action); }
+button[hidden] { display: none; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 16px; }
+
+.feedback { border-radius: 4px; padding: 14px 16px; margin: 0 0 16px; display: none; }
+.feedback.show { display: block; }
+.feedback.correct { background: var(--ok-wash); border-left: 4px solid var(--ok); }
+.feedback.near { background: var(--near-wash); border-left: 4px solid var(--near); }
+.feedback.wrong { background: var(--bad-wash); border-left: 4px solid var(--bad); }
+.feedback p:last-child { margin-bottom: 0; }
+.pass-note { display: none; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 16px; margin: 0 0 20px; }
+.pass-note.show { display: block; }
+
+@media (max-width: 480px) {
+  body { padding: 20px 14px 36px; font-size: 16px; }
+  h1 { font-size: 1.6rem; }
+  .records, .compare { grid-template-columns: 1fr; }
+  .record dl { grid-template-columns: 1fr; }
+  .record dt { padding-bottom: 0; }
+  .record dd { border-top: 0; padding-top: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+.echo { display: none; font-size: 0.9rem; color: var(--ink-soft); margin: 4px 0 0; }
+@media (max-width: 480px) { .echo { display: block; } .slot .echo { grid-column: 1; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Where will each client send its request?</h1>
+  <p class="lead">Both warehouses type the same name for the pick-ticket page. Only one of them can load it. Before you blame the server or the network, find out which address each client was actually given, and whether it is the one intended.</p>
+
+  <dl class="terms">
+    <div><dt>Name resolution.</dt> <dd>The lookup that supplies an address for the name a client uses.</dd></div>
+    <div><dt>Resolver.</dt> <dd>The service a client asks for that lookup. A resolver can hand back an answer it kept from an earlier lookup.</dd></div>
+    <div><dt>Intended address.</dt> <dd>The destination the current service record says the name should lead to.</dd></div>
+  </dl>
+
+  <div class="pass-note" id="pass-note" tabindex="-1">
+    <h2>One fact has changed</h2>
+    <p>This is later. The label service has moved, and the current service record has been updated. The two lookup records are the same as before. Your earlier answers are still in place. Check them against the new record.</p>
+  </div>
+
+  <section class="records" aria-label="Records">
+    <div class="record service" id="rec-service">
+      <h2 id="svc-heading">Current service record</h2>
+      <dl id="svc-dl"></dl>
+    </div>
+    <div class="record">
+      <h3>Lookup record: north warehouse client</h3>
+      <dl id="north-dl"></dl>
+    </div>
+    <div class="record">
+      <h3>Lookup record: south warehouse client</h3>
+      <dl id="south-dl"></dl>
+    </div>
+  </section>
+
+  <section aria-labelledby="cmp-heading">
+    <h2 id="cmp-heading">Compare the answers</h2>
+    <div class="compare">
+      <fieldset>
+        <legend>North warehouse client</legend>
+        <div class="field" id="f-northDest">
+          <label for="northDest">Address this client will send its request to</label>
+          <select id="northDest"></select>
+        </div>
+        <div class="field" id="f-northMatch">
+          <label for="northMatch">Is that the intended address?</label>
+          <select id="northMatch"></select>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>South warehouse client</legend>
+        <div class="field" id="f-southDest">
+          <label for="southDest">Address this client will send its request to</label>
+          <select id="southDest"></select>
+        </div>
+        <div class="field" id="f-southMatch">
+          <label for="southMatch">Is that the intended address?</label>
+          <select id="southMatch"></select>
+        </div>
+      </fieldset>
+      <fieldset class="wide">
+        <legend>What follows</legend>
+        <div class="field" id="f-verdict">
+          <label for="verdict">Whose resolver answer should you investigate?</label>
+          <select id="verdict"></select>
+        </div>
+        <div class="field" id="f-establish">
+          <label for="establish">The north client&#8217;s lookup returned an answer without error. What does that establish?</label>
+          <select id="establish"></select>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="button" id="check-btn">Check my answers</button>
+    <button type="button" class="quiet" id="pass2-btn" hidden>Change one fact</button>
+    <button type="button" class="quiet" id="reset-btn">Start again</button>
+  </div>
+
+  <section class="feedback" id="feedback" role="status" aria-live="polite" tabindex="-1">
+    <h2 id="fb-title"></h2>
+    <div id="fb-body"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var NAME = "picktickets.sem.example";
+  var OLD_ADDR = "192.0.2.10";
+  var NEW_ADDR = "198.51.100.20";
+  var PORT = 8443;
+  var portText = PORT.toLocaleString("en-US", { useGrouping: false });
+
+  var SERVICE = {
+    1: { addr: OLD_ADDR, updated: "Before the incident" },
+    2: { addr: NEW_ADDR, updated: "After the move was completed" }
+  };
+  var NORTH = [["Name requested", NAME], ["Resolver", "North site resolver"], ["Returned address", NEW_ADDR], ["How obtained", "A new lookup, made this morning"]];
+  var SOUTH = [["Name requested", NAME], ["Resolver", "South site resolver"], ["Returned address", OLD_ADDR], ["How obtained", "An answer the resolver kept from an earlier lookup"]];
+
+  var OPTIONS = {
+    northDest: [["", "Choose"], [OLD_ADDR, OLD_ADDR], [NEW_ADDR, NEW_ADDR], ["cannot", "Cannot tell from these records"]],
+    southDest: [["", "Choose"], [OLD_ADDR, OLD_ADDR], [NEW_ADDR, NEW_ADDR], ["cannot", "Cannot tell from these records"]],
+    northMatch: [["", "Choose"], ["yes", "Yes"], ["no", "No"]],
+    southMatch: [["", "Choose"], ["yes", "Yes"], ["no", "No"]],
+    verdict: [["", "Choose"], ["north", "The north warehouse client\u2019s"], ["south", "The south warehouse client\u2019s"], ["both", "Both"], ["neither", "Neither"]],
+    establish: [["", "Choose"],
+      ["works", "The name works, so the page should load"],
+      ["received", "Only which address the north client received"],
+      ["intended", "That the north client has the intended address"],
+      ["answers", "That a service answers at that address"]]
+  };
+  var FIELDS = ["northDest", "northMatch", "southDest", "southMatch", "verdict", "establish"];
+  var LABELS = {
+    northDest: "the north client\u2019s destination",
+    northMatch: "whether the north client\u2019s address is the intended one",
+    southDest: "the south client\u2019s destination",
+    southMatch: "whether the south client\u2019s address is the intended one",
+    verdict: "whose resolver answer to investigate",
+    establish: "what the north lookup establishes"
+  };
+
+  var KEY = {
+    1: { northDest: NEW_ADDR, northMatch: "no", southDest: OLD_ADDR, southMatch: "yes", verdict: "north", establish: "received" },
+    2: { northDest: NEW_ADDR, northMatch: "yes", southDest: OLD_ADDR, southMatch: "no", verdict: "south", establish: "received" }
+  };
+
+  function criterion(field, choice, pass) {
+    if (field === "northDest" || field === "southDest") {
+      if (choice === "cannot") return "The lookup record shows the returned address. A client sends its request to that address.";
+      return "A client sends its request to the address its own resolver returned. The service record does not change where a client sends it.";
+    }
+    if (field === "northMatch" || field === "southMatch") {
+      return "Compare the address this client received with the intended address in the current service record. Do not compare the two clients with each other.";
+    }
+    if (field === "verdict") {
+      if ((pass === 1 && choice === "south") || (pass === 2 && choice === "north")) {
+        return "Age does not decide which answer is wrong. An answer kept from an earlier lookup can be correct, and a new one can be wrong. Only the current service record decides.";
+      }
+      if (choice === "both") return "Investigate an answer when it differs from the intended address. Check each one against the service record.";
+      if (choice === "neither") return "The two clients were given different addresses for the same name. At least one of them differs from the intended address.";
+      return "Investigate the answer that differs from the intended address.";
+    }
+    if (field === "establish") {
+      return "A lookup shows what address came back. It cannot show that the address is the intended one, or that any service answers there.";
+    }
+    return "";
+  }
+
+  var pass = 1;
+  var fb = document.getElementById("feedback");
+  var pass2Btn = document.getElementById("pass2-btn");
+  var passNote = document.getElementById("pass-note");
+
+  function fillDl(el, rows, changedRow) {
+    el.innerHTML = "";
+    rows.forEach(function (r) {
+      var dt = document.createElement("dt");
+      dt.textContent = r[0];
+      var dd = document.createElement("dd");
+      dd.textContent = r[1];
+      if (changedRow && r[0] === changedRow) {
+        var f = document.createElement("span");
+        f.className = "flag";
+        f.textContent = "Changed";
+        dd.appendChild(f);
+      }
+      el.appendChild(dt);
+      el.appendChild(dd);
+    });
+  }
+
+  function renderRecords() {
+    var s = SERVICE[pass];
+    fillDl(document.getElementById("svc-dl"), [
+      ["Name", NAME],
+      ["Intended address", s.addr],
+      ["Port", portText],
+      ["Last updated", s.updated]
+    ], pass === 2 ? "Intended address" : null);
+    document.getElementById("rec-service").classList.toggle("changed", pass === 2);
+    fillDl(document.getElementById("north-dl"), NORTH);
+    fillDl(document.getElementById("south-dl"), SOUTH);
+  }
+
+  function renderSelects() {
+    FIELDS.forEach(function (f) {
+      var sel = document.getElementById(f);
+      sel.innerHTML = "";
+      OPTIONS[f].forEach(function (o) {
+        var op = document.createElement("option");
+        op.value = o[0];
+        op.textContent = o[1];
+        sel.appendChild(op);
+      });
+      sel.addEventListener("change", clearMarks);
+    });
+  }
+
+  function clearMarks() {
+    FIELDS.forEach(function (f) { document.getElementById("f-" + f).className = "field"; });
+  }
+
+  function para(t) { var p = document.createElement("p"); p.textContent = t; return p; }
+
+  function show(state, title, nodes) {
+    fb.className = "feedback show " + state;
+    document.getElementById("fb-title").textContent = title;
+    var body = document.getElementById("fb-body");
+    body.innerHTML = "";
+    nodes.forEach(function (n) { body.appendChild(n); });
+    fb.focus();
+  }
+
+  function check() {
+    clearMarks();
+    var answers = {}, missing = [], wrong = [];
+    FIELDS.forEach(function (f) {
+      answers[f] = document.getElementById(f).value;
+      if (!answers[f]) missing.push(f);
+      else if (answers[f] !== KEY[pass][f]) wrong.push(f);
+    });
+    if (missing.length) {
+      show("near", "Some answers are still blank", [para("Choose an answer for every question.")]);
+      return;
+    }
+    if (wrong.length === 0) {
+      FIELDS.forEach(function (f) { document.getElementById("f-" + f).classList.add("good"); });
+      if (pass === 1) {
+        show("correct", "That holds up", [
+          para("The north client will try " + NEW_ADDR + ". The service record says " + OLD_ADDR + ". That mismatch is the reason to inspect the north site\u2019s resolver answer."),
+          para("The south client\u2019s answer is older, but it matches the record. Being older did not make it wrong."),
+          para("The north lookup succeeded, and it still tells you only what address came back. The next check is a connection test from the north warehouse.")
+        ]);
+        pass2Btn.hidden = false;
+      } else {
+        show("correct", "The answer moved, and that holds up", [
+          para("Nothing about either lookup changed. Only the intended address did. Now the north client\u2019s new answer is the right one, and the south client\u2019s kept answer is out of date."),
+          para("That is why you record the resolver and compare each answer with the current service record. The same answer can be right one week and wrong the next.")
+        ]);
+      }
+      return;
+    }
+    if (wrong.length === 1) {
+      var f = wrong[0];
+      document.getElementById("f-" + f).classList.add("off");
+      show("near", "Close. One answer is out of place", [
+        para("Check " + LABELS[f] + "."),
+        para(criterion(f, answers[f], pass))
+      ]);
+      document.getElementById(f).focus();
+      return;
+    }
+    show("wrong", "Not yet", [
+      para("Where a client sends its request depends on what its resolver returned. Whether that is right depends on the current service record, not on which answer is newer."),
+      para("Start with the north client. Read the returned address from its lookup record. Then find the intended address in the service record and compare the two.")
+    ]);
+  }
+
+  function startPass2() {
+    pass = 2;
+    renderRecords();
+    passNote.classList.add("show");
+    pass2Btn.hidden = true;
+    fb.className = "feedback";
+    clearMarks();
+    passNote.focus();
+  }
+
+  function reset() {
+    pass = 1;
+    passNote.classList.remove("show");
+    pass2Btn.hidden = true;
+    fb.className = "feedback";
+    renderRecords();
+    FIELDS.forEach(function (f) { document.getElementById(f).value = ""; });
+    clearMarks();
+    document.getElementById("northDest").focus();
+  }
+
+  document.getElementById("check-btn").addEventListener("click", check);
+  pass2Btn.addEventListener("click", startPass2);
+  document.getElementById("reset-btn").addEventListener("click", reset);
+
+  renderRecords();
+  renderSelects();
+  function wireEcho() {
+    var sels = document.querySelectorAll("select");
+    Array.prototype.forEach.call(sels, function (s) {
+      var e = s.parentNode.querySelector('.echo[data-for="' + s.id + '"]');
+      if (!e) {
+        e = document.createElement("p"); e.className = "echo"; e.setAttribute("data-for", s.id); e.setAttribute("aria-hidden", "true");
+        s.insertAdjacentElement("afterend", e);
+        s.addEventListener("change", function () { upd(s, e); });
+      }
+      upd(s, e);
+    });
+    function upd(s, e) { e.textContent = s.value ? s.options[s.selectedIndex].text : ""; }
+  }
+  document.addEventListener("click", function (ev) { if (ev.target && ev.target.tagName === "BUTTON") wireEcho(); });
+  wireEcho();
+})();
+</script>
+</body>
+</html>

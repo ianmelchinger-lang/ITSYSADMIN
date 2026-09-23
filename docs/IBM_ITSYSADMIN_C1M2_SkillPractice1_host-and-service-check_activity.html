@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What does this evidence prove?</title>
+<style>
+:root {
+  --paper: #EDF1F5;
+  --sheet: #FFFFFF;
+  --ink: #1C2630;
+  --ink-soft: #4A5866;
+  --rule: #B9C4CF;
+  --action: #245A8C;
+  --action-ink: #FFFFFF;
+  --focus: #E0A100;
+  --ok: #1E6B45;
+  --ok-wash: #E5F2EA;
+  --near: #8A5A00;
+  --near-wash: #FBF2DE;
+  --bad: #9B2C2C;
+  --bad-wash: #F8E6E6;
+  --changed: #FFF3C4;
+  --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0;
+  padding: 32px 20px 48px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+}
+main { max-width: 760px; margin: 0 auto; }
+h1 { font-family: var(--serif); font-size: 2rem; line-height: 1.2; margin: 0 0 12px; }
+h2 { font-size: 1.1rem; margin: 0 0 10px; line-height: 1.3; }
+p { margin: 0 0 12px; max-width: 66ch; }
+.lead { color: var(--ink-soft); }
+.terms { font-size: 0.95rem; color: var(--ink-soft); margin-bottom: 24px; }
+.terms dt { font-weight: 700; color: var(--ink); display: inline; }
+.terms dd { display: inline; margin: 0; }
+.terms div { margin-bottom: 4px; max-width: 70ch; }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.evidence {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-left: 6px solid var(--ink);
+  padding: 18px 20px 6px;
+  margin: 0 0 28px;
+}
+.evidence ol { list-style: none; margin: 0; padding: 0; }
+.evidence li {
+  display: grid;
+  grid-template-columns: 2.6em 1fr;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--serif);
+}
+.evidence li .tag { font-family: var(--sans); font-weight: 700; font-variant-numeric: tabular-nums; }
+.evidence li .src { display: block; font-family: var(--sans); font-size: 0.88rem; color: var(--ink-soft); }
+.evidence li.changed { background: var(--changed); }
+.evidence li .flag { font-family: var(--sans); font-size: 0.85rem; font-weight: 700; color: var(--near); margin-left: 6px; }
+
+.claims { margin: 0 0 16px; }
+.claim {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.claim label { display: block; font-weight: 600; margin-bottom: 6px; }
+.claim .ask { display: block; font-weight: 400; font-size: 0.92rem; color: var(--ink-soft); }
+.claim.off { border-color: var(--near); box-shadow: inset 4px 0 0 var(--near); }
+.claim.good { border-color: var(--ok); box-shadow: inset 4px 0 0 var(--ok); }
+select {
+  font: inherit;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 4px;
+  background: var(--sheet);
+  color: var(--ink);
+  width: 100%;
+  max-width: 520px;
+}
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 4px;
+  border: 2px solid var(--action);
+  background: var(--action);
+  color: var(--action-ink);
+  cursor: pointer;
+}
+button.quiet { background: transparent; color: var(--action); }
+button[hidden] { display: none; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 16px; }
+
+.feedback {
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin: 0 0 16px;
+  display: none;
+}
+.feedback.show { display: block; }
+.feedback.correct { background: var(--ok-wash); border-left: 4px solid var(--ok); }
+.feedback.near { background: var(--near-wash); border-left: 4px solid var(--near); }
+.feedback.wrong { background: var(--bad-wash); border-left: 4px solid var(--bad); }
+.feedback h2 { margin-bottom: 6px; }
+.feedback p:last-child { margin-bottom: 0; }
+
+.pass-note {
+  display: none;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+}
+.pass-note.show { display: block; }
+
+@media (max-width: 480px) {
+  body { padding: 20px 14px 36px; font-size: 16px; }
+  h1 { font-size: 1.6rem; }
+  .evidence { padding: 14px 12px 4px; }
+  .evidence li { grid-template-columns: 2.2em 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>What does this evidence prove?</h1>
+  <p class="lead">Monitoring says the label host is up. A north warehouse user still cannot load the pick-ticket page. Before you tell anyone the server is fine, sort out what each piece of evidence actually proves. Some claims will not be proved by anything here yet. Saying so is a correct answer.</p>
+
+  <dl class="terms">
+    <div><dt>Host.</dt> <dd>A computer or virtual machine with an operating system.</dd></div>
+    <div><dt>Listening service.</dt> <dd>A program on a host that waits for requests on a numbered port and responds to them. One host can run several, and each can fail on its own.</dd></div>
+    <div><dt>Address and port.</dt> <dd>The address points a request toward a host. The port tells the host which service should receive it.</dd></div>
+  </dl>
+
+  <section class="evidence" aria-labelledby="ev-heading">
+    <h2 id="ev-heading">Evidence gathered this morning</h2>
+    <ol id="ev-list"></ol>
+  </section>
+
+  <div class="pass-note" id="pass-note" role="status" aria-live="polite">
+    <h2>One fact has changed</h2>
+    <p>This is another day. A configuration change was made to the label service overnight. Only observation O3 reads differently; it is highlighted. Your earlier answers are still in place. Check them against the new evidence.</p>
+  </div>
+
+  <section aria-labelledby="claims-heading">
+    <h2 id="claims-heading">For each claim, choose the observation that proves it</h2>
+    <p>If nothing here proves a claim, choose <strong>Not yet established</strong>.</p>
+    <div class="claims" id="claims"></div>
+  </section>
+
+  <div class="actions">
+    <button type="button" id="check-btn">Check my answers</button>
+    <button type="button" class="quiet" id="pass2-btn" hidden>Change one fact</button>
+    <button type="button" class="quiet" id="reset-btn">Start again</button>
+  </div>
+
+  <section class="feedback" id="feedback" role="status" aria-live="polite" tabindex="-1">
+    <h2 id="fb-title"></h2>
+    <div id="fb-body"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var HOST_ADDR = "192.0.2.10";
+  var BACKUP_ADDR = "192.0.2.210";
+  var PORT = 8443;
+  var portText = PORT.toLocaleString("en-US", { useGrouping: false });
+
+  var NONE = "none";
+
+  var EVIDENCE_BASE = [
+    { id: "O1", text: "The label host answered a reachability test.", src: "Sent from the monitoring network." },
+    { id: "O2", text: "The label service program is running on the label host.", src: "The host\u2019s list of running programs." },
+    { id: "O3", text: "The label service is accepting connections at " + HOST_ADDR + ", port " + portText + ".", src: "The host\u2019s own record of where each service listens." },
+    { id: "O4", text: "Monitoring status for the label service: up.", src: "The monitoring view. It checks whether the program is running." },
+    { id: "O5", text: "A north warehouse client sent a request for the page. The client shows no local error.", src: "The client\u2019s own record of what it sent." }
+  ];
+  var O3_PASS2 = {
+    text: "The label service is accepting connections at " + BACKUP_ADDR + ", port " + portText + ", only.",
+    src: "The host\u2019s own record of where each service listens. " + BACKUP_ADDR + " is the host\u2019s backup-network address. Warehouse clients cannot reach it."
+  };
+
+  var CLAIMS = [
+    { id: "C1", text: "The label host responds.", ask: "A host check: does the machine respond?" },
+    { id: "C2", text: "The label service program is running.", ask: "A process check: does the program run?" },
+    { id: "C3", text: "The label service accepts connections at " + HOST_ADDR + ", port " + portText + ".", ask: "A listening check: does the program accept connections at that address and port?" },
+    { id: "C4", text: "A north warehouse client can reach the label service at " + HOST_ADDR + ", port " + portText + ".", ask: "A client-side check: can the user reach it along their path?" }
+  ];
+
+  var KEY = {
+    1: { C1: ["O1"], C2: ["O2", "O4"], C3: ["O3"], C4: [NONE] },
+    2: { C1: ["O1"], C2: ["O2", "O4"], C3: [NONE], C4: [NONE] }
+  };
+
+  function criterion(claimId, choice, pass) {
+    if (claimId === "C1") {
+      return "The claim is about the machine responding. Only a test sent to the host and answered by it proves that. Records read on the host describe programs, not a response.";
+    }
+    if (claimId === "C2") {
+      if (choice === NONE) return "Two observations report whether the program is running. Find one of them.";
+      return "The claim is only that the program runs. Look for an observation that reports the program\u2019s state, and nothing more.";
+    }
+    if (claimId === "C3") {
+      if (pass === 2 && choice === "O3") return "Read O3 again. Check the address, not just the port.";
+      if (choice === "O1") return "A host that responds proves nothing about any one service on it.";
+      if (choice === "O2" || choice === "O4") return "A running program is not the same as a program accepting connections at a given address and port. It can run and listen somewhere a client cannot reach.";
+      if (choice === "O5") return "A sent request is evidence about the client only. It does not show anything accepted the connection.";
+      return "The claim names an address and port. Look for the observation that reports where the service listens, and compare the address.";
+    }
+    if (claimId === "C4") {
+      if (choice === "O5") return "The client sent a request. That is evidence about the client. It does not show the request reached the service, or that anything answered.";
+      return "Every observation except one was taken at the host or by monitoring. A claim about a north warehouse client needs a check made from the north warehouse, with a response. Is there one?";
+    }
+    return "";
+  }
+
+  var pass = 1;
+  var evList = document.getElementById("ev-list");
+  var claimsEl = document.getElementById("claims");
+  var fb = document.getElementById("feedback");
+  var fbTitle = document.getElementById("fb-title");
+  var fbBody = document.getElementById("fb-body");
+  var pass2Btn = document.getElementById("pass2-btn");
+  var passNote = document.getElementById("pass-note");
+
+  function renderEvidence() {
+    document.getElementById("ev-heading").textContent = pass === 2 ? "Evidence gathered on another day" : "Evidence gathered this morning";
+    evList.innerHTML = "";
+    EVIDENCE_BASE.forEach(function (e) {
+      var text = e.text, src = e.src, changed = false;
+      if (pass === 2 && e.id === "O3") { text = O3_PASS2.text; src = O3_PASS2.src; changed = true; }
+      var li = document.createElement("li");
+      if (changed) li.className = "changed";
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = e.id;
+      var body = document.createElement("span");
+      body.textContent = text;
+      if (changed) {
+        var f = document.createElement("span");
+        f.className = "flag";
+        f.textContent = "Changed";
+        body.appendChild(f);
+      }
+      var s = document.createElement("span");
+      s.className = "src";
+      s.textContent = src;
+      body.appendChild(s);
+      li.appendChild(tag);
+      li.appendChild(body);
+      evList.appendChild(li);
+    });
+  }
+
+  function renderClaims() {
+    claimsEl.innerHTML = "";
+    CLAIMS.forEach(function (c) {
+      var wrap = document.createElement("div");
+      wrap.className = "claim";
+      wrap.id = "claim-" + c.id;
+      var lab = document.createElement("label");
+      lab.setAttribute("for", "sel-" + c.id);
+      lab.textContent = c.text;
+      var ask = document.createElement("span");
+      ask.className = "ask";
+      ask.textContent = c.ask;
+      lab.appendChild(ask);
+      var sel = document.createElement("select");
+      sel.id = "sel-" + c.id;
+      var opts = [["", "Choose an observation"]];
+      EVIDENCE_BASE.forEach(function (e) { opts.push([e.id, e.id]); });
+      opts.push([NONE, "Not yet established"]);
+      opts.forEach(function (o) {
+        var op = document.createElement("option");
+        op.value = o[0];
+        op.textContent = o[1];
+        sel.appendChild(op);
+      });
+      sel.addEventListener("change", clearMarks);
+      wrap.appendChild(lab);
+      wrap.appendChild(sel);
+      claimsEl.appendChild(wrap);
+    });
+  }
+
+  function clearMarks() {
+    CLAIMS.forEach(function (c) { document.getElementById("claim-" + c.id).className = "claim"; });
+  }
+
+  function para(text) {
+    var p = document.createElement("p");
+    p.textContent = text;
+    return p;
+  }
+
+  function evaluate(answers, p) {
+    var wrong = [];
+    var missing = [];
+    CLAIMS.forEach(function (c) {
+      var a = answers[c.id];
+      if (!a) { missing.push(c.id); return; }
+      if (KEY[p][c.id].indexOf(a) === -1) wrong.push(c.id);
+    });
+    if (missing.length) return { state: "unanswered", missing: missing };
+    if (wrong.length === 0) return { state: "correct" };
+    if (wrong.length === 1) return { state: "near", wrong: wrong };
+    return { state: "wrong", wrong: wrong };
+  }
+
+  function readAnswers() {
+    var a = {};
+    CLAIMS.forEach(function (c) { a[c.id] = document.getElementById("sel-" + c.id).value; });
+    return a;
+  }
+
+  function show(state, title, nodes) {
+    fb.className = "feedback show " + state;
+    fbTitle.textContent = title;
+    fbBody.innerHTML = "";
+    nodes.forEach(function (n) { fbBody.appendChild(n); });
+    fb.focus();
+  }
+
+  function check() {
+    clearMarks();
+    var answers = readAnswers();
+    var r = evaluate(answers, pass);
+    if (r.state === "unanswered") {
+      show("near", "Some claims have no answer yet", [para("Choose an observation, or Not yet established, for every claim.")]);
+      return;
+    }
+    if (r.state === "correct") {
+      CLAIMS.forEach(function (c) { document.getElementById("claim-" + c.id).classList.add("good"); });
+      if (pass === 1) {
+        show("correct", "That holds up", [
+          para("The host responds (O1). The program runs (O2 or O4). It accepts connections at the address and port clients use (O3)."),
+          para("Nothing here shows a north warehouse client reaching it. O5 records only what the client sent. So the honest report is: host up, service listening, client path not yet checked. That is the next check to make."),
+          para("Each check answered a different question. Keeping them separate is what lets a colleague repeat your diagnosis.")
+        ]);
+        pass2Btn.hidden = false;
+      } else {
+        show("correct", "The answer moved, and that holds up", [
+          para("The host still responds. The program still runs. Monitoring would still say up."),
+          para("But the service now listens only at " + BACKUP_ADDR + ", which warehouse clients cannot reach. So nothing proves it accepts connections at " + HOST_ADDR + ", port " + portText + ". One changed fact broke the listening claim while every host and process check stayed green."),
+          para("That is why \u201Cthe host is up\u201D and \u201Cthe service is running\u201D never stand in for \u201Cthe service answers.\u201D")
+        ]);
+      }
+      return;
+    }
+    if (r.state === "near") {
+      var id = r.wrong[0];
+      document.getElementById("claim-" + id).classList.add("off");
+      var claim = CLAIMS.filter(function (c) { return c.id === id; })[0];
+      show("near", "Close. One claim is out of place", [
+        para("The marked claim: \u201C" + claim.text + "\u201D"),
+        para(criterion(id, answers[id], pass))
+      ]);
+      document.getElementById("sel-" + id).focus();
+      return;
+    }
+    show("wrong", "Not yet", [
+      para("Each claim asks one question: does the machine respond, does the program run, does it accept connections at this address and port, can this client reach it. An observation proves a claim only if it answers that same question, from the same place."),
+      para("Start with the claim about the north warehouse client. Where was each observation taken? Then work back to the host claim.")
+    ]);
+  }
+
+  function startPass2() {
+    pass = 2;
+    renderEvidence();
+    passNote.classList.add("show");
+    pass2Btn.hidden = true;
+    fb.className = "feedback";
+    clearMarks();
+    passNote.setAttribute("tabindex", "-1");
+    passNote.focus();
+  }
+
+  function reset() {
+    pass = 1;
+    passNote.classList.remove("show");
+    pass2Btn.hidden = true;
+    fb.className = "feedback";
+    renderEvidence();
+    renderClaims();
+    document.getElementById("sel-C1").focus();
+  }
+
+  document.getElementById("check-btn").addEventListener("click", check);
+  pass2Btn.addEventListener("click", startPass2);
+  document.getElementById("reset-btn").addEventListener("click", reset);
+
+  renderEvidence();
+  renderClaims();
+})();
+</script>
+</body>
+</html>
