@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trace the Failure Upstream</title>
+<style>
+  :root {
+    --paper: #f6f5f1;
+    --panel: #ece9e1;
+    --ink: #1c2321;
+    --ink-soft: #4a524d;
+    --rule: #cfc9ba;
+    --slate: #35566b;
+    --slate-soft: #e4ebee;
+    --correct: #3f6b4a;
+    --correct-soft: #e4ede3;
+    --near: #96602e;
+    --near-soft: #f4e7d8;
+    --wrong: #8a4a3a;
+    --wrong-soft: #f2e2dd;
+    --focus: #1d5fae;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    line-height: 1.55;
+  }
+
+  .wrap { max-width: 680px; margin: 0 auto; padding: 2.75rem 1.5rem 4rem; }
+
+  h1 { font-size: 1.35rem; line-height: 1.3; margin: 0 0 1.2rem; font-weight: 600; max-width: 26ch; }
+
+  p { font-size: 1.03rem; margin: 0 0 1.05rem; max-width: 64ch; }
+
+  .terms {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    border-left: 3px solid var(--slate);
+    padding: 1rem 1.2rem;
+    margin: 0 0 1.6rem;
+    font-size: 0.96rem;
+  }
+  .terms p { margin: 0; }
+
+  .instruction {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    margin: 0 0 1.6rem;
+  }
+
+  .scenario {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--rule);
+    border-radius: 5px;
+    padding: 1.1rem 1.2rem 1.2rem;
+    margin-bottom: 1.4rem;
+  }
+  .scenario.state-correct { border-left-color: var(--correct); background: var(--correct-soft); }
+  .scenario.state-near { border-left-color: var(--near); background: var(--near-soft); }
+  .scenario.state-wrong { border-left-color: var(--wrong); background: var(--wrong-soft); }
+  .scenario.state-changed { border-left-color: var(--slate); }
+
+  .scenario-flag {
+    display: inline-block;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--slate);
+    background: var(--slate-soft);
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .scenario-headline {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin: 0 0 0.7rem;
+  }
+
+  .chain {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin: 0 0 1rem;
+  }
+
+  .unit-row {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--panel);
+  }
+
+  .unit-row input {
+    margin-top: 0.3rem;
+    accent-color: var(--slate);
+    flex-shrink: 0;
+  }
+  .unit-row input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .unit-row label { flex: 1; cursor: pointer; }
+
+  .unit-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .unit-status {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    display: block;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .feedback {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    margin: 0.8rem 0 0;
+    line-height: 1.45;
+  }
+  .feedback .tag { font-weight: 700; margin-right: 0.3rem; }
+  .state-correct .feedback .tag { color: var(--correct); }
+  .state-near .feedback .tag { color: var(--near); }
+  .state-wrong .feedback .tag { color: var(--wrong); }
+
+  .actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+  button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--slate);
+    border: none;
+    border-radius: 5px;
+    padding: 0.85rem 1.5rem;
+    cursor: pointer;
+  }
+  button.secondary { background: #fff; color: var(--slate); border: 1px solid var(--slate); }
+  button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  #summary {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  .divider { border: none; border-top: 1px solid var(--rule); margin: 2.2rem 0 1.8rem; }
+
+  .second-pass {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1.6rem;
+    font-size: 0.96rem;
+  }
+  .second-pass p:last-child { margin-bottom: 0; }
+
+  .capability {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.02rem;
+    font-weight: 600;
+    background: var(--slate-soft);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    max-width: 60ch;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 2rem 1.1rem 3rem; }
+    h1 { font-size: 1.15rem; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1b1d1c; --panel: #26302f; --ink: #eceae4; --ink-soft: #a7ada7;
+      --rule: #3c4644; --slate: #6f9ec2; --slate-soft: #223541;
+      --correct: #7fb08c; --correct-soft: #1f2c23;
+      --near: #d9a869; --near-soft: #382a1c;
+      --wrong: #d99a86; --wrong-soft: #37241e;
+      --focus: #7fb2f2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1b1d1c; --panel: #26302f; --ink: #eceae4; --ink-soft: #a7ada7;
+    --rule: #3c4644; --slate: #6f9ec2; --slate-soft: #223541;
+    --correct: #7fb08c; --correct-soft: #1f2c23;
+    --near: #d9a869; --near-soft: #382a1c;
+    --wrong: #d99a86; --wrong-soft: #37241e;
+    --focus: #7fb2f2;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Trace the Failure Upstream</h1>
+
+  <p>A unit reporting <strong>failed</strong> names the unit. It doesn't diagnose the cause. systemd starts units in an order computed from declared dependencies, not a fixed script &mdash; so the unit everyone notices is often the last domino, not the first.</p>
+
+  <div class="terms">
+    <p>For each case, one unit is the one people noticed failing. Read every unit's status, then pick the one actually worth checking first &mdash; the thing the rest of the chain was waiting for.</p>
+  </div>
+
+  <p class="instruction">Pick the unit to check first in each case.</p>
+
+  <div id="scenario-list"></div>
+
+  <div class="actions">
+    <button type="button" id="check-btn">Check my answers</button>
+    <span id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div id="second-pass-offer" hidden>
+    <div class="second-pass">
+      <p>One of these cases isn't what it looks like tonight. Same chain, different unit actually broke &mdash; see if you're reading statuses or just reading position.</p>
+      <button type="button" class="secondary" id="second-pass-btn">Show tonight's version</button>
+    </div>
+  </div>
+
+  <div id="closing" hidden>
+    <hr class="divider">
+    <div class="capability">
+      The named unit is where the failure surfaces, not necessarily where it started. Reading every status in the chain, before touching anything, is what finds the actual blocker.
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var ROLE_LABEL = { root: 'the actual blocker', downstream: 'downstream of the real blocker', unrelated: 'not part of this chain at all' };
+
+  var SCENARIOS = [
+    {
+      id: "s1",
+      headline: "storefront-payment-proxy.service is reporting failed.",
+      units: [
+        { name: "shared-config.mount", status: "Active: inactive (dead)", log: "waiting on network share \u2014 timed out", role: "root" },
+        { name: "config-sync.service", status: "Active: failed", log: "shared-config.mount is not active", role: "downstream" },
+        { name: "storefront-payment-proxy.service", status: "Active: failed", log: "config-sync.service did not start", role: "downstream" },
+        { name: "register-display.service", status: "Active: active (running)", log: "no issues reported", role: "unrelated" }
+      ]
+    },
+    {
+      id: "s2",
+      headline: "receipt-print-queue.service is reporting failed.",
+      units: [
+        { name: "receipt-printer.socket", status: "Active: inactive (dead)", log: "no listener established \u2014 socket never opened", role: "root" },
+        { name: "receipt-print-queue.service", status: "Active: failed", log: "receipt-printer.socket is not active", role: "downstream" },
+        { name: "nightly-backup.timer", status: "Active: active (waiting)", log: "next run scheduled as usual", role: "unrelated" }
+      ]
+    },
+    {
+      id: "s3",
+      headline: "storefront-catalog.service is reporting failed.",
+      units: [
+        { name: "network-online.target", status: "Active: inactive (dead)", log: "network interface not yet up when target was requested", role: "root" },
+        { name: "inventory-sync.service", status: "Active: failed", log: "network-online.target is not active", role: "downstream" },
+        { name: "storefront-catalog.service", status: "Active: failed", log: "inventory-sync.service did not start", role: "downstream" },
+        { name: "card-reader.service", status: "Active: active (running)", log: "no issues reported", role: "unrelated" }
+      ],
+      variant: {
+        headline: "storefront-catalog.service is reporting failed \u2014 tonight's run.",
+        units: [
+          { name: "network-online.target", status: "Active: active", log: "reached on schedule, before anything else started", role: "unrelated-in-variant" },
+          { name: "inventory-sync.service", status: "Active: failed", log: "scratch volume full \u2014 could not write staging file", role: "root" },
+          { name: "storefront-catalog.service", status: "Active: failed", log: "inventory-sync.service did not start", role: "downstream" },
+          { name: "card-reader.service", status: "Active: active (running)", log: "no issues reported", role: "unrelated" }
+        ]
+      }
+    },
+    {
+      id: "s4",
+      headline: "till-audit-log.service is reporting failed.",
+      units: [
+        { name: "till-audit-log.mount", status: "Active: inactive (dead)", log: "backup volume not attached \u2014 mount request timed out", role: "root" },
+        { name: "till-audit-log.service", status: "Active: failed", log: "till-audit-log.mount is not active", role: "downstream" },
+        { name: "storefront-payment-proxy.service", status: "Active: active (running)", log: "no issues reported", role: "unrelated" }
+      ]
+    }
+  ];
+
+  var list = document.getElementById('scenario-list');
+  var hasCheckedOnce = false;
+
+  function traitFor(role) {
+    if (role === 'root') return "it's the one nothing in the chain got past \u2014 the rest were waiting on it";
+    if (role === 'downstream') return "it's downstream of the real blocker \u2014 it never had a chance once its dependency didn't arrive";
+    return "it isn't part of this chain \u2014 checking it won't tell you anything about the failure";
+  }
+
+  function renderScenario(scenario) {
+    var container = document.getElementById('scenario-' + scenario.id);
+    var wasContainer = !!container;
+    var div = container || document.createElement('div');
+    div.className = 'scenario';
+    div.id = 'scenario-' + scenario.id;
+    div.innerHTML = '';
+
+    var headline = document.createElement('p');
+    headline.className = 'scenario-headline';
+    headline.id = 'headline-' + scenario.id;
+    headline.textContent = scenario.headline;
+    div.appendChild(headline);
+
+    var chain = document.createElement('div');
+    chain.className = 'chain';
+
+    scenario.units.forEach(function (unit, idx) {
+      var row = document.createElement('div');
+      row.className = 'unit-row';
+
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'pick-' + scenario.id;
+      input.id = 'pick-' + scenario.id + '-' + idx;
+      input.value = String(idx);
+      input.addEventListener('change', function () { clearScenarioState(scenario.id); });
+
+      var label = document.createElement('label');
+      label.setAttribute('for', input.id);
+
+      var nameEl = document.createElement('span');
+      nameEl.className = 'unit-name';
+      nameEl.textContent = unit.name;
+
+      var statusEl = document.createElement('span');
+      statusEl.className = 'unit-status';
+      statusEl.textContent = unit.status + ' \u2014 ' + unit.log;
+
+      label.appendChild(nameEl);
+      label.appendChild(statusEl);
+
+      row.appendChild(input);
+      row.appendChild(label);
+      chain.appendChild(row);
+    });
+
+    div.appendChild(chain);
+
+    if (!wasContainer) {
+      list.appendChild(div);
+    }
+  }
+
+  function clearScenarioState(id) {
+    var div = document.getElementById('scenario-' + id);
+    div.classList.remove('state-correct', 'state-near', 'state-wrong');
+    var fb = div.querySelector('.feedback');
+    if (fb) fb.remove();
+  }
+
+  SCENARIOS.forEach(renderScenario);
+
+  function runCheck() {
+    var correctCount = 0;
+    var uncheckedCount = 0;
+
+    SCENARIOS.forEach(function (scenario) {
+      var activeUnits = scenario.activeUnits || scenario.units;
+      var div = document.getElementById('scenario-' + scenario.id);
+      var picked = div.querySelector('input[name="pick-' + scenario.id + '"]:checked');
+
+      clearScenarioState(scenario.id);
+
+      if (!picked) { uncheckedCount++; return; }
+
+      var idx = parseInt(picked.value, 10);
+      var unit = activeUnits[idx];
+      var role = unit.role === 'unrelated-in-variant' ? 'unrelated' : unit.role;
+
+      var fb = document.createElement('p');
+      fb.className = 'feedback';
+      var tag = document.createElement('span');
+      tag.className = 'tag';
+
+      if (role === 'root') {
+        div.classList.add('state-correct');
+        tag.textContent = 'Correct.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          unit.name + ' is what to check first \u2014 ' + traitFor('root') + '.'
+        ));
+        correctCount++;
+      } else if (role === 'downstream') {
+        div.classList.add('state-near');
+        tag.textContent = 'Close.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          unit.name + ' is reporting trouble, but ' + traitFor('downstream') + '. Trace it back one more step.'
+        ));
+      } else {
+        div.classList.add('state-wrong');
+        tag.textContent = 'Not quite.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          unit.name + ' \u2014 ' + traitFor('unrelated') + '. Follow the declared dependency, not the unit that happens to be nearby.'
+        ));
+      }
+
+      div.appendChild(fb);
+    });
+
+    var summary = document.getElementById('summary');
+    if (uncheckedCount > 0) {
+      summary.textContent = uncheckedCount + ' case' + (uncheckedCount === 1 ? '' : 's') + ' still unpicked.';
+    } else {
+      summary.textContent = correctCount + ' of ' + SCENARIOS.length + ' correct on this pass.';
+      if (correctCount === SCENARIOS.length) {
+        document.getElementById('closing').hidden = false;
+        if (!hasCheckedOnce) {
+          document.getElementById('second-pass-offer').hidden = false;
+        }
+      }
+    }
+    hasCheckedOnce = true;
+  }
+
+  document.getElementById('check-btn').addEventListener('click', runCheck);
+
+  document.getElementById('second-pass-btn').addEventListener('click', function () {
+    var scenario = SCENARIOS.filter(function (s) { return s.id === 's3'; })[0];
+    scenario.activeUnits = scenario.variant.units;
+
+    var headline = document.getElementById('headline-s3');
+    headline.textContent = scenario.variant.headline;
+
+    var flag = document.createElement('span');
+    flag.className = 'scenario-flag';
+    flag.textContent = 'Updated';
+    headline.parentNode.insertBefore(flag, headline);
+
+    var chainRows = document.querySelectorAll('#scenario-s3 .unit-row');
+    chainRows.forEach(function (row, idx) {
+      var statusEl = row.querySelector('.unit-status');
+      var unit = scenario.variant.units[idx];
+      statusEl.textContent = unit.status + ' \u2014 ' + unit.log;
+      var radio = row.querySelector('input');
+      radio.checked = false;
+    });
+
+    var div = document.getElementById('scenario-s3');
+    clearScenarioState('s3');
+    div.classList.add('state-changed');
+
+    document.getElementById('second-pass-offer').hidden = true;
+    document.getElementById('closing').hidden = true;
+    document.getElementById('summary').textContent = 'One case updated \u2014 recheck when ready.';
+    div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+})();
+</script>
+
+</body>
+</html>

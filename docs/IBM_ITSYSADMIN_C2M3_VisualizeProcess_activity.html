@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Order the Answer</title>
+<style>
+  :root {
+    --paper: #f6f5f1;
+    --panel: #ece9e1;
+    --ink: #1c2321;
+    --ink-soft: #4a524d;
+    --rule: #cfc9ba;
+    --slate: #35566b;
+    --slate-soft: #e4ebee;
+    --correct: #3f6b4a;
+    --correct-soft: #e4ede3;
+    --near: #96602e;
+    --near-soft: #f4e7d8;
+    --focus: #1d5fae;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    line-height: 1.55;
+  }
+
+  .wrap { max-width: 660px; margin: 0 auto; padding: 2.75rem 1.5rem 4rem; }
+
+  h1 { font-size: 1.35rem; line-height: 1.3; margin: 0 0 1.2rem; font-weight: 600; max-width: 24ch; }
+
+  p { font-size: 1.03rem; margin: 0 0 1.05rem; max-width: 62ch; }
+
+  .instruction {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    margin: 0 0 1.5rem;
+  }
+
+  ol.card-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.4rem;
+    counter-reset: pos;
+  }
+
+  .card {
+    counter-increment: pos;
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--rule);
+    border-radius: 5px;
+    padding: 0.95rem 1.1rem 0.95rem 3.2rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .card.state-ok { border-left-color: var(--correct); background: var(--correct-soft); }
+  .card.state-flagged { border-left-color: var(--near); background: var(--near-soft); }
+
+  .card::before {
+    content: counter(pos);
+    position: absolute;
+    left: 0.9rem;
+    top: 0.95rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    width: 1.6rem;
+    text-align: center;
+  }
+
+  .card-body { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+  .card-text { font-size: 1rem; margin: 0; flex: 1; }
+
+  .card-kind {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    text-transform: none;
+    margin-bottom: 0.25rem;
+  }
+
+  .move-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+
+  .move-controls button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--slate);
+    background: var(--slate-soft);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .move-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .move-controls button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .card-flag {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.9rem;
+    color: var(--near);
+    margin: 0.6rem 0 0;
+    line-height: 1.4;
+  }
+  .card-flag .tag { font-weight: 700; }
+
+  .actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+  button.primary {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--slate);
+    border: none;
+    border-radius: 5px;
+    padding: 0.85rem 1.5rem;
+    cursor: pointer;
+  }
+  button.primary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  #summary {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  .divider { border: none; border-top: 1px solid var(--rule); margin: 2.2rem 0 1.8rem; }
+
+  .capability {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.02rem;
+    font-weight: 600;
+    background: var(--slate-soft);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    max-width: 60ch;
+    margin-bottom: 0.9rem;
+  }
+
+  .capability-note {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    max-width: 60ch;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 2rem 1.1rem 3rem; }
+    h1 { font-size: 1.15rem; }
+    .card { padding-left: 2.6rem; }
+    .card::before { left: 0.6rem; }
+    .card-body { flex-direction: column; align-items: stretch; }
+    .move-controls { flex-direction: row; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1b1d1c; --panel: #26302f; --ink: #eceae4; --ink-soft: #a7ada7;
+      --rule: #3c4644; --slate: #6f9ec2; --slate-soft: #223541;
+      --correct: #7fb08c; --correct-soft: #1f2c23;
+      --near: #d9a869; --near-soft: #382a1c;
+      --focus: #7fb2f2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1b1d1c; --panel: #26302f; --ink: #eceae4; --ink-soft: #a7ada7;
+    --rule: #3c4644; --slate: #6f9ec2; --slate-soft: #223541;
+    --correct: #7fb08c; --correct-soft: #1f2c23;
+    --near: #d9a869; --near-soft: #382a1c;
+    --focus: #7fb2f2;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Order the Answer</h1>
+
+  <p>Six lines describe the whole path through this module's problem: where it starts, the moves that answer it, and the signal that says it's actually answered. They're out of order.</p>
+
+  <p class="instruction">Use the arrows to put them in an order that could actually work. More than one correct order exists &mdash; you're not hunting for one exact sequence, just one that doesn't put anything before something it depends on.</p>
+
+  <ol class="card-list" id="card-list"></ol>
+
+  <div class="actions">
+    <button type="button" class="primary" id="check-btn">Check my order</button>
+    <span id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div id="closing" hidden>
+    <hr class="divider">
+    <div class="capability">
+      This works because you can't confirm a target you haven't stated, and you can't close the case on evidence you haven't read. Whether you read "running" or "enabled" first never mattered &mdash; they're separate facts, from separate commands, and neither depends on the other.
+    </div>
+    <p class="capability-note">That's the whole shape of the module: name what you're trying to confirm, read each fact on its own evidence, then show both hold before you call it done.</p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var CARDS = {
+    problem: {
+      kind: "The problem",
+      text: "A screenshot shows a service running. A colleague says the host is fine going into tonight's reboot."
+    },
+    target: {
+      kind: "First move",
+      text: "Before touching anything, state what you want to confirm: this service running right now, and set to return after the next reboot."
+    },
+    readActive: {
+      kind: "A move",
+      text: "Read whether it's running right now \u2014 one command, one fact."
+    },
+    readEnabled: {
+      kind: "A move",
+      text: "Read whether it's enabled \u2014 a separate command. Don't infer this from the first reading."
+    },
+    checkStig: {
+      kind: "A move",
+      text: "Ask, by name, whether the units that must stay off are enabled \u2014 and read what comes back."
+    },
+    signal: {
+      kind: "The signal it worked",
+      text: "Both facts are confirmed and recorded, before and after any change \u2014 that's what lets someone else trust this host's state."
+    }
+  };
+
+  // [beforeId, afterId]: beforeId must appear before afterId in a valid order
+  var CONSTRAINTS = [
+    ["problem", "target"],
+    ["problem", "readActive"],
+    ["problem", "readEnabled"],
+    ["problem", "checkStig"],
+    ["problem", "signal"],
+    ["target", "readActive"],
+    ["target", "readEnabled"],
+    ["target", "checkStig"],
+    ["target", "signal"],
+    ["readActive", "signal"],
+    ["readEnabled", "signal"],
+    ["checkStig", "signal"]
+  ];
+
+  // Shuffled starting order (deliberately not already valid)
+  var order = ["signal", "readActive", "problem", "checkStig", "target", "readEnabled"];
+
+  var listEl = document.getElementById('card-list');
+
+  function render() {
+    listEl.innerHTML = '';
+    order.forEach(function (id, idx) {
+      var card = CARDS[id];
+      var li = document.createElement('li');
+      li.className = 'card';
+      li.id = 'card-' + id;
+
+      var body = document.createElement('div');
+      body.className = 'card-body';
+
+      var textWrap = document.createElement('div');
+      var kindEl = document.createElement('span');
+      kindEl.className = 'card-kind';
+      kindEl.textContent = kind_label(id);
+      var textEl = document.createElement('p');
+      textEl.className = 'card-text';
+      textEl.textContent = card.text;
+      textWrap.appendChild(kindEl);
+      textWrap.appendChild(textEl);
+
+      var controls = document.createElement('div');
+      controls.className = 'move-controls';
+
+      var upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.textContent = '\u2191 Move up';
+      upBtn.setAttribute('aria-label', 'Move "' + card.text + '" up');
+      upBtn.disabled = idx === 0;
+      upBtn.addEventListener('click', function () { move(idx, -1); });
+
+      var downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.textContent = '\u2193 Move down';
+      downBtn.setAttribute('aria-label', 'Move "' + card.text + '" down');
+      downBtn.disabled = idx === order.length - 1;
+      downBtn.addEventListener('click', function () { move(idx, 1); });
+
+      controls.appendChild(upBtn);
+      controls.appendChild(downBtn);
+
+      body.appendChild(textWrap);
+      body.appendChild(controls);
+      li.appendChild(body);
+      listEl.appendChild(li);
+    });
+  }
+
+  function kind_label(id) {
+    return CARDS[id].kind;
+  }
+
+  function move(idx, dir) {
+    var newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= order.length) return;
+    var tmp = order[idx];
+    order[idx] = order[newIdx];
+    order[newIdx] = tmp;
+    document.getElementById('closing').hidden = true;
+    document.getElementById('summary').textContent = '';
+    render();
+    var movedCard = document.getElementById('card-' + tmp);
+    var buttons = movedCard.querySelectorAll('.move-controls button');
+    var preferred = dir < 0 ? buttons[0] : buttons[1];
+    var fallback = dir < 0 ? buttons[1] : buttons[0];
+    (preferred.disabled ? fallback : preferred).focus();
+  }
+
+  function runCheck() {
+    var indexOf = {};
+    order.forEach(function (id, idx) { indexOf[id] = idx; });
+
+    var violationsByCard = {};
+    CONSTRAINTS.forEach(function (pair) {
+      var before = pair[0], after = pair[1];
+      if (indexOf[before] > indexOf[after]) {
+        violationsByCard[after] = violationsByCard[after] || [];
+        violationsByCard[after].push(before);
+      }
+    });
+
+    var totalViolations = 0;
+    order.forEach(function (id) {
+      var li = document.getElementById('card-' + id);
+      li.classList.remove('state-ok', 'state-flagged');
+      var oldFlag = li.querySelector('.card-flag');
+      if (oldFlag) oldFlag.remove();
+
+      if (violationsByCard[id]) {
+        li.classList.add('state-flagged');
+        totalViolations += violationsByCard[id].length;
+        var flag = document.createElement('p');
+        flag.className = 'card-flag';
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = 'Out of place.';
+        flag.appendChild(tag);
+        var names = violationsByCard[id].map(function (b) { return '\u201c' + CARDS[b].text + '\u201d'; }).join(' and ');
+        flag.appendChild(document.createTextNode(' This needs to come after ' + names + '.'));
+        li.appendChild(flag);
+      } else {
+        li.classList.add('state-ok');
+      }
+    });
+
+    var summary = document.getElementById('summary');
+    if (totalViolations === 0) {
+      summary.textContent = 'Valid order \u2014 nothing is out of place.';
+      document.getElementById('closing').hidden = false;
+    } else {
+      summary.textContent = totalViolations + ' step' + (totalViolations === 1 ? '' : 's') + ' out of place.';
+      document.getElementById('closing').hidden = true;
+    }
+  }
+
+  render();
+  document.getElementById('check-btn').addEventListener('click', runCheck);
+})();
+</script>
+
+</body>
+</html>

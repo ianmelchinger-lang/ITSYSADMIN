@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Will It Survive the Reboot?</title>
+<style>
+  :root {
+    --paper: #f6f5f1;
+    --panel: #ece9e1;
+    --ink: #1c2321;
+    --ink-soft: #4a524d;
+    --rule: #cfc9ba;
+    --slate: #35566b;
+    --slate-soft: #e4ebee;
+    --amber: #96602e;
+    --amber-soft: #f4e7d8;
+    --focus: #1d5fae;
+    --wrong: #8a4a3a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    line-height: 1.55;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+
+  .kicker {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin: 0 0 0.6rem;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 1.4rem;
+    font-weight: 600;
+    max-width: 20ch;
+  }
+
+  p {
+    font-size: 1.05rem;
+    margin: 0 0 1.1rem;
+    max-width: 62ch;
+  }
+
+  .note {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    border-left: 3px solid var(--slate);
+    padding: 1rem 1.2rem;
+    margin: 0 0 1.6rem;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+
+  .note strong {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  figure {
+    margin: 0 0 1.8rem;
+  }
+
+  figcaption {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.5rem;
+  }
+
+  pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+    font-size: 0.92rem;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  pre.reveal-block {
+    background: var(--amber-soft);
+    border-color: #d9c1a0;
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.4rem;
+  }
+
+  legend {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    padding: 0;
+    margin: 0 0 0.9rem;
+    color: var(--ink);
+  }
+
+  .choice {
+    display: block;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.98rem;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.6rem;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+  }
+
+  .choice:hover { border-color: var(--slate); }
+
+  .choice input {
+    margin-top: 0.2rem;
+    accent-color: var(--slate);
+    flex-shrink: 0;
+  }
+
+  .choice input:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .choice:has(input:checked) {
+    border-color: var(--slate);
+    background: var(--slate-soft);
+  }
+
+  button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--slate);
+    border: none;
+    border-radius: 5px;
+    padding: 0.85rem 1.5rem;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    background: #b7bcc0;
+    cursor: not-allowed;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  #hint {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.88rem;
+    color: var(--wrong);
+    margin: -0.6rem 0 1.4rem;
+    min-height: 1.2em;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2.2rem 0 2rem;
+  }
+
+  .capability {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    background: var(--slate-soft);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    margin-top: 1.8rem;
+    max-width: 60ch;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #reveal-section {
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 2rem 1.1rem 3rem; }
+    h1 { font-size: 1.2rem; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1b1d1c;
+      --panel: #26302f;
+      --ink: #eceae4;
+      --ink-soft: #a7ada7;
+      --rule: #3c4644;
+      --slate: #6f9ec2;
+      --slate-soft: #223541;
+      --amber: #d9a869;
+      --amber-soft: #382a1c;
+      --focus: #7fb2f2;
+      --wrong: #d99a86;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1b1d1c;
+    --panel: #26302f;
+    --ink: #eceae4;
+    --ink-soft: #a7ada7;
+    --rule: #3c4644;
+    --slate: #6f9ec2;
+    --slate-soft: #223541;
+    --amber: #d9a869;
+    --amber-soft: #382a1c;
+    --focus: #7fb2f2;
+    --wrong: #d99a86;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Will It Survive the Reboot?</h1>
+
+  <p>A colleague on the retail side sends you a screenshot from this morning's incident, along with a note.</p>
+
+  <div class="note">
+    <strong>Message from retail ops</strong>
+    It's up and running — so it's configured correctly. We're good heading into tonight's reboot.
+  </div>
+
+  <figure>
+    <figcaption>What the screenshot shows</figcaption>
+    <pre>$ systemctl status storefront-payment-proxy.service
+&#9679; storefront-payment-proxy.service - Storefront Payment Proxy
+   Loaded: loaded
+   Active: active (running) since Tue 09:14
+ Main PID: 4021 (payment-proxyd)</pre>
+  </figure>
+
+  <form id="commit-form">
+    <fieldset>
+      <legend>Before you see anything else: will this service still be running after tonight's reboot?</legend>
+      <label class="choice">
+        <input type="radio" name="guess" value="yes">
+        Yes — it's active right now, so it'll come back on its own.
+      </label>
+      <label class="choice">
+        <input type="radio" name="guess" value="no">
+        No — running right now doesn't tell you that.
+      </label>
+      <label class="choice">
+        <input type="radio" name="guess" value="unsure">
+        Can't tell from this screenshot alone.
+      </label>
+    </fieldset>
+    <div id="hint" role="status" aria-live="polite"></div>
+    <button type="submit" id="commit-btn">See what actually happened</button>
+  </form>
+
+  <div id="reveal-section" hidden>
+    <hr class="divider">
+
+    <p id="reveal-response"></p>
+
+    <figure>
+      <figcaption>A second, separate query — read after the guess, not before</figcaption>
+      <pre class="reveal-block">$ systemctl is-enabled storefront-payment-proxy.service
+disabled</pre>
+    </figure>
+
+    <p>Someone started this unit by hand while working the incident this morning. It is genuinely running right now — the first screenshot wasn't wrong. But it was never placed in the boot path. Tonight's reboot will not bring it back. The host will come up looking exactly like it did before anyone touched it.</p>
+
+    <p>The first screenshot could only ever answer one question: what's true this minute. Whether something returns after a reboot is a separate fact, kept in a separate place on the host. No amount of staring harder at the first reading would have produced it — favorable or not.</p>
+
+    <div class="capability">
+      Running right now and set to return after a reboot are two different facts about a host, recorded in two different places. Telling them apart, and checking each one on its own evidence, is the skill this module builds.
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('commit-form');
+  var hint = document.getElementById('hint');
+  var revealSection = document.getElementById('reveal-section');
+  var revealResponse = document.getElementById('reveal-response');
+  var commitBtn = document.getElementById('commit-btn');
+
+  var responses = {
+    yes: "You guessed it would come back on its own. Reasonable, given the screenshot — and wrong, for a reason worth sitting with.",
+    no: "You guessed it wouldn't come back on its own. Here's the separate evidence that confirms it.",
+    unsure: "You held off guessing. Here's the separate evidence the first screenshot couldn't give you."
+  };
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var selected = form.querySelector('input[name="guess"]:checked');
+    if (!selected) {
+      hint.textContent = 'Pick one before continuing — even a guess is the point.';
+      return;
+    }
+    hint.textContent = '';
+    revealResponse.textContent = responses[selected.value];
+    revealSection.hidden = false;
+    commitBtn.disabled = true;
+    form.querySelectorAll('input[name="guess"]').forEach(function (input) {
+      input.disabled = true;
+    });
+    revealSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+})();
+</script>
+
+</body>
+</html>

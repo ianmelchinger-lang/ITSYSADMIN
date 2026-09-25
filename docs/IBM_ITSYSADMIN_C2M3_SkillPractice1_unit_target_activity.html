@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sort the Host</title>
+<style>
+  :root {
+    --paper: #f6f5f1;
+    --panel: #ece9e1;
+    --ink: #1c2321;
+    --ink-soft: #4a524d;
+    --rule: #cfc9ba;
+    --slate: #35566b;
+    --slate-soft: #e4ebee;
+    --correct: #3f6b4a;
+    --correct-soft: #e4ede3;
+    --near: #96602e;
+    --near-soft: #f4e7d8;
+    --wrong: #8a4a3a;
+    --wrong-soft: #f2e2dd;
+    --focus: #1d5fae;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    line-height: 1.55;
+  }
+
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 1.2rem;
+    font-weight: 600;
+    max-width: 24ch;
+  }
+
+  p {
+    font-size: 1.03rem;
+    margin: 0 0 1.05rem;
+    max-width: 62ch;
+  }
+
+  .terms {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    border-left: 3px solid var(--slate);
+    padding: 1rem 1.2rem;
+    margin: 0 0 1.6rem;
+    font-size: 0.96rem;
+  }
+
+  .terms dt {
+    font-weight: 700;
+    display: inline;
+  }
+
+  .terms dd {
+    display: inline;
+    margin: 0;
+  }
+
+  .terms p {
+    margin: 0 0 0.6rem;
+    font-size: 0.96rem;
+  }
+
+  .terms p:last-child { margin-bottom: 0; }
+
+  .instruction {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    margin: 0 0 1.4rem;
+  }
+
+  .item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.6rem;
+  }
+
+  .item {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--rule);
+    border-radius: 5px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .item.state-correct { border-left-color: var(--correct); background: var(--correct-soft); }
+  .item.state-near { border-left-color: var(--near); background: var(--near-soft); }
+  .item.state-wrong { border-left-color: var(--wrong); background: var(--wrong-soft); }
+
+  .item-desc {
+    font-size: 1.02rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .item-controls {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .item-controls label {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+
+  select {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.96rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    background: #fff;
+    color: var(--ink);
+  }
+
+  select:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .feedback {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    margin-top: 0.7rem;
+    line-height: 1.45;
+  }
+
+  .feedback .tag {
+    font-weight: 700;
+    margin-right: 0.3rem;
+  }
+
+  .state-correct .feedback .tag { color: var(--correct); }
+  .state-near .feedback .tag { color: var(--near); }
+  .state-wrong .feedback .tag { color: var(--wrong); }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--slate);
+    border: none;
+    border-radius: 5px;
+    padding: 0.85rem 1.5rem;
+    cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  #summary {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2.2rem 0 1.8rem;
+  }
+
+  .capability {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.02rem;
+    font-weight: 600;
+    background: var(--slate-soft);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    max-width: 60ch;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 2rem 1.1rem 3rem; }
+    h1 { font-size: 1.15rem; }
+    .item-controls { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1b1d1c;
+      --panel: #26302f;
+      --ink: #eceae4;
+      --ink-soft: #a7ada7;
+      --rule: #3c4644;
+      --slate: #6f9ec2;
+      --slate-soft: #223541;
+      --correct: #7fb08c;
+      --correct-soft: #1f2c23;
+      --near: #d9a869;
+      --near-soft: #382a1c;
+      --wrong: #d99a86;
+      --wrong-soft: #37241e;
+      --focus: #7fb2f2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1b1d1c;
+    --panel: #26302f;
+    --ink: #eceae4;
+    --ink-soft: #a7ada7;
+    --rule: #3c4644;
+    --slate: #6f9ec2;
+    --slate-soft: #223541;
+    --correct: #7fb08c;
+    --correct-soft: #1f2c23;
+    --near: #d9a869;
+    --near-soft: #382a1c;
+    --wrong: #d99a86;
+    --wrong-soft: #37241e;
+    --focus: #7fb2f2;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Sort the Host</h1>
+
+  <p>Everything a host is doing or set up to do is one of a few typed things. Read each line below and say what it actually is.</p>
+
+  <div class="terms">
+    <p><strong>Unit</strong> — a named thing systemd manages, of a stated type: a service, a socket, a timer, a mount, or a target. Each one is backed by its own file.</p>
+    <p><strong>Target</strong> — a named group of units standing for a state the host can be in. It's not a single running thing; it's what several units add up to.</p>
+  </div>
+
+  <p class="instruction">For each line, choose what it is.</p>
+
+  <ul class="item-list" id="item-list"></ul>
+
+  <div class="actions">
+    <button type="button" id="check-btn">Check my sorting</button>
+    <span id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div id="closing" hidden>
+    <hr class="divider">
+    <div class="capability">
+      A least-functionality review is nothing more mysterious than this: naming what each unit actually is, sorted by type. Once you can do that, "run only what the job needs" stops being a feeling and becomes a list you can check.
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var TYPE_LABELS = {
+    service: "Service",
+    socket: "Socket",
+    timer: "Timer",
+    mount: "Mount",
+    target: "Target"
+  };
+
+  var TYPE_TRAITS = {
+    service: "runs continuously and does the actual work for as long as the host is up",
+    socket: "waits passively for a connection and only hands off once one arrives",
+    timer: "fires on a fixed schedule, whether or not anything is watching",
+    mount: "is a single filesystem attachment point — where something is grafted into the tree",
+    target: "isn't a single running thing at all — it's a named group of units standing for a state"
+  };
+
+  // near-neighbor type per correct type: the most common confusion, used for "near" feedback
+  var NEAR_OF = {
+    service: "timer",
+    timer: "service",
+    socket: "service",
+    mount: "target",
+    target: "mount"
+  };
+
+  var ITEMS = [
+    {
+      id: "i1",
+      text: "Keeps handling card transactions for as long as the host is up.",
+      correct: "service"
+    },
+    {
+      id: "i2",
+      text: "Watches the payment log continuously and forwards new lines to the monitoring host.",
+      correct: "service"
+    },
+    {
+      id: "i3",
+      text: "Waits for an incoming connection and only starts the program behind it once one arrives.",
+      correct: "socket"
+    },
+    {
+      id: "i4",
+      text: "Listens for a print job and only wakes the print daemon once one shows up.",
+      correct: "socket"
+    },
+    {
+      id: "i5",
+      text: "Runs the log-rotation job every night at 3 a.m., on a fixed schedule rather than in response to anything.",
+      correct: "timer"
+    },
+    {
+      id: "i6",
+      text: "Triggers a backup at 1 a.m. every Sunday, whether or not anyone is watching.",
+      correct: "timer"
+    },
+    {
+      id: "i7",
+      text: "The point in the filesystem where a network drive is attached, so its files show up locally.",
+      correct: "mount"
+    },
+    {
+      id: "i8",
+      text: "What people mean when they say a host has \u201creached multi-user mode.\u201d",
+      correct: "target"
+    },
+    {
+      id: "i9",
+      text: "The state the host reaches when all of its normal, everyday services are up and reachable.",
+      correct: "target"
+    }
+  ];
+
+  var list = document.getElementById('item-list');
+
+  ITEMS.forEach(function (item) {
+    var li = document.createElement('li');
+    li.className = 'item';
+    li.id = 'item-' + item.id;
+
+    var desc = document.createElement('p');
+    desc.className = 'item-desc';
+    desc.textContent = item.text;
+    li.appendChild(desc);
+
+    var controls = document.createElement('div');
+    controls.className = 'item-controls';
+
+    var label = document.createElement('label');
+    label.setAttribute('for', 'select-' + item.id);
+    label.textContent = 'This is a:';
+    controls.appendChild(label);
+
+    var select = document.createElement('select');
+    select.id = 'select-' + item.id;
+    select.setAttribute('data-item', item.id);
+
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose one\u2026';
+    select.appendChild(placeholder);
+
+    Object.keys(TYPE_LABELS).forEach(function (key) {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = TYPE_LABELS[key];
+      select.appendChild(opt);
+    });
+
+    select.addEventListener('change', function () {
+      li.classList.remove('state-correct', 'state-near', 'state-wrong');
+      var fb = li.querySelector('.feedback');
+      if (fb) fb.remove();
+    });
+
+    controls.appendChild(select);
+    li.appendChild(controls);
+
+    list.appendChild(li);
+  });
+
+  document.getElementById('check-btn').addEventListener('click', function () {
+    var correctCount = 0;
+    var uncheckedCount = 0;
+
+    ITEMS.forEach(function (item) {
+      var li = document.getElementById('item-' + item.id);
+      var select = document.getElementById('select-' + item.id);
+      var picked = select.value;
+
+      li.classList.remove('state-correct', 'state-near', 'state-wrong');
+      var oldFb = li.querySelector('.feedback');
+      if (oldFb) oldFb.remove();
+
+      if (!picked) {
+        uncheckedCount++;
+        return;
+      }
+
+      var fb = document.createElement('p');
+      fb.className = 'feedback';
+      var tag = document.createElement('span');
+      tag.className = 'tag';
+
+      if (picked === item.correct) {
+        li.classList.add('state-correct');
+        tag.textContent = 'Correct.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          TYPE_LABELS[item.correct] + ' is right \u2014 it ' + TYPE_TRAITS[item.correct] + '.'
+        ));
+        correctCount++;
+      } else if (picked === NEAR_OF[item.correct]) {
+        li.classList.add('state-near');
+        tag.textContent = 'Close.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          'This reads like a ' + TYPE_LABELS[picked].toLowerCase() + ', but it\u2019s a ' +
+          TYPE_LABELS[item.correct].toLowerCase() + ': it ' + TYPE_TRAITS[item.correct] +
+          ', which a ' + TYPE_LABELS[picked].toLowerCase() + ' does not.'
+        ));
+      } else {
+        li.classList.add('state-wrong');
+        tag.textContent = 'Not quite.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          'Set the label aside and ask: does it run continuously, wait for a signal, fire on a clock, mark a filesystem attachment, or stand for a broader state the host is in?'
+        ));
+      }
+
+      li.appendChild(fb);
+    });
+
+    var summary = document.getElementById('summary');
+    if (uncheckedCount > 0) {
+      summary.textContent = uncheckedCount + ' item' + (uncheckedCount === 1 ? '' : 's') + ' still unset.';
+    } else {
+      summary.textContent = correctCount + ' of ' + ITEMS.length + ' correct on this pass.';
+      if (correctCount === ITEMS.length) {
+        document.getElementById('closing').hidden = false;
+      }
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

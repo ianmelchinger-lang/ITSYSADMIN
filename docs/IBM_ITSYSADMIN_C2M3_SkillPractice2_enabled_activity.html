@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Three Strengths of Off</title>
+<style>
+  :root {
+    --paper: #f6f5f1;
+    --panel: #ece9e1;
+    --ink: #1c2321;
+    --ink-soft: #4a524d;
+    --rule: #cfc9ba;
+    --slate: #35566b;
+    --slate-soft: #e4ebee;
+    --correct: #3f6b4a;
+    --correct-soft: #e4ede3;
+    --near: #96602e;
+    --near-soft: #f4e7d8;
+    --wrong: #8a4a3a;
+    --wrong-soft: #f2e2dd;
+    --focus: #1d5fae;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  body {
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    line-height: 1.55;
+  }
+
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 1.2rem;
+    font-weight: 600;
+    max-width: 24ch;
+  }
+
+  p { font-size: 1.03rem; margin: 0 0 1.05rem; max-width: 62ch; }
+
+  .terms {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    border-left: 3px solid var(--slate);
+    padding: 1rem 1.2rem;
+    margin: 0 0 1.6rem;
+    font-size: 0.96rem;
+  }
+  .terms p { margin: 0 0 0.6rem; font-size: 0.96rem; }
+  .terms p:last-child { margin-bottom: 0; }
+
+  .instruction {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    margin: 0 0 1.4rem;
+  }
+
+  .item-list { list-style: none; padding: 0; margin: 0 0 1.6rem; }
+
+  .item {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--rule);
+    border-radius: 5px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.85rem;
+    transition: border-color 0.2s ease;
+  }
+
+  .item.state-correct { border-left-color: var(--correct); background: var(--correct-soft); }
+  .item.state-near { border-left-color: var(--near); background: var(--near-soft); }
+  .item.state-wrong { border-left-color: var(--wrong); background: var(--wrong-soft); }
+  .item.state-changed { border-left-color: var(--slate); }
+
+  .item-desc { font-size: 1.02rem; margin: 0 0 0.75rem; }
+
+  .item-flag {
+    display: inline-block;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--slate);
+    background: var(--slate-soft);
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .item-controls {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .item-controls label { font-size: 0.88rem; color: var(--ink-soft); }
+
+  select {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.96rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    background: #fff;
+    color: var(--ink);
+  }
+  select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .feedback {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    margin-top: 0.7rem;
+    margin-bottom: 0;
+    line-height: 1.45;
+  }
+  .feedback .tag { font-weight: 700; margin-right: 0.3rem; }
+  .state-correct .feedback .tag { color: var(--correct); }
+  .state-near .feedback .tag { color: var(--near); }
+  .state-wrong .feedback .tag { color: var(--wrong); }
+
+  .actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+  button {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--slate);
+    border: none;
+    border-radius: 5px;
+    padding: 0.85rem 1.5rem;
+    cursor: pointer;
+  }
+  button.secondary {
+    background: #fff;
+    color: var(--slate);
+    border: 1px solid var(--slate);
+  }
+  button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  #summary {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+
+  .divider { border: none; border-top: 1px solid var(--rule); margin: 2.2rem 0 1.8rem; }
+
+  .second-pass {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1.6rem;
+    font-size: 0.96rem;
+  }
+  .second-pass p:last-child { margin-bottom: 0; }
+
+  .capability {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.02rem;
+    font-weight: 600;
+    background: var(--slate-soft);
+    border-radius: 5px;
+    padding: 1.1rem 1.3rem;
+    max-width: 60ch;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .item { transition: none; }
+  }
+
+  @media (max-width: 480px) {
+    .wrap { padding: 2rem 1.1rem 3rem; }
+    h1 { font-size: 1.15rem; }
+    .item-controls { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1b1d1c; --panel: #26302f; --ink: #eceae4; --ink-soft: #a7ada7;
+      --rule: #3c4644; --slate: #6f9ec2; --slate-soft: #223541;
+      --correct: #7fb08c; --correct-soft: #1f2c23;
+      --near: #d9a869; --near-soft: #382a1c;
+      --wrong: #d99a86; --wrong-soft: #37241e;
+      --focus: #7fb2f2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1b1d1c; --panel: #26302f; --ink: #eceae4; --ink-soft: #a7ada7;
+    --rule: #3c4644; --slate: #6f9ec2; --slate-soft: #223541;
+    --correct: #7fb08c; --correct-soft: #1f2c23;
+    --near: #d9a869; --near-soft: #382a1c;
+    --wrong: #d99a86; --wrong-soft: #37241e;
+    --focus: #7fb2f2;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Three Strengths of Off</h1>
+
+  <p>A unit is <strong>enabled</strong> when it's been placed in the boot path, so it starts on its own at the next boot. Turning something off isn't one action — it's a choice among three, and the choice depends on what you actually need to hold true.</p>
+
+  <div class="terms">
+    <p><strong>Stopping</strong> a unit affects only the current run. If it's enabled, it comes back at the next boot regardless.</p>
+    <p><strong>Disabling</strong> a unit removes it from the boot path. It won't start on its own — but someone can still start it by hand.</p>
+    <p><strong>Masking</strong> a unit blocks it from starting at all, by anyone, until the mask is removed.</p>
+  </div>
+
+  <p class="instruction">Read what's actually required, then choose the matching action.</p>
+
+  <ul class="item-list" id="item-list"></ul>
+
+  <div class="actions">
+    <button type="button" id="check-btn">Check my sorting</button>
+    <span id="summary" role="status" aria-live="polite"></span>
+  </div>
+
+  <div id="second-pass-offer" hidden>
+    <div class="second-pass">
+      <p>One requirement just got stricter for the retired monitoring agent. Same list, one line changed — see whether your answer still holds.</p>
+      <button type="button" class="secondary" id="second-pass-btn">Show the stricter requirement</button>
+    </div>
+  </div>
+
+  <div id="closing" hidden>
+    <hr class="divider">
+    <div class="capability">
+      Stopping, disabling, and masking write to different places and answer different questions. Picking among them is a real decision about what has to hold true afterward &mdash; not a single "off" switch.
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var LABELS = { stop: "Stop it", disable: "Disable it", mask: "Mask it" };
+  var TRAITS = {
+    stop: "only takes down the current run \u2014 it comes back at the next boot if it's still enabled",
+    disable: "removes it from the boot path so it won't start on its own, but someone can still start it by hand",
+    mask: "blocks it from starting at all, by anyone, until the mask is removed"
+  };
+  var NEAR_OF = { stop: "disable", disable: "mask", mask: "disable" };
+
+  var ITEMS = [
+    {
+      id: "i1",
+      text: "The payment proxy is misbehaving right now. Take it down for this session \u2014 it's fine if it comes back at the next boot as usual.",
+      correct: "stop"
+    },
+    {
+      id: "i2",
+      text: "Tonight's reconciliation run has jammed. Bring it down for now; it'll pick back up on its own at tomorrow's scheduled run.",
+      correct: "stop"
+    },
+    {
+      id: "i3",
+      text: "This job has been retired. It should not start on its own at the next boot, but someone should still be able to run it by hand for a one-off migration.",
+      correct: "disable"
+    },
+    {
+      id: "i4",
+      text: "The old monitoring agent has been replaced. It shouldn't start automatically anymore, but support may occasionally need to start it by hand while troubleshooting.",
+      correct: "disable",
+      variantText: "The old monitoring agent has been replaced, and the decision now is final. It must not start automatically \u2014 and no one, including support, should be able to start it by hand either.",
+      variantCorrect: "mask"
+    },
+    {
+      id: "i5",
+      text: "This diagnostic shell must never be reachable on this host \u2014 not automatically, and not by an administrator typing the command either.",
+      correct: "mask"
+    },
+    {
+      id: "i6",
+      text: "This unit exposes an old debug interface. It must not be reachable at all, and that has to hold even if it ships enabled by default and something later tries to reinstall it.",
+      correct: "mask"
+    }
+  ];
+
+  var list = document.getElementById('item-list');
+  var hasCheckedOnce = false;
+
+  function clearItemState(li) {
+    li.classList.remove('state-correct', 'state-near', 'state-wrong');
+    var fb = li.querySelector('.feedback');
+    if (fb) fb.remove();
+  }
+
+  ITEMS.forEach(function (item) {
+    var li = document.createElement('li');
+    li.className = 'item';
+    li.id = 'item-' + item.id;
+
+    var desc = document.createElement('p');
+    desc.className = 'item-desc';
+    desc.id = 'desc-' + item.id;
+    desc.textContent = item.text;
+    li.appendChild(desc);
+
+    var controls = document.createElement('div');
+    controls.className = 'item-controls';
+
+    var label = document.createElement('label');
+    label.setAttribute('for', 'select-' + item.id);
+    label.textContent = 'Do this:';
+    controls.appendChild(label);
+
+    var select = document.createElement('select');
+    select.id = 'select-' + item.id;
+
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose one\u2026';
+    select.appendChild(placeholder);
+
+    Object.keys(LABELS).forEach(function (key) {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = LABELS[key];
+      select.appendChild(opt);
+    });
+
+    select.addEventListener('change', function () { clearItemState(li); });
+
+    controls.appendChild(select);
+    li.appendChild(controls);
+    list.appendChild(li);
+  });
+
+  function runCheck() {
+    var correctCount = 0;
+    var uncheckedCount = 0;
+
+    ITEMS.forEach(function (item) {
+      var li = document.getElementById('item-' + item.id);
+      var select = document.getElementById('select-' + item.id);
+      var picked = select.value;
+      var target = item.activeCorrect || item.correct;
+
+      clearItemState(li);
+
+      if (!picked) { uncheckedCount++; return; }
+
+      var fb = document.createElement('p');
+      fb.className = 'feedback';
+      var tag = document.createElement('span');
+      tag.className = 'tag';
+
+      if (picked === target) {
+        li.classList.add('state-correct');
+        tag.textContent = 'Correct.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          LABELS[target] + ' is right \u2014 it ' + TRAITS[target] + '.'
+        ));
+        correctCount++;
+      } else if (picked === NEAR_OF[target]) {
+        li.classList.add('state-near');
+        tag.textContent = 'Close.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          'That would ' + TRAITS[picked] + '. What this needs is: ' + TRAITS[target] + '.'
+        ));
+      } else {
+        li.classList.add('state-wrong');
+        tag.textContent = 'Not quite.';
+        fb.appendChild(tag);
+        fb.appendChild(document.createTextNode(
+          'Set the action aside and ask what has to be true afterward: just this run, this boot path, or every future attempt to start it at all?'
+        ));
+      }
+
+      li.appendChild(fb);
+    });
+
+    var summary = document.getElementById('summary');
+    if (uncheckedCount > 0) {
+      summary.textContent = uncheckedCount + ' item' + (uncheckedCount === 1 ? '' : 's') + ' still unset.';
+    } else {
+      summary.textContent = correctCount + ' of ' + ITEMS.length + ' correct on this pass.';
+      if (correctCount === ITEMS.length) {
+        document.getElementById('closing').hidden = false;
+        if (!hasCheckedOnce) {
+          document.getElementById('second-pass-offer').hidden = false;
+        }
+      }
+    }
+    hasCheckedOnce = true;
+  }
+
+  document.getElementById('check-btn').addEventListener('click', runCheck);
+
+  document.getElementById('second-pass-btn').addEventListener('click', function () {
+    var item = ITEMS.filter(function (i) { return i.id === 'i4'; })[0];
+    item.activeCorrect = item.variantCorrect;
+
+    var desc = document.getElementById('desc-i4');
+    desc.textContent = item.variantText;
+
+    var flag = document.createElement('span');
+    flag.className = 'item-flag';
+    flag.textContent = 'Updated requirement';
+    desc.parentNode.insertBefore(flag, desc);
+
+    var li = document.getElementById('item-i4');
+    li.classList.add('state-changed');
+    clearItemState(li);
+    li.classList.add('state-changed');
+
+    var select = document.getElementById('select-i4');
+    select.value = '';
+
+    document.getElementById('second-pass-offer').hidden = true;
+    document.getElementById('closing').hidden = true;
+    document.getElementById('summary').textContent = 'Requirement updated \u2014 recheck when ready.';
+    li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+})();
+</script>
+
+</body>
+</html>
