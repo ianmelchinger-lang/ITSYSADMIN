@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Five Fields, One Report</title>
+<style>
+  :root {
+    --paper: #E7E2D6; --paper-raised: #F1EEE4; --ink: #262420; --ink-soft: #55504A;
+    --line: #C9C2B0; --terminal-bg: #1B1D1B; --terminal-text: #C9D1C5;
+    --accent: #A6432B;
+    --correct: #35633E; --correct-bg: #DCE6DA;
+    --near: #8A5A16; --near-bg: #EFE2C7;
+    --wrong: #8B3A3A; --wrong-bg: #EBDAD6;
+    --highlight: #EFE2C7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  body { font-family: ui-serif, Georgia, "Times New Roman", serif; line-height: 1.5; font-size: 16.5px; padding: 2rem 1.1rem 3rem; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.45rem; font-weight: 600; margin: 0 0 0.8rem; }
+  p.lede { margin: 0 0 1.2rem; }
+
+  .passage {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.3rem;
+    font-size: 0.98rem;
+  }
+  .passage .s {
+    display: inline;
+  }
+  .passage .s .num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    vertical-align: super;
+    margin-right: 0.15rem;
+  }
+  .passage .s.lit { background: var(--highlight); border-radius: 2px; }
+
+  .item { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 5px; padding: 0.9rem 1.05rem; margin-bottom: 0.85rem; }
+  .item .fieldname { font-weight: 600; margin-bottom: 0.55rem; }
+  .choices { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .choices button { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.82rem; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 0.4rem 0.7rem; cursor: pointer; color: var(--ink); }
+  .choices button.none-btn { font-family: ui-serif, Georgia, serif; font-size: 0.85rem; }
+  .choices button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .choices button.selected { border-color: var(--ink); border-width: 2px; font-weight: 600; }
+  .choices button:disabled { cursor: default; opacity: 0.85; }
+
+  .feedback { margin-top: 0.65rem; padding: 0.6rem 0.75rem; border-radius: 4px; font-size: 0.9rem; border-left: 4px solid transparent; display: none; }
+  .feedback.correct { background: var(--correct-bg); border-color: var(--correct); }
+  .feedback.near { background: var(--near-bg); border-color: var(--near); }
+  .feedback.wrong { background: var(--wrong-bg); border-color: var(--wrong); }
+  .feedback .verdict { font-weight: 600; }
+
+  .tally { text-align: center; font-size: 0.95rem; color: var(--ink-soft); margin: 1.1rem 0 1.6rem; }
+
+  .second-pass { margin-top: 1.6rem; border-top: 1px solid var(--line); padding-top: 1.2rem; }
+  .second-pass h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  .second-pass p { font-size: 0.95rem; margin: 0 0 0.8rem; }
+  .toggle-row { display: flex; align-items: flex-start; gap: 0.6rem; background: var(--paper-raised); border: 1px solid var(--line); border-radius: 5px; padding: 0.8rem 0.9rem; margin-bottom: 0.8rem; }
+  .toggle-row input { margin-top: 0.2rem; }
+  .toggle-row label { font-size: 0.92rem; }
+  .fixed-passage { display: none; font-size: 0.95rem; background: var(--paper-raised); border: 1px solid var(--line); border-radius: 5px; padding: 0.9rem 1rem; }
+  .fixed-passage.show { display: block; }
+  .fixed-passage .added { background: var(--correct-bg); border-radius: 2px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (max-width: 480px) { body { font-size: 16px; padding: 1.4rem 0.9rem 2.5rem; } h1 { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Five Fields, One Report</h1>
+  <p class="lede">A short write-up, sentence by sentence. For each field a run record needs, find the sentence that supplies it &mdash; or say plainly that this report never states it.</p>
+
+  <div class="passage" id="passage">
+    <span class="s" data-n="1"><span class="num">1</span>A colleague on the plant floor in Bavaria asked whether last night's inventory sync had gone through cleanly. </span>
+    <span class="s" data-n="2"><span class="num">2</span>The operator opened a terminal on <code>plant-04-sync</code>, the sync host for that site. </span>
+    <span class="s" data-n="3"><span class="num">3</span>Standing in <code>/opt/sem/jobs/nightly</code>, they ran <code>./sync-check.sh --plant=PL-04</code>. </span>
+    <span class="s" data-n="4"><span class="num">4</span>The terminal printed: <code>Sync verified &mdash; 14,208 records, 0 conflicts.</code> </span>
+    <span class="s" data-n="5"><span class="num">5</span>They reported this back within the hour.</span>
+  </div>
+
+  <div id="items"></div>
+  <p class="tally" id="tally" aria-live="polite"></p>
+
+  <div class="second-pass">
+    <h2>One assumption, moved (not scored)</h2>
+    <p>Add the one thing this report left out and see what changes.</p>
+    <div class="toggle-row">
+      <input type="checkbox" id="addAccount">
+      <label for="addAccount">Add: "logged in as the svc-ops service account."</label>
+    </div>
+    <div class="fixed-passage" id="fixedPassage">
+      A colleague on the plant floor in Bavaria asked whether last night's inventory sync had gone through cleanly.
+      The operator opened a terminal on <code>plant-04-sync</code>, the sync host for that site,
+      <span class="added">logged in as the svc-ops service account.</span>
+      Standing in <code>/opt/sem/jobs/nightly</code>, they ran <code>./sync-check.sh --plant=PL-04</code>.
+      The terminal printed: <code>Sync verified &mdash; 14,208 records, 0 conflicts.</code>
+      They reported this back within the hour.
+      <p style="margin: 0.7rem 0 0;">Nothing else about the incident changed. But now all five fields are present, and a colleague reading this later could rerun the exact same command, on the exact same host, as the exact same account, and expect the exact same result.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var fields = [
+    {
+      name: 'Host',
+      correct: '2',
+      feedback: {
+        '2': "Correct. Sentence 2 names <code>plant-04-sync</code> as the specific machine the terminal was open on.",
+        '1': "Close, but not quite. Sentence 1 names the site (Bavaria), not the specific host machine the command actually ran on.",
+        '3': "Not quite. Sentence 3 gives the working directory, not the host.",
+        '4': "Not quite. Sentence 4 is the output, not the host.",
+        '5': "Not quite. Sentence 5 just confirms the report went out; it names no machine.",
+        'none': "Not quite. The host is stated \u2014 sentence 2 names <code>plant-04-sync</code> directly."
+      }
+    },
+    {
+      name: 'Account',
+      correct: 'none',
+      feedback: {
+        'none': "Correct. Nobody's login or account is named anywhere in this report. \"The operator\" is a role, not a credential a colleague could reuse.",
+        '2': "Close, but not quite. Sentence 2 names a host and refers to \"the operator,\" but a role is not an account \u2014 nothing here says which login actually ran the command.",
+        '1': "Not quite. Sentence 1 is about who asked, not who ran anything.",
+        '3': "Not quite. Sentence 3 gives the directory and the command, not an account.",
+        '4': "Not quite. Sentence 4 is the output.",
+        '5': "Not quite. Sentence 5 just confirms the report was sent."
+      }
+    },
+    {
+      name: 'Working directory',
+      correct: '3',
+      feedback: {
+        '3': "Correct. Sentence 3 states it directly: standing in <code>/opt/sem/jobs/nightly</code>.",
+        '2': "Not quite. Sentence 2 gives the host, not the directory the shell was standing in.",
+        '1': "Not quite. Sentence 1 doesn't mention a filesystem location at all.",
+        '4': "Not quite. Sentence 4 is the output.",
+        '5': "Not quite. Sentence 5 doesn't mention a location.",
+        'none': "Not quite. This one is stated \u2014 sentence 3 names the exact directory."
+      }
+    },
+    {
+      name: 'Command as typed',
+      correct: '3',
+      feedback: {
+        '3': "Correct. The same sentence that gives the directory also gives the exact command: <code>./sync-check.sh --plant=PL-04</code>.",
+        '4': "Close, but not quite. Sentence 4 is what the command produced, not the command itself.",
+        '2': "Not quite. Sentence 2 gives the host, not what was typed.",
+        '1': "Not quite. Sentence 1 doesn't mention any command.",
+        '5': "Not quite. Sentence 5 doesn't name a command.",
+        'none': "Not quite. The exact command is stated \u2014 it's in sentence 3."
+      }
+    },
+    {
+      name: 'Output verbatim',
+      correct: '4',
+      feedback: {
+        '4': "Correct. Sentence 4 quotes exactly what the terminal printed.",
+        '5': "Close, but not quite. Sentence 5 says a report went out, but doesn't quote what actually appeared on screen.",
+        '3': "Not quite. Sentence 3 is the command, not what it produced.",
+        '2': "Not quite. Sentence 2 is the host.",
+        '1': "Not quite. Sentence 1 doesn't mention any output.",
+        'none': "Not quite. The output is quoted directly \u2014 it's in sentence 4."
+      }
+    }
+  ];
+
+  var results = {};
+  var container = document.getElementById('items');
+  var passage = document.getElementById('passage');
+  var sentenceEls = {};
+  passage.querySelectorAll('.s').forEach(function (el) { sentenceEls[el.getAttribute('data-n')] = el; });
+
+  function clearHighlights() {
+    Object.values(sentenceEls).forEach(function (el) { el.classList.remove('lit'); });
+  }
+
+  fields.forEach(function (field, idx) {
+    var card = document.createElement('div');
+    card.className = 'item';
+    var label = document.createElement('div');
+    label.className = 'fieldname';
+    label.textContent = field.name;
+    card.appendChild(label);
+
+    var choices = document.createElement('div');
+    choices.className = 'choices';
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-label', 'Which sentence supplies this field?');
+
+    var feedbackDiv = document.createElement('div');
+    feedbackDiv.className = 'feedback';
+    feedbackDiv.setAttribute('aria-live', 'polite');
+
+    ['1', '2', '3', '4', '5', 'none'].forEach(function (key) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      if (key === 'none') {
+        btn.className = 'none-btn';
+        btn.textContent = 'Not stated in this report';
+      } else {
+        btn.textContent = 'Sentence ' + key;
+      }
+      btn.addEventListener('click', function () {
+        if (btn.disabled) { return; }
+        Array.prototype.forEach.call(choices.children, function (b) { b.disabled = true; b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        clearHighlights();
+        if (key !== 'none' && sentenceEls[key]) { sentenceEls[key].classList.add('lit'); }
+
+        var verdict = key === field.correct ? 'correct' : 'wrong';
+        // treat the single most plausible confusion per field as "near" (already the second listed feedback key)
+        var nearKeys = { 'Host': '1', 'Account': '2', 'Working directory': null, 'Command as typed': '4', 'Output verbatim': '5' };
+        if (verdict === 'wrong' && nearKeys[field.name] === key) { verdict = 'near'; }
+
+        feedbackDiv.className = 'feedback ' + verdict;
+        var verdictLabel = verdict === 'correct' ? 'Correct.' : (verdict === 'near' ? 'Close, but not quite.' : 'Not quite.');
+        var text = field.feedback[key].replace(/^Correct\.\s*|^Close, but not quite\.\s*|^Not quite\.\s*/, '');
+        feedbackDiv.innerHTML = '<span class="verdict">' + verdictLabel + '</span> ' + text;
+        feedbackDiv.style.display = 'block';
+
+        results[field.name] = (verdict === 'correct');
+        updateTally();
+      });
+      choices.appendChild(btn);
+    });
+
+    card.appendChild(choices);
+    card.appendChild(feedbackDiv);
+    container.appendChild(card);
+  });
+
+  function updateTally() {
+    var answered = Object.keys(results).length;
+    var right = Object.values(results).filter(Boolean).length;
+    var tally = document.getElementById('tally');
+    if (answered === 0) { tally.textContent = ''; return; }
+    tally.textContent = right + ' of ' + answered + ' fields matched correctly so far' + (answered === fields.length ? ' \u2014 all five answered.' : '.');
+  }
+
+  document.getElementById('addAccount').addEventListener('change', function (e) {
+    document.getElementById('fixedPassage').classList.toggle('show', e.target.checked);
+  });
+})();
+</script>
+</body>
+</html>

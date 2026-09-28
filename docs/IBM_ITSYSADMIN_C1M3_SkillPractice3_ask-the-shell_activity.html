@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the Lookup Actually Told You</title>
+<style>
+  :root {
+    --paper: #E7E2D6; --paper-raised: #F1EEE4; --ink: #262420; --ink-soft: #55504A;
+    --line: #C9C2B0; --terminal-bg: #1B1D1B; --terminal-text: #C9D1C5; --terminal-dim: #7C877C;
+    --accent: #A6432B;
+    --correct: #35633E; --correct-bg: #DCE6DA;
+    --near: #8A5A16; --near-bg: #EFE2C7;
+    --wrong: #8B3A3A; --wrong-bg: #EBDAD6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  body { font-family: ui-serif, Georgia, "Times New Roman", serif; line-height: 1.5; font-size: 16.5px; padding: 2rem 1.1rem 3rem; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.45rem; font-weight: 600; margin: 0 0 0.8rem; }
+  p.lede { margin: 0 0 1.3rem; }
+
+  .item { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 5px; padding: 0.95rem 1.05rem; margin-bottom: 0.9rem; }
+  .transcript {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    background: var(--terminal-bg); color: var(--terminal-text);
+    border-radius: 4px; padding: 0.8rem 0.9rem; font-size: 0.84rem; line-height: 1.55;
+    margin-bottom: 0.75rem; white-space: pre-wrap; word-break: break-word;
+  }
+  .transcript .dim { color: var(--terminal-dim); }
+
+  .choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .choices button { font-family: inherit; font-size: 0.85rem; background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 0.4rem 0.8rem; cursor: pointer; color: var(--ink); }
+  .choices button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .choices button.selected { border-color: var(--ink); border-width: 2px; font-weight: 600; }
+  .choices button:disabled { cursor: default; opacity: 0.85; }
+
+  .feedback { margin-top: 0.7rem; padding: 0.6rem 0.75rem; border-radius: 4px; font-size: 0.9rem; border-left: 4px solid transparent; display: none; }
+  .feedback.correct { background: var(--correct-bg); border-color: var(--correct); }
+  .feedback.near { background: var(--near-bg); border-color: var(--near); }
+  .feedback.wrong { background: var(--wrong-bg); border-color: var(--wrong); }
+  .feedback .verdict { font-weight: 600; }
+
+  .tally { text-align: center; font-size: 0.95rem; color: var(--ink-soft); margin: 1.1rem 0 1.6rem; }
+
+  .second-pass { margin-top: 1.6rem; border-top: 1px solid var(--line); padding-top: 1.2rem; }
+  .second-pass h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  .second-pass p { font-size: 0.95rem; margin: 0 0 0.8rem; }
+  .shell-select { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+  .shell-select button { font-family: inherit; font-size: 0.88rem; background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 0.45rem 0.9rem; cursor: pointer; }
+  .shell-select button.active { border-color: var(--ink); border-width: 2px; font-weight: 600; background: var(--paper-raised); }
+  .shell-select button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .demo-result { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 5px; padding: 0.85rem 1rem; font-size: 0.92rem; }
+  .demo-result code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #00000010; padding: 0.1rem 0.3rem; border-radius: 3px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (max-width: 480px) { body { font-size: 16px; padding: 1.4rem 0.9rem 2.5rem; } h1 { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>What the Lookup Actually Told You</h1>
+  <p class="lede">Six attempts to find out what a command does. Some stop after one step, some continue to a second. Decide what you actually know once the transcript ends.</p>
+
+  <div id="items"></div>
+  <p class="tally" id="tally" aria-live="polite"></p>
+
+  <div class="second-pass">
+    <h2>One assumption, moved (not scored)</h2>
+    <p>The question never changes: what does this shell run when its own manual comes up empty? The word you'd actually type does.</p>
+    <div class="shell-select" role="group" aria-label="Choose a shell">
+      <button type="button" data-shell="bash" class="active">Bash</button>
+      <button type="button" data-shell="zsh">Zsh</button>
+      <button type="button" data-shell="powershell">PowerShell</button>
+    </div>
+    <div class="demo-result" id="demoResult" aria-live="polite"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var items = [
+    {
+      id: '1',
+      transcript: '$ man cp\nCP(1)                     User Commands\nNAME\n       cp - copy files and directories\nSYNOPSIS\n       cp [OPTION]... SOURCE DEST',
+      correct: 'external',
+      feedback: {
+        external: "Correct. The manual returned a full entry \u2014 name, synopsis, description. <code>cp</code> is an external command, and its documentation already told you what you need.",
+        builtin: "Not quite. The manual did not come back empty here \u2014 it returned a complete entry, which is the signature of an external command, not a builtin.",
+        missing: "Not quite. This lookup succeeded on the first try. There is no reason here to suspect the command does not exist."
+      }
+    },
+    {
+      id: '2',
+      transcript: '$ man cd\nNo manual entry for cd\n$ help cd\ncd: cd [-L|-P] [dir]\n    Change the current directory.',
+      correct: 'builtin',
+      feedback: {
+        builtin: "Correct. The manual came back empty, but the shell's own help described it fully. That is exactly what a builtin looks like: not covered by the manual system, but documented by the shell itself.",
+        external: "Not quite. The manual returned nothing for this one \u2014 an external command with a manual page would have produced an entry, the way <code>cp</code> did.",
+        missing: "Not quite. The shell's own help did find something and described it \u2014 that is a successful lookup, not a sign the command is missing."
+      }
+    },
+    {
+      id: '3',
+      transcript: '$ man frobnicate-widgets\nNo manual entry for frobnicate-widgets\n$ help frobnicate-widgets\nbash: help: no help topics match \'frobnicate-widgets\'',
+      correct: 'missing',
+      feedback: {
+        missing: "Correct. Neither the manual nor the shell's own help found anything. Having checked both places a command can be documented, it is reasonable to conclude this one does not exist, at least not under this name.",
+        builtin: "Not quite. A builtin would show up in the shell's own help, the way <code>cd</code> did. This one came back empty there too.",
+        external: "Not quite. Nothing here describes what this command does \u2014 both lookups came back empty."
+      }
+    },
+    {
+      id: '4',
+      transcript: '$ man history\nNo manual entry for history\n$ help history\nhistory: history [-c] [-d offset]\n    Display or manipulate the history list.',
+      correct: 'builtin',
+      feedback: {
+        builtin: "Correct. Empty manual, but the shell's own help had a full description. Another builtin \u2014 the shell carries it out itself, so it is not in the external-command manual.",
+        external: "Not quite. The manual returned nothing for this one; an external command would have produced an entry there.",
+        missing: "Not quite. The second step did find a description \u2014 that rules out concluding this command does not exist."
+      }
+    },
+    {
+      id: '5',
+      transcript: '$ man printf\nPRINTF(1)                 User Commands\nNAME\n       printf - format and print data',
+      correct: 'external',
+      feedback: {
+        external: "Correct. A full manual entry on the first attempt \u2014 this is documented as an external command, and you already have what you need.",
+        builtin: "Not quite. The manual did not come back empty \u2014 it returned a real entry, which is not what a builtin lookup looks like.",
+        missing: "Not quite. The very first lookup succeeded, so there is no basis here for doubting the command exists."
+      }
+    },
+    {
+      id: '6',
+      transcript: '$ man exportt\nNo manual entry for exportt\n$ help exportt\nbash: help: no help topics match \'exportt\'',
+      correct: 'missing',
+      feedback: {
+        missing: "Correct. Both the manual and the shell's own help came back empty. That is the pattern for a command that does not exist \u2014 often, as here, a simple typo.",
+        builtin: "Not quite. A real builtin would have turned up in the shell's own help. This search came back empty there too.",
+        external: "Not quite. Nothing here documents what this command does; both attempts to find out came back empty."
+      }
+    }
+  ];
+
+  var labels = { external: 'External \u2014 the manual already documented it', builtin: "Builtin \u2014 no manual entry, but the shell's own help described it", missing: 'Likely does not exist \u2014 neither lookup found anything' };
+  var order = ['external', 'builtin', 'missing'];
+  var results = {};
+  var container = document.getElementById('items');
+
+  items.forEach(function (item) {
+    var card = document.createElement('div');
+    card.className = 'item';
+    var t = document.createElement('div');
+    t.className = 'transcript';
+    t.textContent = item.transcript;
+    card.appendChild(t);
+
+    var choices = document.createElement('div');
+    choices.className = 'choices';
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-label', 'What do you now know about this command?');
+
+    var feedbackDiv = document.createElement('div');
+    feedbackDiv.className = 'feedback';
+    feedbackDiv.setAttribute('aria-live', 'polite');
+
+    order.forEach(function (key) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = labels[key];
+      btn.addEventListener('click', function () {
+        if (btn.disabled) { return; }
+        Array.prototype.forEach.call(choices.children, function (b) { b.disabled = true; b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        var verdict = key === item.correct ? 'correct' : (key === 'missing' || item.correct === 'missing' ? 'wrong' : 'near');
+        feedbackDiv.className = 'feedback ' + verdict;
+        var verdictLabel = verdict === 'correct' ? 'Correct.' : (verdict === 'near' ? 'Close, but not quite.' : 'Not quite.');
+        feedbackDiv.innerHTML = '<span class="verdict">' + verdictLabel + '</span> ' + item.feedback[key].replace(/^Correct\.\s*|^Not quite\.\s*/, '');
+        feedbackDiv.style.display = 'block';
+        results[item.id] = (verdict === 'correct');
+        updateTally();
+      });
+      choices.appendChild(btn);
+    });
+
+    card.appendChild(choices);
+    card.appendChild(feedbackDiv);
+    container.appendChild(card);
+  });
+
+  function updateTally() {
+    var answered = Object.keys(results).length;
+    var right = Object.values(results).filter(Boolean).length;
+    var tally = document.getElementById('tally');
+    if (answered === 0) { tally.textContent = ''; return; }
+    tally.textContent = right + ' of ' + answered + ' read correctly so far' + (answered === items.length ? ' \u2014 all six answered.' : '.');
+  }
+
+  var demoResult = document.getElementById('demoResult');
+  var shellButtons = document.querySelectorAll('.shell-select button');
+  var shellText = {
+    bash: 'In Bash, once <code>man</code> comes back empty, ask the shell itself with <code>help &lt;command&gt;</code>.',
+    zsh: 'In Zsh, the manual step is the same, but the shell answers to <code>run-help &lt;command&gt;</code> instead of <code>help</code>.',
+    powershell: 'In PowerShell, there is no separate manual step to fall back from \u2014 <code>Get-Help &lt;command&gt;</code> is the one place to ask, for both cmdlets and built-in commands.'
+  };
+  function renderDemo(shell) {
+    demoResult.innerHTML = shellText[shell] + ' The question stays the same in every shell: what does this actually do? Only the word you type to ask it changes.';
+  }
+  shellButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      shellButtons.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderDemo(btn.getAttribute('data-shell'));
+    });
+  });
+  renderDemo('bash');
+})();
+</script>
+</body>
+</html>

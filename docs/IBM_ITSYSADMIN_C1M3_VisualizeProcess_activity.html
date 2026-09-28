@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assemble the Path</title>
+<style>
+  :root {
+    --paper: #E7E2D6; --paper-raised: #F1EEE4; --ink: #262420; --ink-soft: #55504A;
+    --line: #C9C2B0; --terminal-bg: #1B1D1B; --terminal-text: #C9D1C5;
+    --accent: #A6432B;
+    --correct: #35633E; --correct-bg: #DCE6DA;
+    --wrong: #8B3A3A; --wrong-bg: #EBDAD6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  body { font-family: ui-serif, Georgia, "Times New Roman", serif; line-height: 1.5; font-size: 16.5px; padding: 2rem 1.1rem 3rem; }
+  main { max-width: 620px; margin: 0 auto; }
+  h1 { font-size: 1.45rem; font-weight: 600; margin: 0 0 0.8rem; }
+  p.lede { margin: 0 0 1.2rem; }
+
+  .problem {
+    background: var(--terminal-bg);
+    color: var(--terminal-text);
+    border-radius: 5px;
+    padding: 0.9rem 1.05rem;
+    margin-bottom: 1.4rem;
+    font-size: 0.95rem;
+  }
+  .problem .tag { display: block; font-size: 0.78rem; letter-spacing: 0.02em; color: #9AA79A; margin-bottom: 0.3rem; }
+
+  .columns { display: flex; flex-direction: column; gap: 1.1rem; }
+  @media (min-width: 560px) {
+    .columns { flex-direction: row; align-items: flex-start; }
+    .col { flex: 1; }
+  }
+
+  .col h2 { font-size: 1rem; margin: 0 0 0.6rem; }
+
+  #pool, #sequence {
+    min-height: 3rem;
+    border: 1px dashed var(--line);
+    border-radius: 5px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  #sequence { border-style: solid; background: var(--paper-raised); }
+
+  .step-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.92rem;
+    cursor: pointer;
+    text-align: left;
+  }
+  .step-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .step-card .title { font-weight: 600; display: block; margin-bottom: 0.15rem; }
+  .step-card .desc { color: var(--ink-soft); font-size: 0.85rem; }
+
+  .seq-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 0.6rem 0.8rem;
+  }
+  .seq-item .n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink-soft); font-size: 0.85rem; }
+
+  .actions { display: flex; gap: 0.7rem; margin: 1.3rem 0 1rem; flex-wrap: wrap; }
+  button.action {
+    font-family: inherit; font-size: 0.95rem; border-radius: 5px; padding: 0.6rem 1.1rem; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink);
+  }
+  button.action.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.action:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.action:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+  .feedback { margin-top: 0.4rem; padding: 0.75rem 0.9rem; border-radius: 5px; font-size: 0.94rem; border-left: 4px solid transparent; display: none; }
+  .feedback.correct { background: var(--correct-bg); border-color: var(--correct); }
+  .feedback.wrong { background: var(--wrong-bg); border-color: var(--wrong); }
+  .feedback .verdict { font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (max-width: 480px) { body { font-size: 16px; padding: 1.4rem 0.9rem 2.5rem; } h1 { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Assemble the Path</h1>
+  <p class="lede">Click the steps below, in the order you'd actually do them, to build the sequence on the right.</p>
+
+  <div class="problem">
+    <span class="tag">The situation</span>
+    A colleague hands you one line to run on a system you've never used, and asks what happened.
+  </div>
+
+  <div class="columns">
+    <div class="col">
+      <h2>Available steps</h2>
+      <div id="pool"></div>
+    </div>
+    <div class="col">
+      <h2>Your sequence</h2>
+      <div id="sequence"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="action" id="resetBtn">Start over</button>
+    <button type="button" class="action primary" id="checkBtn" disabled>Check the order</button>
+  </div>
+
+  <div class="feedback" id="feedback" aria-live="polite"></div>
+</main>
+
+<script>
+(function () {
+  var steps = [
+    { id: 'position', title: 'Establish where and who you are', desc: 'Host, account, working directory \u2014 before anything runs.',
+      reason: "This has to come first. Nothing else here can be read correctly until you know where you're standing and who you are." },
+    { id: 'find', title: "Find out what's actually there", desc: "Check the real directory contents, not what you expect to see.",
+      reason: "This depends on already knowing where you are \u2014 \u201cwhat's actually there\u201d only means something once your position is established." },
+    { id: 'document', title: "Get the machine's own account of the command", desc: 'Check the manual; if that comes back empty, ask the shell for its own help.',
+      reason: "This can happen early or late in principle, but it only becomes useful once you know where you are and what you're actually looking at \u2014 otherwise you don't yet know what to ask about." },
+    { id: 'read', title: 'Run it and read the result honestly', desc: 'Tell an empty result from an error, rather than assuming either.', 
+      reason: "You can't honestly read a result before there is one \u2014 this depends on having already run the command with your position established and, where it mattered, checked what it was supposed to do." },
+    { id: 'report', title: 'Report the five-field record', desc: 'Host, account, directory, command as typed, output verbatim.',
+      reason: "A report describing a result has to come last \u2014 there's nothing to report until the command has actually been run and read." }
+  ];
+
+  var correctOrder = ['position', 'find', 'document', 'read', 'report'];
+  var reasonById = {};
+  steps.forEach(function (s) { reasonById[s.id] = s.reason; });
+
+  var pool = document.getElementById('pool');
+  var sequence = document.getElementById('sequence');
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var feedback = document.getElementById('feedback');
+  var seqOrder = [];
+
+  var shuffled = steps.slice();
+  // fixed, deliberate shuffle (not the correct order, not reversed)
+  shuffled = [steps[2], steps[0], steps[4], steps[1], steps[3]];
+
+  function render() {
+    pool.innerHTML = '';
+    shuffled.forEach(function (s) {
+      if (seqOrder.indexOf(s.id) !== -1) { return; }
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'step-card';
+      btn.innerHTML = '<span class="title">' + s.title + '</span><span class="desc">' + s.desc + '</span>';
+      btn.addEventListener('click', function () {
+        seqOrder.push(s.id);
+        feedback.style.display = 'none';
+        render();
+      });
+      pool.appendChild(btn);
+    });
+
+    sequence.innerHTML = '';
+    seqOrder.forEach(function (id, i) {
+      var s = steps.filter(function (x) { return x.id === id; })[0];
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'seq-item';
+      row.setAttribute('title', 'Click to remove and put back in the pool');
+      row.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="title">' + s.title + '</span>';
+      row.addEventListener('click', function () {
+        seqOrder = seqOrder.filter(function (x) { return x !== id; });
+        feedback.style.display = 'none';
+        render();
+      });
+      sequence.appendChild(row);
+    });
+
+    checkBtn.disabled = seqOrder.length !== steps.length;
+  }
+
+  checkBtn.addEventListener('click', function () {
+    var firstBad = -1;
+    for (var i = 0; i < correctOrder.length; i++) {
+      if (seqOrder[i] !== correctOrder[i]) { firstBad = i; break; }
+    }
+    if (firstBad === -1) {
+      feedback.className = 'feedback correct';
+      feedback.innerHTML = '<span class="verdict">That\'s the path.</span> Position, then what\'s actually there, then the machine\'s own account of the command, then an honest read of the result, then the five-field report \u2014 each one resting on the one before it.';
+    } else {
+      var placedId = seqOrder[firstBad];
+      var placedTitle = steps.filter(function (s) { return s.id === placedId; })[0].title;
+      feedback.className = 'feedback wrong';
+      feedback.innerHTML = '<span class="verdict">Not yet \u2014 position ' + (firstBad + 1) + ' is out of place.</span> You put \u201c' + placedTitle + '\u201d there. ' + reasonById[placedId];
+    }
+    feedback.style.display = 'block';
+  });
+
+  resetBtn.addEventListener('click', function () {
+    seqOrder = [];
+    feedback.style.display = 'none';
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

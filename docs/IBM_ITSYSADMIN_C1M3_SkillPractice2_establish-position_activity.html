@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where the Path Actually Goes</title>
+<style>
+  :root {
+    --paper: #E7E2D6;
+    --paper-raised: #F1EEE4;
+    --ink: #262420;
+    --ink-soft: #55504A;
+    --line: #C9C2B0;
+    --terminal-bg: #1B1D1B;
+    --terminal-text: #C9D1C5;
+    --accent: #A6432B;
+    --correct: #35633E; --correct-bg: #DCE6DA;
+    --near: #8A5A16; --near-bg: #EFE2C7;
+    --wrong: #8B3A3A; --wrong-bg: #EBDAD6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  body { font-family: ui-serif, Georgia, "Times New Roman", serif; line-height: 1.5; font-size: 16.5px; padding: 2rem 1.1rem 3rem; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.45rem; font-weight: 600; margin: 0 0 0.8rem; }
+  p.lede { margin: 0 0 1rem; }
+
+  .tree {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    background: var(--terminal-bg);
+    color: var(--terminal-text);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    margin-bottom: 1.3rem;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .goal {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 1.2rem;
+    font-size: 0.98rem;
+  }
+
+  .item {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 0.95rem 1.05rem;
+    margin-bottom: 0.9rem;
+  }
+  .item .setup { font-size: 0.95rem; margin-bottom: 0.6rem; }
+  .item .setup code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #00000010; padding: 0.1rem 0.3rem; border-radius: 3px; }
+
+  .choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .choices button {
+    font-family: inherit; font-size: 0.85rem; background: #fff;
+    border: 1px solid var(--line); border-radius: 20px; padding: 0.4rem 0.8rem;
+    cursor: pointer; color: var(--ink);
+  }
+  .choices button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .choices button.selected { border-color: var(--ink); border-width: 2px; font-weight: 600; }
+  .choices button:disabled { cursor: default; opacity: 0.85; }
+
+  .feedback {
+    margin-top: 0.7rem; padding: 0.6rem 0.75rem; border-radius: 4px;
+    font-size: 0.9rem; border-left: 4px solid transparent; display: none;
+  }
+  .feedback.correct { background: var(--correct-bg); border-color: var(--correct); }
+  .feedback.near { background: var(--near-bg); border-color: var(--near); }
+  .feedback.wrong { background: var(--wrong-bg); border-color: var(--wrong); }
+  .feedback .verdict { font-weight: 600; }
+
+  .tally { text-align: center; font-size: 0.95rem; color: var(--ink-soft); margin: 1.1rem 0 1.6rem; }
+
+  .second-pass { margin-top: 1.6rem; border-top: 1px solid var(--line); padding-top: 1.2rem; }
+  .second-pass h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+  .second-pass p { font-size: 0.95rem; margin: 0 0 0.8rem; }
+  .wd-select { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+  .wd-select button {
+    font-family: inherit; font-size: 0.88rem; background: #fff;
+    border: 1px solid var(--line); border-radius: 20px; padding: 0.45rem 0.9rem; cursor: pointer;
+  }
+  .wd-select button.active { border-color: var(--ink); border-width: 2px; font-weight: 600; background: var(--paper-raised); }
+  .wd-select button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .demo-result {
+    background: var(--paper-raised); border: 1px solid var(--line); border-radius: 5px;
+    padding: 0.85rem 1rem; font-size: 0.92rem;
+  }
+  .demo-result .path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; display: block; margin-bottom: 0.5rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  @media (max-width: 480px) { body { font-size: 16px; padding: 1.4rem 0.9rem 2.5rem; } h1 { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Where the Path Actually Goes</h1>
+  <p class="lede">Same small project, six moments. Each one names where the shell was standing and what got typed. Decide what the command actually reached.</p>
+
+  <div class="tree" aria-label="Project file tree">project/
+├── notes.txt
+├── reports/
+│   ├── q3.txt              (this quarter's report)
+│   └── archive/
+│       └── q3.txt          (an old report, same filename, left behind)
+└── scripts/
+    └── build.sh</div>
+
+  <div class="goal"><strong>The goal every time:</strong> open this quarter's report, <code>reports/q3.txt</code>.</div>
+
+  <div id="items"></div>
+  <p class="tally" id="tally" aria-live="polite"></p>
+
+  <div class="second-pass">
+    <h2>One assumption, moved (not scored)</h2>
+    <p>Same typed command every time: <code>cat q3.txt</code>. Only the working directory changes. Toggle it and watch where the same line actually lands.</p>
+    <div class="wd-select" role="group" aria-label="Choose the working directory">
+      <button type="button" data-wd="reports" class="active">Standing in project/reports</button>
+      <button type="button" data-wd="archive">Standing in project/reports/archive</button>
+    </div>
+    <div class="demo-result" id="demoResult" aria-live="polite"></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var items = [
+    {
+      id: 'A',
+      setup: 'Working directory: <code>project/reports</code>. Typed: <code>cat q3.txt</code>',
+      correct: 'intended',
+      feedback: {
+        intended: "Correct. From inside <code>reports</code>, the bare filename <code>q3.txt</code> resolves right there \u2014 this quarter's report.",
+        nothing: "This path does resolve. From <code>reports</code>, <code>q3.txt</code> sits directly in the current directory.",
+        different: "This one reaches the file it was meant to \u2014 there is no second <code>q3.txt</code> inside <code>reports</code> itself, only inside its <code>archive</code> subfolder."
+      }
+    },
+    {
+      id: 'B',
+      setup: 'Working directory: <code>project</code>. Typed: <code>cat q3.txt</code>',
+      correct: 'nothing',
+      feedback: {
+        nothing: "Correct. There is no <code>q3.txt</code> directly inside <code>project</code> \u2014 it only exists one level down, inside <code>reports</code>.",
+        intended: "Not quite. This looks for <code>q3.txt</code> directly inside <code>project</code>, and nothing lives there by that name.",
+        different: "Not quite. There is no file at this exact location at all, so there is nothing to reach \u2014 right or wrong."
+      }
+    },
+    {
+      id: 'C',
+      setup: 'Working directory: <code>project/reports/archive</code>. Typed: <code>cat q3.txt</code>',
+      correct: 'different',
+      feedback: {
+        different: "Correct. This resolves to the old report sitting in <code>archive</code>, not the current one in <code>reports</code>. Same filename, same-looking command, wrong quarter.",
+        intended: "Not quite \u2014 this reads the <code>q3.txt</code> that lives inside <code>archive</code>, the leftover copy, not the current report one level up.",
+        nothing: "This one does resolve to a real file \u2014 just not the one that was meant. <code>archive</code> has its own <code>q3.txt</code>."
+      }
+    },
+    {
+      id: 'D',
+      setup: 'Working directory: <code>project</code>. Typed: <code>cat reports/q3.txt</code>',
+      correct: 'intended',
+      feedback: {
+        intended: "Correct. From <code>project</code>, stepping into <code>reports</code> and then <code>q3.txt</code> lands exactly on the current report.",
+        nothing: "This path does resolve \u2014 <code>reports</code> exists directly under <code>project</code>, and <code>q3.txt</code> is inside it.",
+        different: "This reaches the right file. The path names <code>reports</code> specifically, so it never touches the archived copy."
+      }
+    },
+    {
+      id: 'F',
+      setup: 'Working directory: <code>project/reports/archive</code>. Typed: <code>cat ../q3.txt</code>',
+      correct: 'intended',
+      feedback: {
+        intended: "Correct. <code>..</code> steps up from <code>archive</code> back into <code>reports</code>, then <code>q3.txt</code> reaches the current report \u2014 not the archived one.",
+        different: "Not quite. The <code>..</code> is what changes this from the earlier archive case: it deliberately steps back out to <code>reports</code> before reading <code>q3.txt</code>.",
+        nothing: "This path does resolve. Going up one level from <code>archive</code> lands in <code>reports</code>, where <code>q3.txt</code> is waiting."
+      }
+    },
+    {
+      id: 'H',
+      setup: 'Working directory: <code>project</code>. Typed: <code>cat archive/q3.txt</code>',
+      correct: 'nothing',
+      feedback: {
+        nothing: "Correct. <code>archive</code> is not directly under <code>project</code> \u2014 it lives inside <code>reports</code>. This path names a folder that does not exist at this level.",
+        intended: "Not quite. This assumes <code>archive</code> sits directly under <code>project</code>. It actually sits one level deeper, inside <code>reports</code>.",
+        different: "Not quite. There is no <code>project/archive</code> at all, so this does not reach a real file of any kind."
+      }
+    }
+  ];
+
+  var labels = { intended: 'Reaches the intended file', nothing: 'Reaches nothing', different: 'Reaches a different file than intended' };
+  var order = ['intended', 'nothing', 'different'];
+  var results = {};
+  var container = document.getElementById('items');
+
+  items.forEach(function (item) {
+    var card = document.createElement('div');
+    card.className = 'item';
+
+    var setup = document.createElement('div');
+    setup.className = 'setup';
+    setup.innerHTML = item.setup;
+    card.appendChild(setup);
+
+    var choices = document.createElement('div');
+    choices.className = 'choices';
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-label', 'Classify this command');
+
+    var feedbackDiv = document.createElement('div');
+    feedbackDiv.className = 'feedback';
+    feedbackDiv.setAttribute('aria-live', 'polite');
+
+    order.forEach(function (key) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = labels[key];
+      btn.addEventListener('click', function () {
+        if (btn.disabled) { return; }
+        Array.prototype.forEach.call(choices.children, function (b) {
+          b.disabled = true; b.classList.remove('selected');
+        });
+        btn.classList.add('selected');
+        var verdict = key === item.correct ? 'correct' : (key === 'different' || item.correct === 'different' ? 'wrong' : 'near');
+        feedbackDiv.className = 'feedback ' + verdict;
+        var verdictLabel = verdict === 'correct' ? 'Correct.' : (verdict === 'near' ? 'Close, but not quite.' : 'Not quite.');
+        feedbackDiv.innerHTML = '<span class="verdict">' + verdictLabel + '</span> ' + item.feedback[key].replace(/^Correct\.\s*|^Not quite\.\s*/, '');
+        feedbackDiv.style.display = 'block';
+        results[item.id] = (verdict === 'correct');
+        updateTally();
+      });
+      choices.appendChild(btn);
+    });
+
+    card.appendChild(choices);
+    card.appendChild(feedbackDiv);
+    container.appendChild(card);
+  });
+
+  function updateTally() {
+    var answered = Object.keys(results).length;
+    var right = Object.values(results).filter(Boolean).length;
+    var tally = document.getElementById('tally');
+    if (answered === 0) { tally.textContent = ''; return; }
+    tally.textContent = right + ' of ' + answered + ' matched correctly so far' + (answered === items.length ? ' \u2014 all six answered.' : '.');
+  }
+
+  var demoResult = document.getElementById('demoResult');
+  var wdButtons = document.querySelectorAll('.wd-select button');
+  function renderDemo(wd) {
+    if (wd === 'reports') {
+      demoResult.innerHTML = '<span class="path">Resolves to: project/reports/q3.txt</span>This is the current report. Standing in <code>reports</code>, the bare filename lands directly on it.';
+    } else {
+      demoResult.innerHTML = '<span class="path">Resolves to: project/reports/archive/q3.txt</span>This is the old, archived copy. The exact same typed line now opens a different file, because the only thing that changed is where the shell was standing.';
+    }
+  }
+  wdButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      wdButtons.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderDemo(btn.getAttribute('data-wd'));
+    });
+  });
+  renderDemo('reports');
+})();
+</script>
+</body>
+</html>
