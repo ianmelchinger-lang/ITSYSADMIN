@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You Are Here — Counting last night's failed logins</title>
+<style>
+  :root {
+    --bg: #eef2f1;
+    --panel: #ffffff;
+    --panel-border: #c9d3d0;
+    --ink: #1b2420;
+    --ink-soft: #4b5953;
+    --terminal-bg: #1c2420;
+    --terminal-text: #cfe3da;
+    --terminal-dim: #7fa093;
+    --accent: #0f6b5c;
+    --accent-soft: #e4efec;
+    --warn: #9c4a1d;
+    --warn-soft: #f7ebe0;
+    --focus: #0f6b5c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+
+  body {
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin: 0 0 1rem;
+    max-width: 22ch;
+  }
+
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 0.6rem;
+  }
+
+  p {
+    margin: 0 0 1rem;
+    max-width: 62ch;
+  }
+
+  .lede {
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+  }
+
+  .terminal {
+    background: var(--terminal-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1.5rem 0 1rem;
+  }
+
+  .terminal-head {
+    color: var(--terminal-dim);
+    font-size: 0.78rem;
+    padding: 0.6rem 1rem 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .terminal-body {
+    margin: 0;
+    padding: 0.9rem 1rem 1.1rem;
+    color: var(--terminal-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    overflow-x: auto;
+    white-space: pre;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .terminal-body .fill {
+    color: var(--terminal-dim);
+    font-style: normal;
+  }
+
+  .readout {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 1rem 1.2rem;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    margin-bottom: 1.75rem;
+  }
+
+  .readout-number {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .readout-label {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  section.question {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 1.25rem 1.25rem 1.4rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .estimate-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.9rem 0 1rem;
+  }
+
+  label {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  input[type="number"] {
+    font-size: 1rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    width: 9rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    background: #fff;
+  }
+
+  input[type="number"]:focus-visible,
+  button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.05rem;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:disabled {
+    background: #a9bdb7;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    width: 100%;
+    margin-top: 0.3rem;
+  }
+
+  .btn-secondary:disabled,
+  .btn-primary:disabled ~ .btn-secondary {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .hint {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin: -0.4rem 0 0.9rem;
+  }
+
+  section.reveal {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-left: 4px solid var(--warn);
+    border-radius: 10px;
+    padding: 1.3rem 1.3rem 1.45rem;
+  }
+
+  .committed-line {
+    font-size: 0.98rem;
+    margin-bottom: 1.1rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .committed-line strong {
+    color: var(--ink);
+  }
+
+  table.breakdown {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.2rem 0 1.2rem;
+    font-size: 0.95rem;
+  }
+
+  table.breakdown td {
+    padding: 0.5rem 0.4rem;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  table.breakdown td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  table.breakdown tr.total td {
+    border-bottom: none;
+    padding-top: 0.75rem;
+    font-weight: 600;
+  }
+
+  .closing {
+    background: var(--accent-soft);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    margin-top: 0.3rem;
+  }
+
+  .closing p {
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .closing p + p {
+    margin-top: 0.7rem;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; }
+    .readout { flex-direction: column; align-items: flex-start; gap: 0.15rem; }
+    .estimate-row { flex-direction: column; align-items: stretch; }
+    input[type="number"] { width: 100%; }
+    .btn-primary { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    section.reveal.animate-in {
+      animation: riseIn 0.35s ease-out;
+    }
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Counting last night's failed logins</h1>
+
+    <p class="lede">Overnight, the storefront tier slowed badly during a seasonal spike and logged some customers out mid-checkout. Nothing crashed. By morning, someone has already searched last night's saved output for the word that marks a failure.</p>
+
+    <div class="terminal" aria-label="A sample of the saved log">
+      <div class="terminal-head">storefront.log — a few lines, out of thousands saved overnight</div>
+      <pre class="terminal-body">02:14:03  203.0.113.44  FAILED login
+02:14:05  203.0.113.44  FAILED login
+02:14:07  203.0.113.44  FAILED login
+02:14:09  198.51.100.9  FAILED login
+02:17:41  203.0.113.44  FAILED login
+02:17:43  203.0.113.44  FAILED login
+02:22:18  192.0.2.77     FAILED login
+02:22:19  203.0.113.44  FAILED login
+<span class="fill">…</span></pre>
+    </div>
+
+    <div class="readout">
+      <div class="readout-number" id="matchCount">6,000</div>
+      <div class="readout-label">lines in the file contain the word FAILED</div>
+    </div>
+
+    <section class="question" id="questionSection">
+      <h2>Before you look any closer</h2>
+      <p>Based on what you've seen so far, how many customers do you think couldn't log in last night?</p>
+
+      <div class="estimate-row">
+        <label for="estimateInput">Your estimate</label>
+        <input type="number" id="estimateInput" min="0" step="1" inputmode="numeric" placeholder="e.g. 50" aria-describedby="estimateHint">
+        <button id="lockInBtn" class="btn btn-primary" type="button" disabled>Lock in my estimate</button>
+      </div>
+      <p class="hint" id="estimateHint">Enter a number, or use the option below if the file doesn't tell you enough to guess.</p>
+
+      <button id="cantTellBtn" class="btn btn-secondary" type="button">I can't tell from this — not enough information</button>
+    </section>
+
+    <section class="reveal" id="revealSection" hidden aria-live="polite">
+      <div class="committed-line" id="committedLine"></div>
+
+      <h2>What the file actually contains</h2>
+      <table class="breakdown">
+        <tr><td>Lines containing the word FAILED</td><td id="rowMatches">6,000</td></tr>
+        <tr><td>Distinct source addresses behind those lines</td><td id="rowAddresses">9</td></tr>
+        <tr><td>Of those 9, addresses retrying every two seconds — a till, not a customer</td><td id="rowRetry">7</td></tr>
+        <tr class="total"><td>Addresses left once the retries are set aside</td><td id="rowLeft">2</td></tr>
+      </table>
+
+      <div class="closing">
+        <p>A match count tells you how many lines mentioned a word. It doesn't tell you how many distinct things were behind those lines — a till retrying every two seconds produces hundreds of matching lines and zero customers, and nothing in the file converts one to the other on its own.</p>
+        <p>Getting from 6,000 to the real number takes a different move: naming the field that identifies the thing you actually want to count, and counting the distinct values in it. That's not about which search term you use. It's a capability — treating a file's output as something you reduce on a stated rule, rather than something you read off the screen — and it's what the rest of this module builds.</p>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function () {
+  var estimateInput = document.getElementById('estimateInput');
+  var lockInBtn = document.getElementById('lockInBtn');
+  var cantTellBtn = document.getElementById('cantTellBtn');
+  var questionSection = document.getElementById('questionSection');
+  var revealSection = document.getElementById('revealSection');
+  var committedLine = document.getElementById('committedLine');
+
+  var MATCHES = 6000;
+  var ADDRESSES = 9;
+  var RETRY = 7;
+  var LEFT = ADDRESSES - RETRY;
+
+  function fmt(n) {
+    return n.toLocaleString('en-US');
+  }
+
+  function validateInput() {
+    var raw = estimateInput.value.trim();
+    var ok = raw !== '' && /^\d+$/.test(raw);
+    lockInBtn.disabled = !ok;
+  }
+
+  estimateInput.addEventListener('input', validateInput);
+
+  function commit(message) {
+    committedLine.innerHTML = message;
+    estimateInput.disabled = true;
+    lockInBtn.disabled = true;
+    cantTellBtn.disabled = true;
+
+    document.getElementById('rowMatches').textContent = fmt(MATCHES);
+    document.getElementById('rowAddresses').textContent = fmt(ADDRESSES);
+    document.getElementById('rowRetry').textContent = fmt(RETRY);
+    document.getElementById('rowLeft').textContent = fmt(LEFT);
+
+    revealSection.hidden = false;
+    revealSection.classList.add('animate-in');
+    revealSection.setAttribute('tabindex', '-1');
+    revealSection.focus();
+  }
+
+  lockInBtn.addEventListener('click', function () {
+    var n = parseInt(estimateInput.value, 10);
+    if (isNaN(n)) { return; }
+    commit('You estimated <strong>' + fmt(n) + '</strong> customers couldn\'t log in.');
+  });
+
+  cantTellBtn.addEventListener('click', function () {
+    commit('You said you couldn\'t tell from this. That caution was right — a raw match count alone can\'t answer the question.');
+  });
+})();
+</script>
+</body>
+</html>

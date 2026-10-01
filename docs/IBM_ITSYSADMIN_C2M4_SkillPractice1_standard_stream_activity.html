@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — Two Streams, One Redirect</title>
+<style>
+  :root {
+    --bg: #eef2f1;
+    --panel: #ffffff;
+    --panel-border: #c9d3d0;
+    --ink: #1b2420;
+    --ink-soft: #4b5953;
+    --terminal-bg: #1c2420;
+    --terminal-text: #cfe3da;
+    --terminal-dim: #7fa093;
+    --accent: #0f6b5c;
+    --accent-soft: #e4efec;
+    --warn: #9c4a1d;
+    --warn-soft: #f7ebe0;
+    --good: #0f6b5c;
+    --good-soft: #e4efec;
+    --bad: #a1312a;
+    --bad-soft: #f8e7e5;
+    --focus: #0f6b5c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+
+  body { padding: 2.5rem 1.25rem 4rem; }
+
+  .wrap { max-width: 680px; margin: 0 auto; }
+
+  h1 { font-size: 1.4rem; line-height: 1.3; margin: 0 0 1rem; max-width: 26ch; }
+  h2 { font-size: 1.05rem; margin: 0 0 0.6rem; }
+  p { margin: 0 0 1rem; max-width: 64ch; }
+  .lede { color: var(--ink-soft); }
+
+  .setup {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .setup p:last-child { margin-bottom: 0; }
+
+  .row {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .row-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .badge {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    margin-top: 0.1rem;
+  }
+  .badge.s1 { background: var(--accent-soft); color: var(--accent); }
+  .badge.s2 { background: var(--warn-soft); color: var(--warn); }
+
+  .line-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.85rem;
+    color: var(--ink);
+  }
+
+  .choices {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .choice-btn {
+    font-size: 0.86rem;
+    padding: 0.42rem 0.75rem;
+    border-radius: 7px;
+    border: 1px solid var(--panel-border);
+    background: #fff;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .choice-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .row.graded .choice-btn { cursor: default; }
+
+  .row.correct { border-left: 4px solid var(--good); }
+  .row.incorrect { border-left: 4px solid var(--bad); }
+
+  .row-feedback {
+    font-size: 0.86rem;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--panel-border);
+    display: none;
+  }
+  .row.graded .row-feedback { display: block; }
+  .row.correct .row-feedback { color: var(--good); }
+  .row.incorrect .row-feedback { color: var(--bad); }
+
+  .controls {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 1rem 0 1.75rem;
+  }
+
+  .btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:disabled { background: #a9bdb7; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+  .choice-btn:focus-visible, .btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .summary {
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.75rem;
+    font-size: 0.98rem;
+  }
+  .summary.tier-correct { background: var(--good-soft); color: var(--ink); }
+  .summary.tier-near { background: var(--warn-soft); color: var(--ink); }
+  .summary.tier-wrong { background: var(--bad-soft); color: var(--ink); }
+
+  section.pass2 {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 1.2rem 1.2rem 1.3rem;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0.8rem 0 1.1rem;
+    flex-wrap: wrap;
+  }
+
+  .toggle-btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: #fff;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .toggle-btn.active { background: var(--accent); color: #fff; }
+
+  table.live {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  table.live td {
+    padding: 0.45rem 0.4rem;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  table.live td.dest {
+    text-align: right;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  table.live td.dest.file { color: var(--accent); }
+  table.live td.dest.screen { color: var(--warn); }
+  table.live .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; }
+    .row-top { flex-direction: column; }
+    .choices { width: 100%; }
+    .choice-btn { flex: 1 1 auto; text-align: center; }
+    .controls .btn { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .row.graded { transition: border-color 0.2s ease; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Two streams, one redirect</h1>
+    <p class="lede">A command's results and its errors travel on separate channels. Redirecting one never touches the other.</p>
+
+    <div class="setup">
+      <p>A nightly backup script writes two kinds of lines as it runs: a line for every directory it copies successfully (its results, standard output — stream 1), and a line when it can't read something (its errors, standard error — stream 2).</p>
+      <p>Last night, someone ran it like this: <strong>only standard output was redirected, into backup.log.</strong> Standard error was left alone — it still goes wherever it always goes, by default: the screen.</p>
+      <p>Each line below is labelled with the stream the script actually sent it on. For each one, say where it ends up.</p>
+    </div>
+
+    <div id="rows"></div>
+
+    <div class="controls">
+      <button id="checkBtn" class="btn btn-primary" type="button" disabled>Check my answers</button>
+      <button id="resetBtn" class="btn btn-ghost" type="button" hidden>Try again</button>
+    </div>
+
+    <div id="summary" class="summary" hidden role="status" aria-live="polite"></div>
+
+    <section class="pass2" id="pass2" hidden>
+      <h2>Now she changes her mind</h2>
+      <p>This time, only standard error is redirected, into error.log. Standard output is left alone. Nothing here is graded — just watch where each line lands as you flip the redirect.</p>
+      <div class="toggle-row">
+        <span id="toggleLabel">Currently redirecting: <strong>standard error → error.log</strong></span>
+      </div>
+      <div class="toggle-row">
+        <button id="toggleBtn" class="toggle-btn" type="button">Redirect standard output instead</button>
+      </div>
+      <table class="live" id="liveTable" aria-label="Live destination of each line">
+        <tbody></tbody>
+      </table>
+    </section>
+  </div>
+
+<script>
+(function () {
+  var LINES = [
+    { id: 1, stream: 1, text: "Backed up /var/www/html — 120 files" },
+    { id: 2, stream: 2, text: "Could not read /etc/shadow — permission denied" },
+    { id: 3, stream: 1, text: "Backed up /etc/nginx — 18 files" },
+    { id: 4, stream: 1, text: "Backed up /opt/storefront — 340 files" },
+    { id: 5, stream: 2, text: "Could not read /var/log/secure — permission denied" },
+    { id: 6, stream: 1, text: "Backed up /home/svcacct — 4 files" },
+    { id: 7, stream: 2, text: "Archive step exited early because of the errors above" },
+    { id: 8, stream: 1, text: "Backup finished — 482 files copied, 2 skipped" }
+  ];
+
+  var rowsEl = document.getElementById('rows');
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var summaryEl = document.getElementById('summary');
+  var pass2 = document.getElementById('pass2');
+  var toggleBtn = document.getElementById('toggleBtn');
+  var toggleLabel = document.getElementById('toggleLabel');
+  var liveTableBody = document.querySelector('#liveTable tbody');
+
+  var answers = {};
+
+  function buildRows() {
+    rowsEl.innerHTML = '';
+    LINES.forEach(function (line) {
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.id = 'row-' + line.id;
+
+      var top = document.createElement('div');
+      top.className = 'row-top';
+
+      var badge = document.createElement('span');
+      badge.className = 'badge ' + (line.stream === 1 ? 's1' : 's2');
+      badge.textContent = line.stream === 1 ? 'stream 1' : 'stream 2';
+
+      var text = document.createElement('span');
+      text.className = 'line-text';
+      text.textContent = line.text;
+
+      top.appendChild(badge);
+      top.appendChild(text);
+
+      var choices = document.createElement('div');
+      choices.className = 'choices';
+
+      var fileBtn = document.createElement('button');
+      fileBtn.type = 'button';
+      fileBtn.className = 'choice-btn';
+      fileBtn.textContent = '→ backup.log';
+      fileBtn.setAttribute('aria-pressed', 'false');
+
+      var screenBtn = document.createElement('button');
+      screenBtn.type = 'button';
+      screenBtn.className = 'choice-btn';
+      screenBtn.textContent = '→ still on screen';
+      screenBtn.setAttribute('aria-pressed', 'false');
+
+      function select(choice, btnChosen, btnOther) {
+        answers[line.id] = choice;
+        btnChosen.classList.add('selected');
+        btnChosen.setAttribute('aria-pressed', 'true');
+        btnOther.classList.remove('selected');
+        btnOther.setAttribute('aria-pressed', 'false');
+        checkBtn.disabled = Object.keys(answers).length < LINES.length;
+      }
+
+      fileBtn.addEventListener('click', function () {
+        if (row.classList.contains('graded')) { return; }
+        select('file', fileBtn, screenBtn);
+      });
+      screenBtn.addEventListener('click', function () {
+        if (row.classList.contains('graded')) { return; }
+        select('screen', screenBtn, fileBtn);
+      });
+
+      choices.appendChild(fileBtn);
+      choices.appendChild(screenBtn);
+
+      var feedback = document.createElement('div');
+      feedback.className = 'row-feedback';
+      feedback.id = 'fb-' + line.id;
+
+      row.appendChild(top);
+      row.appendChild(choices);
+      row.appendChild(feedback);
+      rowsEl.appendChild(row);
+    });
+  }
+
+  function correctDestination(line) {
+    return line.stream === 1 ? 'file' : 'screen';
+  }
+
+  function check() {
+    var correctCount = 0;
+    LINES.forEach(function (line) {
+      var row = document.getElementById('row-' + line.id);
+      var fb = document.getElementById('fb-' + line.id);
+      var given = answers[line.id];
+      var correct = correctDestination(line);
+      var isRight = given === correct;
+      row.classList.add('graded');
+      row.classList.add(isRight ? 'correct' : 'incorrect');
+
+      if (isRight) {
+        correctCount++;
+        fb.textContent = line.stream === 1
+          ? 'Right — this is stream 1, and stream 1 was the one redirected, so it lands in backup.log.'
+          : 'Right — this is stream 2, and nothing redirected stream 2, so it still goes to its default: the screen.';
+      } else {
+        fb.textContent = line.stream === 1
+          ? 'Not quite — this line is stream 1 (standard output). The redirect sent standard output to backup.log, so this line lands there, not on screen.'
+          : 'Not quite — this line is stream 2 (standard error). Only standard output was redirected here. Standard error keeps going to its default destination: the screen.';
+      }
+    });
+
+    checkBtn.hidden = true;
+    resetBtn.hidden = false;
+
+    summaryEl.hidden = false;
+    var total = LINES.length;
+    if (correctCount === total) {
+      summaryEl.className = 'summary tier-correct';
+      summaryEl.textContent = 'All ' + total + ' correct. Redirecting one stream never changes where the other one goes — that\'s the whole rule.';
+    } else if (correctCount >= total - 2) {
+      summaryEl.className = 'summary tier-near';
+      summaryEl.textContent = correctCount + ' of ' + total + ' correct. Check the line(s) marked above — the stream label decides the destination, not how the words sound.';
+    } else {
+      summaryEl.className = 'summary tier-wrong';
+      summaryEl.textContent = correctCount + ' of ' + total + ' correct. Start from the redirect, not the wording: only standard output was redirected, so only stream-1 lines move. Every stream-2 line stays on screen, whatever it says.';
+    }
+
+    pass2.hidden = false;
+  }
+
+  function resetRound() {
+    answers = {};
+    buildRows();
+    checkBtn.hidden = false;
+    checkBtn.disabled = true;
+    resetBtn.hidden = true;
+    summaryEl.hidden = true;
+    pass2.hidden = true;
+    redirectingStderr = true;
+    syncToggleUI();
+    renderLive();
+  }
+
+  checkBtn.addEventListener('click', check);
+  resetBtn.addEventListener('click', resetRound);
+
+  // Second pass — ungraded, live recompute as the redirected stream flips.
+  var redirectingStderr = true; // matches the pass-2 setup text on load
+
+  function renderLive() {
+    liveTableBody.innerHTML = '';
+    LINES.forEach(function (line) {
+      var tr = document.createElement('tr');
+
+      var tdBadge = document.createElement('td');
+      tdBadge.innerHTML = '<span class="badge ' + (line.stream === 1 ? 's1' : 's2') + '">' +
+        (line.stream === 1 ? 'stream 1' : 'stream 2') + '</span>';
+
+      var tdText = document.createElement('td');
+      tdText.className = 'mono';
+      tdText.textContent = line.text;
+
+      var tdDest = document.createElement('td');
+      tdDest.className = 'dest';
+
+      var redirectedStream = redirectingStderr ? 2 : 1;
+      var destinationFile = redirectingStderr ? 'error.log' : 'backup.log';
+      var goesToFile = line.stream === redirectedStream;
+
+      tdDest.textContent = goesToFile ? ('→ ' + destinationFile) : '→ still on screen';
+      tdDest.classList.add(goesToFile ? 'file' : 'screen');
+
+      tr.appendChild(tdBadge);
+      tr.appendChild(tdText);
+      tr.appendChild(tdDest);
+      liveTableBody.appendChild(tr);
+    });
+  }
+
+  function syncToggleUI() {
+    toggleBtn.classList.toggle('active', redirectingStderr);
+    // Button always names the switch a click would perform next.
+    toggleBtn.textContent = redirectingStderr
+      ? 'Redirect standard output instead'
+      : 'Redirect standard error instead';
+    toggleLabel.innerHTML = redirectingStderr
+      ? 'Currently redirecting: <strong>standard error → error.log</strong>'
+      : 'Currently redirecting: <strong>standard output → backup.log</strong>';
+  }
+
+  toggleBtn.addEventListener('click', function () {
+    redirectingStderr = !redirectingStderr;
+    syncToggleUI();
+    renderLive();
+  });
+
+  buildRows();
+  syncToggleUI();
+  renderLive();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — Neighbours Only</title>
+<style>
+  :root {
+    --bg: #eef2f1;
+    --panel: #ffffff;
+    --panel-border: #c9d3d0;
+    --ink: #1b2420;
+    --ink-soft: #4b5953;
+    --terminal-bg: #1c2420;
+    --terminal-text: #cfe3da;
+    --terminal-dim: #7fa093;
+    --accent: #0f6b5c;
+    --accent-soft: #e4efec;
+    --warn: #9c4a1d;
+    --warn-soft: #f7ebe0;
+    --good: #0f6b5c;
+    --good-soft: #e4efec;
+    --bad: #a1312a;
+    --bad-soft: #f8e7e5;
+    --focus: #0f6b5c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+
+  body { padding: 2.5rem 1.25rem 4rem; }
+  .wrap { max-width: 700px; margin: 0 auto; }
+
+  h1 { font-size: 1.4rem; line-height: 1.3; margin: 0 0 1rem; max-width: 26ch; }
+  h2 { font-size: 1.05rem; margin: 0 0 0.6rem; }
+  p { margin: 0 0 1rem; max-width: 66ch; }
+  .lede { color: var(--ink-soft); }
+
+  .setup {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.25rem;
+  }
+  .setup p:last-child { margin-bottom: 0; }
+
+  .target {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    font-size: 0.92rem;
+    margin-bottom: 1.5rem;
+  }
+  .target strong { font-weight: 700; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+  }
+
+  @media (max-width: 620px) {
+    .panels { grid-template-columns: 1fr; }
+  }
+
+  .panel-block h2 {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    text-transform: none;
+  }
+
+  .terminal {
+    background: var(--terminal-bg);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .terminal-body {
+    margin: 0;
+    padding: 0.8rem 0.9rem;
+    color: var(--terminal-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    white-space: pre;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .out-row {
+    display: flex;
+    gap: 0.6rem;
+  }
+  .out-row .count {
+    color: var(--terminal-dim);
+    min-width: 1.4em;
+    text-align: right;
+  }
+
+  .toggles {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .toggle:last-child { border-bottom: none; }
+
+  .toggle-name {
+    font-size: 0.92rem;
+  }
+  .toggle-name .stage-label {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .switch-btn {
+    font-size: 0.85rem;
+    padding: 0.38rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: #fff;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+    min-width: 4.2rem;
+  }
+  .switch-btn.on {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0 0 1.75rem;
+  }
+
+  .btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+  .switch-btn:focus-visible, .btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .result {
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.75rem;
+    font-size: 0.98rem;
+  }
+  .result.tier-correct { background: var(--good-soft); color: var(--ink); }
+  .result.tier-near { background: var(--warn-soft); color: var(--ink); }
+  .result.tier-wrong { background: var(--bad-soft); color: var(--ink); }
+
+  section.pass2 {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 1.2rem 1.2rem 1.3rem;
+  }
+
+  section.pass2 .panels { margin-top: 0.9rem; }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Neighbours only</h1>
+    <p class="lede">A filter that collapses duplicates only ever looks at the line right next to it.</p>
+
+    <div class="setup">
+      <p>The administrator has already reduced last night's auth.log down to one address per failed-login line — twelve of them, in the order they happened. She wants a ranked count: which address failed the most.</p>
+    </div>
+
+    <div class="target">Target, stated up front: a list of addresses with a count next to each, <strong>largest count first</strong>, nothing scattered.</div>
+
+    <div class="panels">
+      <div class="panel-block">
+        <h2>The twelve lines, as they happened</h2>
+        <div class="terminal"><pre class="terminal-body" id="rawView"></pre></div>
+      </div>
+      <div class="panel-block">
+        <h2>Live output</h2>
+        <div class="terminal"><pre class="terminal-body" id="liveOutput"></pre></div>
+      </div>
+    </div>
+
+    <div class="toggles">
+      <div class="toggle">
+        <span class="toggle-name">Sort<span class="stage-label">sort</span></span>
+        <button class="switch-btn" id="t-sort" type="button" aria-pressed="false">Off</button>
+      </div>
+      <div class="toggle">
+        <span class="toggle-name">Count duplicates<span class="stage-label">uniq -c</span></span>
+        <button class="switch-btn" id="t-count" type="button" aria-pressed="false">Off</button>
+      </div>
+      <div class="toggle">
+        <span class="toggle-name">Rank by count<span class="stage-label">sort -rn</span></span>
+        <button class="switch-btn" id="t-rank" type="button" aria-pressed="false">Off</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="checkBtn" class="btn btn-primary" type="button">Check against the target</button>
+    </div>
+
+    <div id="result" class="result" hidden role="status" aria-live="polite"></div>
+
+    <section class="pass2" id="pass2" hidden>
+      <h2>Now move one assumption</h2>
+      <p>What actually matters to Count duplicates isn't whether Sort ran — it's whether matching lines end up next to each other. Sort is just the usual way to guarantee that. Here's the same twelve values, arriving already grouped (but not in sorted order), with Sort left off.</p>
+      <div class="panels">
+        <div class="panel-block">
+          <h2>Arrives already grouped, unsorted order</h2>
+          <div class="terminal"><pre class="terminal-body" id="groupedView"></pre></div>
+        </div>
+        <div class="panel-block">
+          <h2>Output, Sort still off</h2>
+          <div class="terminal"><pre class="terminal-body" id="groupedOutput"></pre></div>
+        </div>
+      </div>
+      <p style="margin-top:0.9rem; font-size:0.9rem; color:var(--ink-soft);">Nothing scattered this time, so nothing needed sorting first. Sort isn't the rule — it's just how you make a scattered list satisfy the rule.</p>
+    </section>
+  </div>
+
+<script>
+(function () {
+  var RAW = [
+    '203.0.113.44', '198.51.100.9', '203.0.113.44', '192.0.2.77',
+    '198.51.100.9', '203.0.113.44', '192.0.2.201', '203.0.113.44',
+    '198.51.100.9', '192.0.2.77', '203.0.113.44', '198.51.100.9'
+  ];
+
+  // Same twelve values, same multiset, arrived already grouped (adjacency guaranteed)
+  // but NOT alphabetically sorted — order of the groups themselves is arbitrary.
+  var GROUPED = [
+    '198.51.100.9', '198.51.100.9', '198.51.100.9', '198.51.100.9',
+    '203.0.113.44', '203.0.113.44', '203.0.113.44', '203.0.113.44', '203.0.113.44',
+    '192.0.2.201',
+    '192.0.2.77', '192.0.2.77'
+  ];
+
+  var TARGET = [
+    { value: '203.0.113.44', count: 5 },
+    { value: '198.51.100.9', count: 4 },
+    { value: '192.0.2.77', count: 2 },
+    { value: '192.0.2.201', count: 1 }
+  ];
+
+  var rawView = document.getElementById('rawView');
+  var liveOutput = document.getElementById('liveOutput');
+  var groupedView = document.getElementById('groupedView');
+  var groupedOutput = document.getElementById('groupedOutput');
+  var checkBtn = document.getElementById('checkBtn');
+  var resultEl = document.getElementById('result');
+  var pass2 = document.getElementById('pass2');
+
+  var tSort = document.getElementById('t-sort');
+  var tCount = document.getElementById('t-count');
+  var tRank = document.getElementById('t-rank');
+
+  var state = { sort: false, count: true, rank: true };
+
+  function collapseAdjacent(lines) {
+    var out = [];
+    lines.forEach(function (v) {
+      var last = out[out.length - 1];
+      if (last && last.value === v) {
+        last.count++;
+      } else {
+        out.push({ value: v, count: 1 });
+      }
+    });
+    return out;
+  }
+
+  function compute(lines, s) {
+    var working = lines.slice();
+    if (s.sort) { working.sort(); }
+
+    var entries;
+    if (s.count) {
+      entries = collapseAdjacent(working);
+    } else {
+      entries = working.map(function (v) { return { value: v, count: 1 }; });
+    }
+
+    if (s.rank && s.count) {
+      entries = entries.slice().sort(function (a, b) { return b.count - a.count; });
+    }
+    return entries;
+  }
+
+  function renderPlain(el, lines) {
+    el.textContent = lines.join('\n');
+  }
+
+  function renderEntries(el, entries, withCounts) {
+    el.innerHTML = '';
+    entries.forEach(function (e) {
+      var row = document.createElement('div');
+      row.className = 'out-row';
+      if (withCounts) {
+        var c = document.createElement('span');
+        c.className = 'count';
+        c.textContent = e.count;
+        row.appendChild(c);
+      }
+      var v = document.createElement('span');
+      v.textContent = e.value;
+      row.appendChild(v);
+      el.appendChild(row);
+    });
+    if (entries.length === 0) {
+      el.textContent = '(nothing)';
+    }
+  }
+
+  function syncToggleButtons() {
+    [['sort', tSort], ['count', tCount], ['rank', tRank]].forEach(function (pair) {
+      var key = pair[0], btn = pair[1];
+      btn.classList.toggle('on', state[key]);
+      btn.setAttribute('aria-pressed', state[key] ? 'true' : 'false');
+      btn.textContent = state[key] ? 'On' : 'Off';
+    });
+  }
+
+  function refreshLive() {
+    var entries = compute(RAW, state);
+    renderEntries(liveOutput, entries, state.count);
+  }
+
+  function toggle(key) {
+    state[key] = !state[key];
+    syncToggleButtons();
+    refreshLive();
+  }
+
+  tSort.addEventListener('click', function () { toggle('sort'); });
+  tCount.addEventListener('click', function () { toggle('count'); });
+  tRank.addEventListener('click', function () { toggle('rank'); });
+
+  function matchesTarget(entries) {
+    if (entries.length !== TARGET.length) { return false; }
+    for (var i = 0; i < TARGET.length; i++) {
+      if (entries[i].value !== TARGET[i].value || entries[i].count !== TARGET[i].count) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  checkBtn.addEventListener('click', function () {
+    var entries = compute(RAW, state);
+    resultEl.hidden = false;
+
+    if (matchesTarget(entries)) {
+      resultEl.className = 'result tier-correct';
+      resultEl.textContent = 'That\'s it — ranked, largest first, nothing scattered. Sort grouped the duplicates, Count duplicates collapsed each group into one line with a number, and Rank by count put the biggest group first.';
+    } else if (!state.sort && state.count) {
+      resultEl.className = 'result tier-wrong';
+      resultEl.textContent = 'Count duplicates only merges a line with the one right next to it. These twelve lines arrived scattered, so almost nothing is adjacent yet — turn Sort on first, so matching lines end up next to each other before Count duplicates runs.';
+    } else if (state.sort && !state.count) {
+      resultEl.className = 'result tier-near';
+      resultEl.textContent = 'Right data, not reduced yet — the lines are in order, but nothing has merged the duplicates into counts. Turn on Count duplicates.';
+    } else if (state.sort && state.count && !state.rank) {
+      resultEl.className = 'result tier-near';
+      resultEl.textContent = 'Right counts, wrong order — you have one line per address with an accurate count, but they\'re still in alphabetical order, not ranked by size. Turn on Rank by count.';
+    } else {
+      resultEl.className = 'result tier-wrong';
+      resultEl.textContent = 'Not yet. Without Sort, matching lines are never next to each other, so Count duplicates can\'t merge them — everything else depends on getting that first.';
+    }
+
+    pass2.hidden = false;
+  });
+
+  renderPlain(rawView, RAW);
+  renderPlain(groupedView, GROUPED);
+  syncToggleButtons();
+  refreshLive();
+
+  // Second pass content is static relative to the grouped, already-adjacent input,
+  // shown with Sort off to isolate adjacency from the Sort command itself.
+  var groupedEntries = collapseAdjacent(GROUPED).sort(function (a, b) { return b.count - a.count; });
+  renderEntries(groupedOutput, groupedEntries, true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visualize the Process — Assemble the Reduction</title>
+<style>
+  :root {
+    --bg: #eef2f1;
+    --panel: #ffffff;
+    --panel-border: #c9d3d0;
+    --ink: #1b2420;
+    --ink-soft: #4b5953;
+    --terminal-bg: #1c2420;
+    --terminal-text: #cfe3da;
+    --terminal-dim: #7fa093;
+    --accent: #0f6b5c;
+    --accent-soft: #e4efec;
+    --warn: #9c4a1d;
+    --warn-soft: #f7ebe0;
+    --good: #0f6b5c;
+    --good-soft: #e4efec;
+    --bad: #a1312a;
+    --bad-soft: #f8e7e5;
+    --focus: #0f6b5c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+
+  body { padding: 2.5rem 1.25rem 4rem; }
+  .wrap { max-width: 700px; margin: 0 auto; }
+
+  h1 { font-size: 1.4rem; line-height: 1.3; margin: 0 0 1rem; max-width: 28ch; }
+  h2 { font-size: 1.05rem; margin: 0 0 0.6rem; }
+  h3 { font-size: 0.92rem; margin: 0 0 0.6rem; color: var(--ink-soft); }
+  p { margin: 0 0 1rem; max-width: 66ch; }
+  .lede { color: var(--ink-soft); }
+
+  .board-section {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 1.1rem 1.2rem 1.25rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .board-section.flagged { border-left: 4px solid var(--bad); }
+  .board-section.okay { border-left: 4px solid var(--good); }
+
+  .option-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .option-btn {
+    text-align: left;
+    font-size: 0.92rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .option-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .option-btn.graded.right { border-color: var(--good); background: var(--good-soft); }
+  .option-btn.graded.wrong-pick { border-color: var(--bad); background: var(--bad-soft); }
+
+  .step-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #fff;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-pos {
+    flex: 0 0 auto;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-text { flex: 1 1 auto; }
+  .step-title { font-size: 0.92rem; font-weight: 600; }
+  .step-detail {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-top: 0.15rem;
+  }
+
+  .step-moves {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .move-btn {
+    font-size: 0.78rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 5px;
+    border: 1px solid var(--panel-border);
+    background: #fff;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .move-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .step-card.correct-pos { border-left: 4px solid var(--good); }
+  .step-card.wrong-pos { border-left: 4px solid var(--bad); }
+
+  .controls {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0.4rem 0 1.75rem;
+  }
+
+  .btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+  .option-btn:focus-visible, .move-btn:focus-visible, .btn:focus-visible, .toggle-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .result {
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.75rem;
+    font-size: 0.98rem;
+  }
+  .result.tier-correct { background: var(--good-soft); color: var(--ink); }
+  .result.tier-near { background: var(--warn-soft); color: var(--ink); }
+  .result.tier-wrong { background: var(--bad-soft); color: var(--ink); }
+  .result ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+  .result li { margin-bottom: 0.3rem; }
+
+  section.pass2 {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 1.2rem 1.2rem 1.3rem;
+  }
+
+  .toggle-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.8rem 0 1rem;
+  }
+
+  .toggle-btn {
+    font-size: 0.86rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: #fff;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .toggle-btn.active { background: var(--accent); color: #fff; }
+
+  .outcome-line {
+    background: var(--terminal-bg);
+    color: var(--terminal-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.84rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 7px;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; }
+    .step-card { flex-wrap: wrap; }
+    .controls .btn { width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Assemble the reduction</h1>
+    <p class="lede">Put the whole path back together: the question actually being asked, the steps in the order they have to run, and the signal that says it's done.</p>
+
+    <div class="board-section" id="questionBoard">
+      <h2>1. The operational question</h2>
+      <p>Last night's auth.log is saved and six thousand lines matched the word FAILED. What is the administrator actually trying to answer?</p>
+      <div class="option-list" id="questionOptions"></div>
+    </div>
+
+    <div class="board-section" id="stepsBoard">
+      <h2>2. The steps, in order</h2>
+      <p>Four moves reduce the raw file to an answer. Use the arrows to put them in the order they have to run.</p>
+      <div id="stepsList"></div>
+    </div>
+
+    <div class="board-section" id="signalBoard">
+      <h2>3. The signal that says it worked</h2>
+      <p>Once the pipeline runs, what tells the administrator she's actually done?</p>
+      <div class="option-list" id="signalOptions"></div>
+    </div>
+
+    <div class="controls">
+      <button id="checkBtn" class="btn btn-primary" type="button">Check the assembly</button>
+      <button id="resetBtn" class="btn btn-ghost" type="button" hidden>Try again</button>
+    </div>
+
+    <div id="result" class="result" hidden role="status" aria-live="polite"></div>
+
+    <section class="pass2" id="pass2" hidden>
+      <h2>Now move one assumption</h2>
+      <p>This isn't a one-time report — it runs again tomorrow night. How she captures the result matters just as much as the pipeline itself.</p>
+      <div class="toggle-row">
+        <button class="toggle-btn active" id="capOverwrite" type="button">Capture with &gt;</button>
+        <button class="toggle-btn" id="capAppend" type="button">Capture with &gt;&gt;</button>
+      </div>
+      <div class="outcome-line" id="capOutcome"></div>
+    </section>
+  </div>
+
+<script>
+(function () {
+  var QUESTION_OPTIONS = [
+    { id: 'lines', text: "How many lines in the log contain the word FAILED?", correct: false },
+    { id: 'addresses', text: "Which client addresses account for the most failed-login attempts, ranked?", correct: true },
+    { id: 'status', text: "Is the authentication service still running right now?", correct: false }
+  ];
+
+  var SIGNAL_OPTIONS = [
+    { id: 'silent', text: "The command ran and nothing printed to the screen.", correct: false },
+    { id: 'ranked', text: "A ranked list, largest count first, plus how many lines were discarded to get there.", correct: true },
+    { id: 'spreadsheet', text: "A spreadsheet someone typed the counts into by hand.", correct: false }
+  ];
+
+  // Correct order is single-valued per the Guide's stated move cap and the Tutorial's
+  // range-finding ("filter first, cut afterwards") plus the sort-before-count rule.
+  var CORRECT_ORDER = ['count', 'filter', 'cut', 'rank'];
+
+  var STEP_DATA = {
+    count: { title: 'Count the raw lines', detail: 'wc -l auth.log', note: 'establishes the starting total before anything is discarded' },
+    filter: { title: 'Keep only the matching lines', detail: "grep FAILED auth.log", note: 'discards everything that is not a failed-login line' },
+    cut: { title: 'Cut to the identifying field', detail: "cut -d' ' -f2", note: 'reduces each remaining line to just the client address' },
+    rank: { title: 'Sort, count, and rank', detail: 'sort | uniq -c | sort -rn', note: 'groups duplicate addresses together, counts them, then ranks largest first' }
+  };
+
+  // Shuffled starting order — deliberately not the correct one.
+  var order = ['cut', 'count', 'rank', 'filter'];
+
+  var questionAnswer = null;
+  var signalAnswer = null;
+
+  var questionOptionsEl = document.getElementById('questionOptions');
+  var signalOptionsEl = document.getElementById('signalOptions');
+  var stepsListEl = document.getElementById('stepsList');
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var resultEl = document.getElementById('result');
+  var pass2 = document.getElementById('pass2');
+  var questionBoard = document.getElementById('questionBoard');
+  var signalBoard = document.getElementById('signalBoard');
+
+  function buildOptionList(container, options, onPick, graded) {
+    container.innerHTML = '';
+    options.forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'option-btn';
+      btn.textContent = opt.text;
+      btn.dataset.id = opt.id;
+      btn.addEventListener('click', function () {
+        if (container.dataset.graded === 'true') { return; }
+        Array.prototype.forEach.call(container.children, function (b) {
+          b.classList.remove('selected');
+        });
+        btn.classList.add('selected');
+        onPick(opt.id);
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function renderSteps() {
+    stepsListEl.innerHTML = '';
+    order.forEach(function (key, idx) {
+      var data = STEP_DATA[key];
+      var card = document.createElement('div');
+      card.className = 'step-card';
+      card.id = 'step-' + key;
+
+      var pos = document.createElement('div');
+      pos.className = 'step-pos';
+      pos.textContent = idx + 1;
+
+      var text = document.createElement('div');
+      text.className = 'step-text';
+      var title = document.createElement('div');
+      title.className = 'step-title';
+      title.textContent = data.title;
+      var detail = document.createElement('div');
+      detail.className = 'step-detail';
+      detail.textContent = data.detail;
+      text.appendChild(title);
+      text.appendChild(detail);
+
+      var moves = document.createElement('div');
+      moves.className = 'step-moves';
+      var up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'move-btn';
+      up.textContent = '↑ move up';
+      up.disabled = idx === 0 || stepsListEl.dataset.graded === 'true';
+      up.addEventListener('click', function () {
+        if (stepsListEl.dataset.graded === 'true') { return; }
+        var i = order.indexOf(key);
+        if (i > 0) {
+          order.splice(i, 1);
+          order.splice(i - 1, 0, key);
+          renderSteps();
+        }
+      });
+      var down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'move-btn';
+      down.textContent = '↓ move down';
+      down.disabled = idx === order.length - 1 || stepsListEl.dataset.graded === 'true';
+      down.addEventListener('click', function () {
+        if (stepsListEl.dataset.graded === 'true') { return; }
+        var i = order.indexOf(key);
+        if (i < order.length - 1) {
+          order.splice(i, 1);
+          order.splice(i + 1, 0, key);
+          renderSteps();
+        }
+      });
+      moves.appendChild(up);
+      moves.appendChild(down);
+
+      card.appendChild(pos);
+      card.appendChild(text);
+      card.appendChild(moves);
+      stepsListEl.appendChild(card);
+    });
+  }
+
+  buildOptionList(questionOptionsEl, QUESTION_OPTIONS, function (id) { questionAnswer = id; }, false);
+  buildOptionList(signalOptionsEl, SIGNAL_OPTIONS, function (id) { signalAnswer = id; }, false);
+  renderSteps();
+
+  function firstViolation(current) {
+    for (var i = 0; i < current.length; i++) {
+      if (current[i] !== CORRECT_ORDER[i]) {
+        var here = STEP_DATA[current[i]].title;
+        var shouldBe = STEP_DATA[CORRECT_ORDER[i]].title;
+        if (current[i] === 'cut' && current.indexOf('filter') > i) {
+          return "\u201cCut to the identifying field\u201d is placed before \u201cKeep only the matching lines\u201d — cutting unfiltered lines pulls the address field out of every line, including ones that were never a failed login.";
+        }
+        if (current[i] === 'rank' && (current.indexOf('cut') > i || current.indexOf('filter') > i)) {
+          return "\u201cSort, count, and rank\u201d runs before the lines are filtered and cut down to addresses — it would be ranking the wrong thing.";
+        }
+        if (current[i] === 'filter' && current.indexOf('count') > i) {
+          return "\u201cCount the raw lines\u201d needs to happen before anything is discarded — otherwise there's no starting total to compare the final count against.";
+        }
+        return 'Position ' + (i + 1) + ' has \u201c' + here + '\u201d where \u201c' + shouldBe + '\u201d belongs.';
+      }
+    }
+    return null;
+  }
+
+  checkBtn.addEventListener('click', function () {
+    var qRight = questionAnswer === 'addresses';
+    var sRight = signalAnswer === 'ranked';
+    var orderRight = order.join(',') === CORRECT_ORDER.join(',');
+
+    // Grade question options
+    questionOptionsEl.dataset.graded = 'true';
+    Array.prototype.forEach.call(questionOptionsEl.children, function (b) {
+      b.classList.add('graded');
+      if (b.dataset.id === 'addresses') { b.classList.add('right'); }
+      else if (b.dataset.id === questionAnswer) { b.classList.add('wrong-pick'); }
+    });
+    questionBoard.classList.add(qRight ? 'okay' : 'flagged');
+
+    // Grade signal options
+    signalOptionsEl.dataset.graded = 'true';
+    Array.prototype.forEach.call(signalOptionsEl.children, function (b) {
+      b.classList.add('graded');
+      if (b.dataset.id === 'ranked') { b.classList.add('right'); }
+      else if (b.dataset.id === signalAnswer) { b.classList.add('wrong-pick'); }
+    });
+    signalBoard.classList.add(sRight ? 'okay' : 'flagged');
+
+    // Grade step order
+    stepsListEl.dataset.graded = 'true';
+    order.forEach(function (key, idx) {
+      var card = document.getElementById('step-' + key);
+      card.classList.add(key === CORRECT_ORDER[idx] ? 'correct-pos' : 'wrong-pos');
+    });
+    Array.prototype.forEach.call(stepsListEl.querySelectorAll('.move-btn'), function (b) { b.disabled = true; });
+
+    var messages = [];
+    if (!qRight) {
+      messages.push('The question: a match count alone isn\'t the operational question — it\'s which addresses account for the most attempts, ranked.');
+    }
+    if (!orderRight) {
+      messages.push('The steps: ' + firstViolation(order));
+    }
+    if (!sRight) {
+      messages.push('The done-signal: silence isn\'t evidence of a correct result, and a hand-typed spreadsheet isn\'t reproducible. The signal is the ranked list itself, plus the count of what was discarded.');
+    }
+
+    resultEl.hidden = false;
+    var rightCount = (qRight ? 1 : 0) + (orderRight ? 1 : 0) + (sRight ? 1 : 0);
+
+    if (rightCount === 3) {
+      resultEl.className = 'result tier-correct';
+      resultEl.innerHTML = 'All three pieces line up: the right question, the steps in the order the dependencies require, and a signal that\u2019s actually reproducible.';
+    } else if (rightCount === 2) {
+      resultEl.className = 'result tier-near';
+      resultEl.innerHTML = 'Two of three line up. One piece is flagged above:<ul><li>' + messages.join('</li><li>') + '</li></ul>';
+    } else {
+      resultEl.className = 'result tier-wrong';
+      resultEl.innerHTML = 'More than one piece is off:<ul><li>' + messages.join('</li><li>') + '</li></ul>';
+    }
+
+    checkBtn.hidden = true;
+    resetBtn.hidden = false;
+    pass2.hidden = false;
+  });
+
+  function resetAll() {
+    questionAnswer = null;
+    signalAnswer = null;
+    order = ['cut', 'count', 'rank', 'filter'];
+    questionOptionsEl.dataset.graded = 'false';
+    signalOptionsEl.dataset.graded = 'false';
+    stepsListEl.dataset.graded = 'false';
+    questionBoard.classList.remove('okay', 'flagged');
+    signalBoard.classList.remove('okay', 'flagged');
+    buildOptionList(questionOptionsEl, QUESTION_OPTIONS, function (id) { questionAnswer = id; }, false);
+    buildOptionList(signalOptionsEl, SIGNAL_OPTIONS, function (id) { signalAnswer = id; }, false);
+    renderSteps();
+    checkBtn.hidden = false;
+    resetBtn.hidden = true;
+    resultEl.hidden = true;
+    pass2.hidden = true;
+    capturing = 'overwrite';
+    syncCapture();
+  }
+
+  resetBtn.addEventListener('click', resetAll);
+
+  // Second pass — ungraded. Moves one assumption: this pipeline runs again tomorrow.
+  var capturing = 'overwrite';
+  var capOverwrite = document.getElementById('capOverwrite');
+  var capAppend = document.getElementById('capAppend');
+  var capOutcome = document.getElementById('capOutcome');
+
+  function syncCapture() {
+    capOverwrite.classList.toggle('active', capturing === 'overwrite');
+    capAppend.classList.toggle('active', capturing === 'append');
+    capOutcome.textContent = capturing === 'overwrite'
+      ? 'Tomorrow\u2019s run replaces tonight\u2019s file the instant it starts. Only the latest ranked list ever exists.'
+      : 'Tomorrow\u2019s run adds its ranked list after tonight\u2019s. Every night\u2019s result is still there to compare.';
+  }
+
+  capOverwrite.addEventListener('click', function () { capturing = 'overwrite'; syncCapture(); });
+  capAppend.addEventListener('click', function () { capturing = 'append'; syncCapture(); });
+  syncCapture();
+})();
+</script>
+</body>
+</html>
