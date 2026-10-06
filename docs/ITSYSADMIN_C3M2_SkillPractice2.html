@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How access reaches the user</title>
+<style>
+:root {
+  --bg: #1b2027;
+  --surface: #232a33;
+  --raised: #2b333e;
+  --line: #3a4552;
+  --ink: #e8e6e1;
+  --muted: #a6afb9;
+  --accent: #8ec5cc;
+  --accent-ink: #12262a;
+  --ok: #9fcf9a;
+  --near: #e2b45f;
+  --wrong: #e58f84;
+  --focus: #f2d58a;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; line-height: 1.3; font-weight: 650; margin: 0 0 0.75rem; }
+p { margin: 0 0 1rem; max-width: 38rem; }
+code { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.92em; }
+
+.grant {
+  background: var(--raised);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.9rem 1.1rem;
+  margin: 1.25rem 0 1.25rem;
+}
+.grant p { margin: 0; }
+.grant .grant-state { color: var(--muted); font-size: 0.95rem; margin-top: 0.35rem; }
+.grant.removed { border-left-color: var(--wrong); }
+.grant.removed .grant-line { text-decoration: line-through; color: var(--muted); }
+
+.legs { margin: 0 0 1.5rem; padding: 0; list-style: none; }
+.legs li { margin-bottom: 0.5rem; padding-left: 1rem; border-left: 2px solid var(--line); }
+.legs strong { font-weight: 650; }
+
+.cards { list-style: none; margin: 0; padding: 0; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1rem 1.1rem 1.1rem;
+  margin-bottom: 0.9rem;
+}
+.card h3 { font-size: 1.05rem; font-weight: 650; margin: 0 0 0.35rem; }
+.card .facts { margin-bottom: 0.75rem; }
+.card fieldset { border: 0; margin: 0; padding: 0; }
+.card legend { font-size: 0.95rem; color: var(--muted); padding: 0; margin-bottom: 0.4rem; }
+.opts { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.opts label {
+  display: flex; align-items: center; gap: 0.45rem;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.97rem;
+}
+.opts label:has(input:checked) { border-color: var(--accent); background: var(--raised); }
+.opts input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; margin: 0; }
+.card .result { margin: 0.75rem 0 0; padding: 0.6rem 0.8rem; border-radius: 4px; background: var(--bg); border-left: 3px solid var(--line); font-size: 0.97rem; }
+.card .result[hidden] { display: none; }
+.result .tag { font-weight: 650; display: block; }
+.result.correct { border-left-color: var(--ok); } .result.correct .tag { color: var(--ok); }
+.result.near { border-left-color: var(--near); } .result.near .tag { color: var(--near); }
+.result.wrong { border-left-color: var(--wrong); } .result.wrong .tag { color: var(--wrong); }
+
+.outcome {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline;
+  margin-top: 0.6rem; font-size: 0.95rem;
+}
+.outcome[hidden] { display: none; }
+.outcome .now { font-weight: 650; }
+.outcome .changed { color: var(--near); font-weight: 600; }
+.outcome .same { color: var(--muted); }
+.predict { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-size: 0.97rem; }
+.predict[hidden] { display: none; }
+.predict input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; margin: 0; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.25rem; }
+button.btn {
+  font: inherit; font-weight: 600; border-radius: 6px; padding: 0.6rem 1.15rem; cursor: pointer;
+  border: 1px solid var(--accent);
+}
+.primary { background: var(--accent); color: var(--accent-ink); }
+.primary:disabled { background: var(--raised); color: var(--muted); border-color: var(--line); cursor: default; }
+.hint { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+.summary {
+  margin-top: 1.25rem; border-radius: 6px; padding: 1rem 1.1rem; background: var(--raised);
+  font-variant-numeric: tabular-nums;
+}
+.summary[hidden] { display: none; }
+.summary p:last-child { margin-bottom: 0; }
+
+#pass2 { margin-top: 2.25rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+#pass2[hidden] { display: none; }
+.change {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1.1rem; margin-bottom: 1rem;
+}
+.change.current { border-color: var(--accent); }
+.change p { margin: 0; }
+.change .step-state { color: var(--muted); font-size: 0.93rem; margin-top: 0.3rem; }
+
+input:focus-visible, button:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .result:not([hidden]), .outcome:not([hidden]) { animation: show 220ms ease-out; }
+  @keyframes show { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.45rem; }
+  .opts { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>How access reaches the user</h1>
+  <p>Access to the warehouse folder was granted once, to a group. A group is an object in the directory with members, and a right granted to it reaches every member by a route: their membership. The group also carries a scope, a setting on the group that decides where its access can be applied.</p>
+
+  <div class="grant" id="grant">
+    <p class="grant-line"><strong>Granted once:</strong> members of <code>grp-warehouse-ops</code> may read the warehouse folder.</p>
+    <p class="grant-state" id="grant-state">Nothing you do here edits this grant.</p>
+  </div>
+
+  <p>Two legs decide whether that grant reaches a given account.</p>
+  <ul class="legs">
+    <li><strong>Membership route.</strong> Is the account in the group the grant names?</li>
+    <li><strong>Scope.</strong> Does the folder sit where that group's access can be applied?</li>
+  </ul>
+
+  <p>Six new starters' accounts are below. For each one, choose what decides whether it can open the folder. Where both legs fail, choose the one the request meets first.</p>
+
+  <ol class="cards" id="cards"></ol>
+
+  <div class="actions">
+    <button type="button" class="btn primary" id="check-btn" disabled>Check my choices</button>
+    <p class="hint" id="check-hint">Choose for all six accounts to check.</p>
+  </div>
+
+  <div class="summary" id="summary" hidden tabindex="-1" role="status"></div>
+
+  <section id="pass2" hidden aria-labelledby="pass2-heading">
+    <h2 id="pass2-heading" tabindex="-1">Change one thing, then another</h2>
+    <p>Two changes follow, one at a time. Before each, tick the accounts whose access you expect to change: able to open the folder before and not after, or the reverse. Then apply it and compare.</p>
+
+    <div class="change current" id="change-a">
+      <p><strong>Change 1.</strong> South clerk 2 is added to <code>grp-warehouse-ops</code>. Nothing on the folder changes.</p>
+      <p class="step-state" id="change-a-state">Tick your predictions on the cards above, then apply.</p>
+    </div>
+    <div class="change" id="change-b">
+      <p><strong>Change 2.</strong> The grant on the folder is removed from <code>grp-warehouse-ops</code>. No account changes.</p>
+      <p class="step-state" id="change-b-state">Available after change 1.</p>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="apply-btn">Apply change 1</button>
+    </div>
+    <div class="summary" id="summary2" hidden tabindex="-1" role="status"></div>
+  </section>
+
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var LEGS = {
+    route: "No membership route",
+    scope: "Scope does not reach the folder",
+    holds: "Access holds"
+  };
+  var LEG_ORDER = ["route", "scope", "holds"];
+
+  // Facts are the source of truth; the key is computed from them.
+  var CARDS = [
+    { id: "c1", label: "South clerk 1", inOps: true, inScope: true,
+      facts: "In <code>grp-warehouse-ops</code>. The folder sits inside the group's scope. The account's own record lists no permission for the folder at all.",
+      correct: "The grant reaches this account through the group. Its own record shows nothing because the right was never placed on the person. It was placed on the group.",
+      hint: "Look past the account's own record. Start with the route: is this account in the group the grant names?" },
+    { id: "c2", label: "South clerk 2", inOps: false, inScope: true,
+      facts: "Copied from a clerk at the other warehouse, so it carries that clerk's only group, <code>grp-stockroom-north</code>. The folder sits inside the scope of <code>grp-warehouse-ops</code>.",
+      correct: "The copy brought over a membership, just not the one this grant names. No route connects the account to <code>grp-warehouse-ops</code>, so the group's scope never comes into it.",
+      hint: "Having a group is not the same as having this group. Start with the route: which group does the grant name, and is this account in it?" },
+    { id: "c3", label: "South clerk 3", inOps: true, inScope: false,
+      facts: "In <code>grp-warehouse-ops</code>, and the group's membership list is exactly right. The folder sits outside the group's scope.",
+      correct: "The membership route holds. The group's scope is what stops it: the folder sits where this group's access cannot be applied, and the membership list says nothing about that.",
+      hint: "The route is only the first leg. Once you know the account is in the group, ask the second question: can that group's access be applied where the folder sits?" },
+    { id: "c4", label: "South clerk 4", inOps: false, inScope: false,
+      facts: "Created this morning with no group memberships yet. The folder also sits outside the scope of <code>grp-warehouse-ops</code>.",
+      correct: "Both legs fail, and the request meets the route first. With no membership, nothing connects this account to the grant, so scope is never reached. Fixing the route alone would then expose the scope problem.",
+      near: "The scope problem is real, but the request never gets that far. It meets the route first, and this account is in no group the grant names.",
+      hint: "Both legs may matter here. Start with the one the request meets first: is this account in the group the grant names?" },
+    { id: "c5", label: "South clerk 5", inOps: true, inScope: false,
+      facts: "Signs in normally and opens other shared folders without trouble. In <code>grp-warehouse-ops</code>. The folder sits outside the group's scope.",
+      correct: "A working sign-in shows the account is fine. It says nothing about this grant. The route holds, and the group's scope is what stops the request.",
+      hint: "A working sign-in tells you about the account, not about this grant. Check the route first, then whether the group's access can be applied where the folder sits." },
+    { id: "c6", label: "South clerk 6", inOps: true, inScope: true,
+      facts: "In <code>grp-warehouse-ops</code>. Nobody has touched the folder since the grant was made, months before this account existed.",
+      correct: "The grant was made once and reaches every member, including members who join later. Joining the group was the whole route. No second grant was needed.",
+      hint: "When the grant was made does not decide it. Start with the route: is this account in the group the grant names today?" }
+  ];
+
+  function outcome(card, grantOn) {
+    if (!grantOn) { return "none"; }
+    if (!card.inOps) { return "route"; }
+    if (!card.inScope) { return "scope"; }
+    return "holds";
+  }
+  var OUTCOME_TEXT = {
+    route: "No membership route",
+    scope: "Scope does not reach the folder",
+    holds: "Access holds",
+    none: "No grant left to reach"
+  };
+
+  CARDS.forEach(function (c) { c.key = outcome(c, true); });
+
+  function grade(card, answer) {
+    var key = card.key;
+    if (answer === key) { return "correct"; }
+    if (card.near && key === "route" && answer === "scope" && !card.inOps && !card.inScope) { return "near"; }
+    return "wrong";
+  }
+
+  var state = { answers: {}, checked: false, step: 0, grantOn: true, prev: {} };
+
+  var cardsEl = document.getElementById("cards");
+  var checkBtn = document.getElementById("check-btn");
+  var checkHint = document.getElementById("check-hint");
+  var summary = document.getElementById("summary");
+  var pass2 = document.getElementById("pass2");
+  var applyBtn = document.getElementById("apply-btn");
+  var summary2 = document.getElementById("summary2");
+  var live = document.getElementById("live");
+
+  function build() {
+    CARDS.forEach(function (c) {
+      var li = document.createElement("li");
+      li.className = "card";
+      li.id = c.id;
+      var opts = LEG_ORDER.map(function (k) {
+        var iid = c.id + "-" + k;
+        return '<label for="' + iid + '"><input type="radio" name="' + c.id + '" id="' + iid + '" value="' + k + '"> ' + LEGS[k] + '</label>';
+      }).join("");
+      li.innerHTML =
+        '<h3 id="' + c.id + '-h">' + c.label + '</h3>' +
+        '<p class="facts">' + c.facts + '</p>' +
+        '<fieldset><legend>What decides whether this account can open the folder?</legend><div class="opts">' + opts + '</div></fieldset>' +
+        '<p class="result" hidden aria-live="polite"></p>' +
+        '<div class="outcome" hidden></div>' +
+        '<label class="predict" hidden for="' + c.id + '-pred"><input type="checkbox" id="' + c.id + '-pred"> I expect this account’s access to change</label>';
+      cardsEl.appendChild(li);
+      li.querySelectorAll('input[type="radio"]').forEach(function (r) {
+        r.addEventListener("change", function () {
+          state.answers[c.id] = r.value;
+          var res = li.querySelector(".result");
+          if (state.checked) { res.hidden = true; }
+          refreshCheck();
+        });
+      });
+    });
+  }
+
+  function refreshCheck() {
+    var n = Object.keys(state.answers).length;
+    checkBtn.disabled = n < CARDS.length;
+    checkHint.textContent = n < CARDS.length ? "Choose for all six accounts to check. " + n.toLocaleString("en-US") + " of 6 chosen." : "Ready to check.";
+  }
+
+  function check() {
+    if (state.step > 0) { return; }
+    state.checked = true;
+    var tally = { correct: 0, near: 0, wrong: 0 };
+    CARDS.forEach(function (c) {
+      var li = document.getElementById(c.id);
+      var res = li.querySelector(".result");
+      var g = grade(c, state.answers[c.id]);
+      tally[g]++;
+      res.className = "result " + g;
+      if (g === "correct") { res.innerHTML = '<span class="tag">Right: ' + LEGS[c.key].toLowerCase() + '.</span>' + c.correct; }
+      else if (g === "near") { res.innerHTML = '<span class="tag">Close.</span>' + c.near; }
+      else { res.innerHTML = '<span class="tag">Not this one.</span>' + c.hint; }
+      res.hidden = false;
+    });
+    var msg = '';
+    if (tally.correct === 6) {
+      msg += '<p>All six are decided by the leg you chose. Each answer came from the same two questions in the same order: is the account in the group the grant names, and can that group\u2019s access be applied where the folder sits? None of them came from the account\u2019s own record.</p>';
+    } else {
+      msg += '<p>Some choices need another look. Change any of them and check again. Each note names the question to start with.</p>';
+    }
+    summary.innerHTML = msg;
+    summary.hidden = false;
+    summary.focus();
+    if (tally.wrong === 0) {
+      pass2.hidden = false;
+      showPredict(true);
+    } else {
+      pass2.hidden = true;
+      showPredict(false);
+    }
+  }
+
+  function showPredict(on) {
+    CARDS.forEach(function (c) {
+      var p = document.getElementById(c.id).querySelector(".predict");
+      p.hidden = !on;
+      if (on) { p.querySelector("input").checked = false; p.querySelector("input").disabled = false; }
+    });
+  }
+
+  function apply() {
+    if (state.step >= 2) { return; }
+    var before = {};
+    CARDS.forEach(function (c) { before[c.id] = outcome(c, state.grantOn) === "holds"; });
+    var predicted = {};
+    CARDS.forEach(function (c) { predicted[c.id] = document.getElementById(c.id + "-pred").checked; });
+
+    if (state.step === 0) {
+      CARDS[1].inOps = true;
+    } else {
+      state.grantOn = false;
+      document.getElementById("grant").classList.add("removed");
+      document.getElementById("grant-state").textContent = "Removed in change 2. No account was edited.";
+    }
+
+    var changed = [], misses = [];
+    CARDS.forEach(function (c) {
+      var reason = outcome(c, state.grantOn);
+      var after = reason === "holds";
+      var did = after !== before[c.id];
+      if (did) { changed.push(c.label); }
+      if (did !== predicted[c.id]) { misses.push(c.label); }
+      var out = document.getElementById(c.id).querySelector(".outcome");
+      out.innerHTML = '<span>After change ' + (state.step + 1) + ':</span> <span class="now">' + (after ? 'can open the folder' : 'cannot open the folder') + '</span> <span class="same">(' + OUTCOME_TEXT[reason].toLowerCase() + ')</span> ' +
+        (did ? '<span class="changed">access changed</span>' : '<span class="same">access unchanged</span>');
+      out.hidden = false;
+      document.getElementById(c.id + "-pred").disabled = true;
+    });
+
+    var html = '<p><strong>Change ' + (state.step + 1) + ' changed access for ' + changed.length.toLocaleString("en-US") + ' of 6 accounts.</strong> ' +
+      (misses.length ? 'Your prediction differed on ' + misses.join(", ") + '.' : 'Your predictions matched.') + '</p>';
+    if (state.step === 0) {
+      html += '<p>One membership moved, so one account\u2019s reach moved. The folder and the grant were untouched. South clerk 2 now has a route, and the folder already sat inside the group\u2019s scope.</p>';
+      document.getElementById("change-a").classList.remove("current");
+      document.getElementById("change-a-state").textContent = "Applied.";
+      checkBtn.disabled = true;
+      checkHint.textContent = "Choices are fixed while the changes run.";
+      cardsEl.querySelectorAll('input[type="radio"]').forEach(function (r) { r.disabled = true; });
+      document.getElementById("change-b").classList.add("current");
+      document.getElementById("change-b-state").textContent = "Tick your predictions on the cards above, then apply.";
+      applyBtn.textContent = "Apply change 2";
+      showPredict(true);
+    } else {
+      html += '<p>One grant moved, so every account that reached the folder through it lost access at the same moment, and no account was touched. The others could not open the folder before, so they had nothing to lose.</p>';
+      document.getElementById("change-b").classList.remove("current");
+      document.getElementById("change-b-state").textContent = "Applied.";
+      applyBtn.disabled = true;
+      applyBtn.textContent = "Both changes applied";
+    }
+    state.step++;
+    summary2.innerHTML = html;
+    summary2.hidden = false;
+    summary2.focus();
+  }
+
+  build();
+  refreshCheck();
+  checkBtn.addEventListener("click", check);
+  applyBtn.addEventListener("click", apply);
+})();
+</script>
+</body>
+</html>

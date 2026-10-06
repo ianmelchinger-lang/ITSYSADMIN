@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build the access path</title>
+<style>
+:root {
+  --bg: #1b2027;
+  --surface: #232a33;
+  --raised: #2b333e;
+  --line: #3a4552;
+  --ink: #e8e6e1;
+  --muted: #a6afb9;
+  --accent: #8ec5cc;
+  --accent-ink: #12262a;
+  --ok: #9fcf9a;
+  --near: #e2b45f;
+  --wrong: #e58f84;
+  --focus: #f2d58a;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; line-height: 1.3; font-weight: 650; margin: 0 0 0.6rem; }
+p { margin: 0 0 1rem; max-width: 38rem; }
+code { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.92em; }
+
+.part { margin-top: 2rem; }
+.part-head { display: flex; gap: 0.75rem; align-items: baseline; }
+.part-num {
+  flex: none;
+  width: 1.9rem; height: 1.9rem;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 650; font-size: 0.95rem;
+}
+fieldset { border: 0; margin: 0; padding: 0; }
+legend { font-weight: 600; margin-bottom: 0.6rem; padding: 0; }
+.choice {
+  display: grid; grid-template-columns: auto 1fr; gap: 0 0.7rem; align-items: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.7rem 0.9rem; margin-bottom: 0.5rem; cursor: pointer;
+}
+.choice:has(input:checked) { border-color: var(--accent); background: var(--raised); }
+.choice input { margin: 0.25rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+
+.moves { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.move {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 6px;
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.5rem;
+}
+.move.flag { border-left-color: var(--wrong); }
+.move .pos { font-weight: 650; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.move .text strong { font-weight: 650; display: block; }
+.move .text span { color: var(--muted); font-size: 0.93rem; }
+.move .flag-note { display: block; color: var(--wrong); font-size: 0.92rem; margin-top: 0.2rem; }
+.arrows { display: flex; gap: 0.35rem; }
+.arrows button {
+  font: inherit; font-size: 0.9rem; font-weight: 600;
+  background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 5px;
+  padding: 0.3rem 0.55rem; cursor: pointer; min-width: 2.6rem;
+}
+.arrows button:disabled { color: var(--line); cursor: default; }
+.arrows button { display: inline-flex; align-items: center; justify-content: center; }
+.arrow-icon { width: 1.25rem; height: 1.25rem; display: block; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.5rem; }
+button.btn { font: inherit; font-weight: 600; border-radius: 6px; padding: 0.6rem 1.15rem; cursor: pointer; border: 1px solid var(--accent); }
+.primary { background: var(--accent); color: var(--accent-ink); }
+.primary:disabled { background: var(--raised); color: var(--muted); border-color: var(--line); cursor: default; }
+.hint { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+.summary { margin-top: 1.25rem; border-radius: 6px; padding: 1rem 1.1rem; background: var(--raised); border-left: 4px solid var(--line); }
+.summary[hidden] { display: none; }
+.summary.correct { border-left-color: var(--ok); }
+.summary.near { border-left-color: var(--near); }
+.summary.wrong { border-left-color: var(--wrong); }
+.summary .verdict { font-weight: 650; }
+.summary.correct .verdict { color: var(--ok); }
+.summary.near .verdict { color: var(--near); }
+.summary.wrong .verdict { color: var(--wrong); }
+.summary ul { margin: 0 0 1rem; padding-left: 1.2rem; }
+.summary li { margin-bottom: 0.35rem; }
+.summary p:last-child, .summary ul:last-child { margin-bottom: 0; }
+
+#pass2 { margin-top: 2.25rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+#pass2[hidden] { display: none; }
+.counts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin: 1rem 0; font-variant-numeric: tabular-nums; }
+.counts div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 0.8rem; }
+.counts div.current { border-color: var(--accent); }
+.counts strong { display: block; font-size: 1.3rem; font-weight: 650; }
+.counts span { color: var(--muted); font-size: 0.9rem; }
+
+input:focus-visible, button:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .summary:not([hidden]) { animation: show 220ms ease-out; }
+  @keyframes show { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.45rem; }
+  .move { grid-template-columns: 1.6rem 1fr; }
+  .arrows { grid-column: 2; }
+  .counts { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Build the access path</h1>
+  <p>A second warehouse is coming onto the network. Assemble the whole path for setting up its accounts: the problem in operational terms, the moves in an order that works, and the signal that says it worked.</p>
+
+  <section class="part" aria-labelledby="p1-h">
+    <div class="part-head"><span class="part-num" aria-hidden="true">1</span><h2 id="p1-h">The problem</h2></div>
+    <fieldset>
+      <legend>Which statement names the problem to solve?</legend>
+      <label class="choice" for="prob-a"><input type="radio" name="prob" id="prob-a" value="a"><span>The new starters' accounts were created with the wrong permissions on them.</span></label>
+      <label class="choice" for="prob-b"><input type="radio" name="prob" id="prob-b" value="b"><span>Nobody can say where any right on the estate came from, so the new site would copy access nobody can account for.</span></label>
+      <label class="choice" for="prob-c"><input type="radio" name="prob" id="prob-c" value="c"><span>Four clerks were locked out of the warehouse folder for most of a shift.</span></label>
+    </fieldset>
+  </section>
+
+  <section class="part" aria-labelledby="p2-h">
+    <div class="part-head"><span class="part-num" aria-hidden="true">2</span><h2 id="p2-h">The moves</h2></div>
+    <p>Put the six moves in an order that works. Use the arrow buttons to move a step up or down. More than one order can work; only orders that break a dependency are flagged.</p>
+    <ol class="moves" id="moves" aria-label="Moves in your current order"></ol>
+  </section>
+
+  <section class="part" aria-labelledby="p3-h">
+    <div class="part-head"><span class="part-num" aria-hidden="true">3</span><h2 id="p3-h">The signal</h2></div>
+    <fieldset>
+      <legend>Which result shows the build worked?</legend>
+      <label class="choice" for="sig-a"><input type="radio" name="sig" id="sig-a" value="a"><span>All six new starters can open the warehouse folder today.</span></label>
+      <label class="choice" for="sig-b"><input type="radio" name="sig" id="sig-b" value="b"><span>Every new account shows the folder in its own permissions.</span></label>
+      <label class="choice" for="sig-c"><input type="radio" name="sig" id="sig-c" value="c"><span>Someone added after the grant was made holds the right, reached by a route, with no second grant.</span></label>
+    </fieldset>
+  </section>
+
+  <div class="actions">
+    <button type="button" class="btn primary" id="check-btn" disabled>Check my assembly</button>
+    <p class="hint" id="check-hint">Choose a problem and a signal to check.</p>
+  </div>
+  <div class="summary" id="summary" hidden tabindex="-1" role="status"></div>
+
+  <section id="pass2" hidden aria-labelledby="pass2-h">
+    <h2 id="pass2-h" tabindex="-1">Change what is granted</h2>
+    <p>Keep your order. Now suppose the right is not granted to the group on a folder, but delegated over the container: members of the group may administer accounts placed there. A delegation is made on the container, so the container has to exist first.</p>
+    <fieldset>
+      <legend>What does the grant attach to?</legend>
+      <label class="choice" for="g-group"><input type="radio" name="grant" id="g-group" value="group" checked><span>A right granted to the group</span></label>
+      <label class="choice" for="g-container"><input type="radio" name="grant" id="g-container" value="container"><span>A right delegated to the group over the container</span></label>
+    </fieldset>
+    <div class="counts" aria-live="polite">
+      <div id="count-group"><strong id="n-group"></strong><span>orders that work when the right is granted to the group</span></div>
+      <div id="count-container"><strong id="n-container"></strong><span>orders that work when it is delegated over the container</span></div>
+    </div>
+    <div class="summary" id="summary2" role="status" tabindex="-1"></div>
+  </section>
+
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var MOVES = {
+    A: { title: "State the target state and the checks", note: "What each object will carry, and how you will know it worked." },
+    B: { title: "Create the container", note: "With its access permissions set on purpose, not left at inherited defaults." },
+    C: { title: "Create the group", note: "At the scope the intended reach requires." },
+    D: { group: { title: "Grant the right once, to the group", note: "One grant, never edited again." },
+         container: { title: "Delegate the right once, to the group, over the container", note: "One delegation, never edited again." } },
+    E: { title: "Place the accounts", note: "Each account into the container and into the group." },
+    F: { title: "Record each object", note: "Where it sits, what it carries, and who administers it." }
+  };
+  var START = ["E", "B", "D", "A", "F", "C"];
+
+  // Dependencies: [before, after, rule]
+  function rules(mode) {
+    var r = [
+      ["A", "B", "Settle the target state and the checks before creating anything."],
+      ["A", "C", "Settle the target state and the checks before creating anything."],
+      ["B", "E", "An account can only be placed in a container that already exists."],
+      ["C", "E", "An account can only join a group that already exists."],
+      ["C", "D", "A right can only be granted to a group that already exists."],
+      ["D", "F", "The record names what each object carries, so the grant has to exist first."],
+      ["E", "F", "The record names where each object sits, so the accounts have to be placed first."]
+    ];
+    if (mode === "container") {
+      r.push(["B", "D", "A delegation is made on the container, so the container has to exist first."]);
+    }
+    return r;
+  }
+
+  function violations(order, mode) {
+    var pos = {};
+    order.forEach(function (k, i) { pos[k] = i; });
+    return rules(mode).filter(function (r) { return pos[r[0]] > pos[r[1]]; });
+  }
+
+  function permutations(arr) {
+    if (arr.length <= 1) { return [arr.slice()]; }
+    var out = [];
+    arr.forEach(function (x, i) {
+      var rest = arr.slice(0, i).concat(arr.slice(i + 1));
+      permutations(rest).forEach(function (p) { out.push([x].concat(p)); });
+    });
+    return out;
+  }
+  function countValid(mode) {
+    var all = permutations(["A", "B", "C", "D", "E", "F"]);
+    return { valid: all.filter(function (p) { return violations(p, mode).length === 0; }).length, total: all.length };
+  }
+
+  var state = { order: START.slice(), mode: "group", checked: false, solved: false };
+  var movesEl = document.getElementById("moves");
+  var live = document.getElementById("live");
+
+  function moveText(k) {
+    var m = k === "D" ? MOVES.D[state.mode] : MOVES[k];
+    return m;
+  }
+
+  function render(flags) {
+    movesEl.innerHTML = "";
+    var flagged = {};
+    (flags || []).forEach(function (v) { flagged[v[1]] = (flagged[v[1]] || []).concat([v]); });
+    state.order.forEach(function (k, i) {
+      var m = moveText(k);
+      var li = document.createElement("li");
+      li.className = "move" + (flagged[k] ? " flag" : "");
+      li.setAttribute("data-key", k);
+      var notes = flagged[k] ? flagged[k].map(function (v) {
+        return '<span class="flag-note">Must come after \u201c' + moveText(v[0]).title + '.\u201d</span>';
+      }).join("") : "";
+      li.innerHTML = '<span class="pos" aria-hidden="true">' + (i + 1) + '</span>' +
+        '<span class="text"><strong>' + m.title + '</strong><span>' + m.note + '</span>' + notes + '</span>' +
+        '<span class="arrows">' +
+          '<button type="button" data-dir="-1" aria-label="Move up: ' + m.title + '"' + (i === 0 ? " disabled" : "") + '><svg class="arrow-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 16V4M4.5 9.5L10 4l5.5 5.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+          '<button type="button" data-dir="1" aria-label="Move down: ' + m.title + '"' + (i === state.order.length - 1 ? " disabled" : "") + '><svg class="arrow-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4v12M4.5 10.5L10 16l5.5-5.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+        '</span>';
+      movesEl.appendChild(li);
+    });
+  }
+
+  movesEl.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-dir]");
+    if (!b) { return; }
+    var k = b.closest(".move").getAttribute("data-key");
+    var i = state.order.indexOf(k);
+    var j = i + parseInt(b.getAttribute("data-dir"), 10);
+    if (j < 0 || j >= state.order.length) { return; }
+    state.order.splice(i, 1);
+    state.order.splice(j, 0, k);
+    render(state.solved ? violations(state.order, state.mode) : null);
+    if (!state.solved) { document.getElementById("summary").hidden = true; }
+    var dir = b.getAttribute("data-dir");
+    var again = movesEl.querySelector('.move[data-key="' + k + '"] button[data-dir="' + dir + '"]');
+    if (!again || again.disabled) { again = movesEl.querySelector('.move[data-key="' + k + '"] button:not([disabled])'); }
+    if (again) { again.focus(); }
+    live.textContent = moveText(k).title + ", now step " + (j + 1) + " of 6.";
+    if (state.solved) { updatePass2(false); }
+  });
+
+  function picked(name) {
+    var r = document.querySelector('input[name="' + name + '"]:checked');
+    return r ? r.value : null;
+  }
+  function refreshCheck() {
+    var ready = picked("prob") && picked("sig");
+    document.getElementById("check-btn").disabled = !ready;
+    document.getElementById("check-hint").textContent = ready ? "Ready to check." : "Choose a problem and a signal to check.";
+  }
+
+  // Exposed for the check and the second pass; pure.
+  function assess(order, mode, prob, sig) {
+    var v = violations(order, mode);
+    var probOk = prob === "b", sigOk = sig === "c";
+    var faults = v.length + (probOk ? 0 : 1) + (sigOk ? 0 : 1);
+    return { v: v, probOk: probOk, sigOk: sigOk, verdict: faults === 0 ? "correct" : faults === 1 ? "near" : "wrong" };
+  }
+
+  function check() {
+    var a = assess(state.order, "group", picked("prob"), picked("sig"));
+    render(a.v);
+    var s = document.getElementById("summary");
+    var items = [];
+    if (!a.probOk) {
+      items.push(picked("prob") === "a" ?
+        "The problem: this reads access as something on the person. Ask instead what nobody can explain about where access came from." :
+        "The problem: this is the cost on one shift. Ask what nobody on the estate can answer about the access itself.");
+    }
+    a.v.forEach(function (r) {
+      items.push("The moves: \u201c" + moveText(r[1]).title + "\u201d sits before \u201c" + moveText(r[0]).title + ".\u201d " + r[2]);
+    });
+    if (!a.sigOk) {
+      items.push(picked("sig") === "a" ?
+        "The signal: six working accounts show access works today. Ask what would prove it reaches someone who was not there when it was granted." :
+        "The signal: access on the person is the misreading the build replaces. Ask what would prove a route, not a second grant, carried the right.");
+    }
+    if (a.verdict === "correct") {
+      s.className = "summary correct";
+      s.innerHTML = '<p class="verdict">The path holds together.</p>' +
+        '<p>The problem names what is missing: an account of where access came from. The moves settle the target first, build each object before anything depends on it, and record the result. The signal is the one only a route can produce: someone who arrived after the grant holds the right.</p>';
+      state.solved = true;
+      document.getElementById("pass2").hidden = false;
+      updatePass2(false);
+    } else {
+      s.className = "summary " + a.verdict;
+      s.innerHTML = '<p class="verdict">' + (a.verdict === "near" ? "One element is out of place." : "Some elements need another look.") + '</p>' +
+        '<ul>' + items.map(function (t) { return "<li>" + t + "</li>"; }).join("") + '</ul>' +
+        (a.verdict === "wrong" ? '<p>Start with the moves: settle what you are building and how you will check it before you create anything.</p>' : '');
+    }
+    s.hidden = false;
+    s.focus();
+  }
+
+  function updatePass2(focus) {
+    var mode = picked("grant") || "group";
+    state.mode = mode;
+    var v = violations(state.order, mode);
+    render(v);
+    var cg = countValid("group"), cc = countValid("container");
+    document.getElementById("n-group").textContent = cg.valid.toLocaleString("en-US") + " of " + cg.total.toLocaleString("en-US");
+    document.getElementById("n-container").textContent = cc.valid.toLocaleString("en-US") + " of " + cc.total.toLocaleString("en-US");
+    document.getElementById("count-group").className = mode === "group" ? "current" : "";
+    document.getElementById("count-container").className = mode === "container" ? "current" : "";
+    var s2 = document.getElementById("summary2");
+    if (mode === "group" && v.length === 0) {
+      s2.className = "summary correct";
+      s2.innerHTML = '<p>Your order works when the right is granted to the group. Switch to a delegation over the container to see whether it still does.</p>';
+    } else if (mode === "group") {
+      s2.className = "summary near";
+      s2.innerHTML = '<p class="verdict">Your order no longer works.</p><p>' + v.map(function (r) { return r[2]; }).join(" ") + '</p>';
+    } else if (v.length === 0) {
+      s2.className = "summary correct";
+      s2.innerHTML = '<p class="verdict">Your order still works.</p><p>You created the container before the grant, so the new dependency was already met. Fewer orders work now: the definition of the grant added one rule, and every order that granted before the container existed dropped out.</p>';
+    } else {
+      s2.className = "summary near";
+      s2.innerHTML = '<p class="verdict">Your order no longer works.</p><p>' + v.map(function (r) { return r[2]; }).join(" ") +
+        ' Nothing about your order changed. What changed is what the grant attaches to, and that moved a dependency. Move the container up to fix it.</p>';
+    }
+    if (focus) { s2.focus(); }
+  }
+
+  render(null);
+  refreshCheck();
+  document.querySelectorAll('input[name="prob"], input[name="sig"]').forEach(function (r) {
+    r.addEventListener("change", function () { refreshCheck(); if (!state.solved) { document.getElementById("summary").hidden = true; } });
+  });
+  document.getElementById("check-btn").addEventListener("click", check);
+  document.querySelectorAll('input[name="grant"]').forEach(function (r) { r.addEventListener("change", function () { updatePass2(true); }); });
+})();
+</script>
+</body>
+</html>

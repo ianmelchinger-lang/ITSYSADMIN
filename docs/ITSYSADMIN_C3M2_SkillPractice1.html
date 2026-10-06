@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attach it where it reaches</title>
+<style>
+:root {
+  --bg: #1b2027;
+  --surface: #232a33;
+  --raised: #2b333e;
+  --line: #3a4552;
+  --ink: #e8e6e1;
+  --muted: #a6afb9;
+  --accent: #8ec5cc;
+  --accent-ink: #12262a;
+  --reach: #9fcf9a;
+  --reach-bg: #24342a;
+  --miss: #e2b45f;
+  --wrong: #e58f84;
+  --focus: #f2d58a;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; line-height: 1.3; font-weight: 650; margin: 0 0 0.75rem; }
+p { margin: 0 0 1rem; max-width: 38rem; }
+code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+}
+.requirement {
+  background: var(--raised);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.9rem 1.1rem;
+  margin: 1.25rem 0 1.5rem;
+}
+.requirement p { margin: 0; }
+.how { color: var(--muted); }
+
+.tree { list-style: none; margin: 0; padding: 0; }
+.tree > li { margin-bottom: 1rem; }
+.children {
+  list-style: none;
+  margin: 0.4rem 0 0 1.1rem;
+  padding: 0 0 0 1rem;
+  border-left: 2px solid var(--line);
+}
+.children li { margin: 0.35rem 0; position: relative; }
+.children li::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 1.35rem;
+  width: 0.85rem;
+  border-top: 2px solid var(--line);
+}
+
+.node {
+  font: inherit;
+  color: var(--ink);
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 0.75rem;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+.node:hover { border-color: var(--accent); }
+.node:focus-visible, button:focus-visible, input:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.node.container { padding: 0.75rem 0.95rem; border-width: 2px; }
+.node-name { font-weight: 600; }
+.node-sub { display: block; color: var(--muted); font-size: 0.92rem; font-weight: 400; }
+.pin {
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 0.1rem 0.5rem;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.node[aria-pressed="true"] { border-color: var(--accent); background: var(--raised); }
+.node[aria-pressed="true"] .pin { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+.status { grid-column: 1 / -1; font-size: 0.9rem; color: var(--muted); }
+.account.reached { background: var(--reach-bg); border-color: var(--reach); }
+.account.reached .status { color: var(--reach); }
+.account.new { box-shadow: 0 0 0 2px var(--miss); }
+
+.tally {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin: 1.5rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.tally div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 0.75rem; }
+.tally strong { display: block; font-size: 1.35rem; font-weight: 650; }
+.tally span { color: var(--muted); font-size: 0.9rem; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.25rem; }
+button.btn {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.6rem 1.15rem;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+}
+.primary { background: var(--accent); color: var(--accent-ink); }
+.primary:disabled { background: var(--raised); color: var(--muted); border-color: var(--line); cursor: default; }
+.secondary { background: transparent; color: var(--ink); border-color: var(--line) !important; }
+
+.feedback {
+  margin-top: 1.25rem;
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border-left: 4px solid var(--line);
+}
+.feedback[hidden] { display: none; }
+.feedback p:last-child { margin-bottom: 0; }
+.feedback .verdict { font-weight: 650; margin-bottom: 0.4rem; }
+.feedback.correct { border-left-color: var(--reach); }
+.feedback.correct .verdict { color: var(--reach); }
+.feedback.near { border-left-color: var(--miss); }
+.feedback.near .verdict { color: var(--miss); }
+.feedback.wrong { border-left-color: var(--wrong); }
+.feedback.wrong .verdict { color: var(--wrong); }
+
+#pass2 { margin-top: 2.25rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+#pass2[hidden] { display: none; }
+fieldset { border: 0; margin: 0; padding: 0; }
+legend { font-weight: 600; margin-bottom: 0.6rem; padding: 0; }
+.radio-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.radio-row label {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.5rem 0.9rem; cursor: pointer;
+}
+.radio-row input { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; margin: 0; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .node { transition: background-color 150ms ease, border-color 150ms ease; }
+  .account.new { animation: arrive 400ms ease-out; }
+  @keyframes arrive { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.45rem; }
+  .tally { grid-template-columns: 1fr; }
+  .children { margin-left: 0.5rem; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Attach it where it reaches</h1>
+  <p>A directory keeps its entries in a tree, not a list. Every entry has a position, and a setting can be attached to a position instead of to each entry one by one. Here, the positions are two containers, one for each warehouse, holding the clerks' accounts.</p>
+
+  <div class="requirement">
+    <p><strong>The requirement.</strong> The south warehouse's sign-in settings must apply to every south clerk account, and to no north clerk account.</p>
+  </div>
+
+  <p class="how">Select any container or any account to attach the settings there. Select it again to remove them. The accounts the settings reach turn green.</p>
+
+  <ul class="tree" id="tree" aria-label="Directory tree"></ul>
+
+  <div class="tally" aria-live="polite" id="tally">
+    <div><strong id="t-south">0 of 6</strong><span>south clerks reached</span></div>
+    <div><strong id="t-north">0 of 3</strong><span>north clerks reached</span></div>
+    <div><strong id="t-attach">0</strong><span>places the settings are attached</span></div>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn primary" id="check-btn">Check where I attached it</button>
+    <button type="button" class="btn secondary" id="clear-btn">Remove all attachments</button>
+  </div>
+
+  <div class="feedback" id="feedback" hidden tabindex="-1" role="status"></div>
+
+  <section id="pass2" hidden aria-labelledby="pass2-heading">
+    <h2 id="pass2-heading" tabindex="-1">A seventh starter</h2>
+    <p>Tomorrow a seventh clerk joins the south warehouse. Their account will be created inside <code>OU=Warehouse-South</code>, next to the other six. You will not change any attachment.</p>
+    <fieldset>
+      <legend>Will the south sign-in settings reach the new account?</legend>
+      <div class="radio-row">
+        <label for="pred-yes"><input type="radio" name="pred" id="pred-yes" value="yes"> Yes</label>
+        <label for="pred-no"><input type="radio" name="pred" id="pred-no" value="no"> No</label>
+      </div>
+    </fieldset>
+    <div class="actions">
+      <button type="button" class="btn primary" id="arrive-btn" disabled>Create the seventh account</button>
+    </div>
+    <div class="feedback" id="feedback2" hidden tabindex="-1" role="status"></div>
+  </section>
+
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var DATA = {
+    containers: [
+      { id: "south", name: "OU=Warehouse-South", sub: "Container for the south warehouse" },
+      { id: "north", name: "OU=Warehouse-North", sub: "Container for the north warehouse" }
+    ],
+    accounts: [
+      { id: "s1", label: "South clerk 1", container: "south" },
+      { id: "s2", label: "South clerk 2", container: "south" },
+      { id: "s3", label: "South clerk 3", container: "south" },
+      { id: "s4", label: "South clerk 4", container: "south" },
+      { id: "s5", label: "South clerk 5", container: "south" },
+      { id: "s6", label: "South clerk 6", container: "south" },
+      { id: "n1", label: "North clerk 1", container: "north" },
+      { id: "n2", label: "North clerk 2", container: "north" },
+      { id: "n3", label: "North clerk 3", container: "north" }
+    ],
+    seventh: { id: "s7", label: "South clerk 7", container: "south" }
+  };
+
+  var state = { attached: {}, checked: null, seventhAdded: false, predicted: null };
+
+  function accounts() {
+    return state.seventhAdded ? DATA.accounts.concat([DATA.seventh]) : DATA.accounts;
+  }
+
+  function reaches(acc, attached) {
+    return !!(attached[acc.id] || attached[acc.container]);
+  }
+
+  // Pure evaluation, exposed for verification.
+  function evaluate(attached, accs) {
+    var south = accs.filter(function (a) { return a.container === "south"; });
+    var north = accs.filter(function (a) { return a.container === "north"; });
+    var southHit = south.filter(function (a) { return reaches(a, attached); });
+    var northHit = north.filter(function (a) { return reaches(a, attached); });
+    var keys = Object.keys(attached).filter(function (k) { return attached[k]; });
+    var individual = keys.filter(function (k) { return k !== "south" && k !== "north"; });
+    var result = {
+      southReached: southHit.length, southTotal: south.length,
+      northReached: northHit.length, northTotal: north.length,
+      attachments: keys.length, onSouth: !!attached.south, onNorth: !!attached.north,
+      individual: individual
+    };
+    if (keys.length === 0) { result.verdict = "wrong"; result.reason = "none"; }
+    else if (northHit.length > 0) { result.verdict = "wrong"; result.reason = "north"; }
+    else if (southHit.length < south.length) { result.verdict = "wrong"; result.reason = "short"; }
+    else if (attached.south && individual.length === 0) { result.verdict = "correct"; result.reason = "position"; }
+    else if (attached.south) { result.verdict = "near"; result.reason = "redundant"; }
+    else { result.verdict = "near"; result.reason = "entries"; }
+    return result;
+  }
+
+  var tree = document.getElementById("tree");
+  var feedback = document.getElementById("feedback");
+  var feedback2 = document.getElementById("feedback2");
+  var pass2 = document.getElementById("pass2");
+  var live = document.getElementById("live");
+
+  function labelFor(acc) {
+    var lookup = {};
+    accounts().forEach(function (a) { lookup[a.id] = a; });
+    return lookup[acc] ? lookup[acc].label : acc;
+  }
+
+  function render() {
+    tree.innerHTML = "";
+    DATA.containers.forEach(function (c) {
+      var li = document.createElement("li");
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "node container";
+      btn.setAttribute("aria-pressed", state.attached[c.id] ? "true" : "false");
+      btn.innerHTML = '<span><span class="node-name"><code>' + c.name + '</code></span><span class="node-sub">' + c.sub + '</span></span>' +
+        '<span class="pin">' + (state.attached[c.id] ? "Attached here" : "Attach here") + '</span>';
+      btn.addEventListener("click", function () { toggle(c.id); });
+      btn.setAttribute("data-id", c.id);
+      li.appendChild(btn);
+
+      var ul = document.createElement("ul");
+      ul.className = "children";
+      ul.setAttribute("aria-label", "Accounts in " + c.name);
+      accounts().filter(function (a) { return a.container === c.id; }).forEach(function (a) {
+        var ali = document.createElement("li");
+        var ab = document.createElement("button");
+        ab.type = "button";
+        var hit = reaches(a, state.attached);
+        ab.className = "node account" + (hit ? " reached" : "") + (a.id === "s7" ? " new" : "");
+        ab.setAttribute("aria-pressed", state.attached[a.id] ? "true" : "false");
+        ab.setAttribute("data-id", a.id);
+        var status;
+        if (state.attached[a.id] && state.attached[a.container]) { status = "Gets the settings from its container and from its own attachment"; }
+        else if (state.attached[a.id]) { status = "Gets the settings from its own attachment"; }
+        else if (state.attached[a.container]) { status = "Gets the settings from its container"; }
+        else { status = "No settings reach this account"; }
+        ab.innerHTML = '<span class="node-name">' + a.label + (a.id === "s7" ? ' <span class="node-sub" style="display:inline">(new)</span>' : '') + '</span>' +
+          '<span class="pin">' + (state.attached[a.id] ? "Attached here" : "Attach here") + '</span>' +
+          '<span class="status">' + status + '</span>';
+        ab.addEventListener("click", function () { toggle(a.id); });
+        ali.appendChild(ab);
+        ul.appendChild(ali);
+      });
+      li.appendChild(ul);
+      tree.appendChild(li);
+    });
+
+    var r = evaluate(state.attached, accounts());
+    document.getElementById("t-south").textContent = r.southReached.toLocaleString("en-US") + " of " + r.southTotal.toLocaleString("en-US");
+    document.getElementById("t-north").textContent = r.northReached.toLocaleString("en-US") + " of " + r.northTotal.toLocaleString("en-US");
+    document.getElementById("t-attach").textContent = r.attachments.toLocaleString("en-US");
+  }
+
+  function toggle(id) {
+    state.attached[id] = !state.attached[id];
+    if (!state.attached[id]) { delete state.attached[id]; }
+    render();
+    var focusTarget = tree.querySelector('[data-id="' + id + '"]');
+    if (focusTarget) { focusTarget.focus(); }
+  }
+
+  function showFeedback(el, verdict, html) {
+    el.className = "feedback " + verdict;
+    el.innerHTML = html;
+    el.hidden = false;
+    el.focus();
+  }
+
+  function check() {
+    var r = evaluate(state.attached, accounts());
+    state.checked = r;
+    var html;
+    if (r.reason === "none") {
+      html = '<p class="verdict">Nothing is attached yet.</p><p>A setting only reaches entries through a place it is attached. Start by finding the one position that holds every south clerk and nothing else.</p>';
+    } else if (r.reason === "north") {
+      html = '<p class="verdict">The settings reach ' + r.northReached + ' north ' + (r.northReached === 1 ? 'clerk' : 'clerks') + '.</p><p>A setting attached to a position reaches every entry placed there. ' +
+        (r.onNorth ? 'It is attached to <code>OU=Warehouse-North</code>, so every account in that container gets it. ' : '') +
+        'Start by finding the one position that holds every south clerk and nothing else.</p>';
+    } else if (r.reason === "short") {
+      var missing = r.southTotal - r.southReached;
+      html = '<p class="verdict">' + missing + ' south ' + (missing === 1 ? 'clerk gets' : 'clerks get') + ' no settings.</p><p>Every south clerk must be reached. Look for one position that already holds all ' + r.southTotal + ', instead of reaching them one at a time.</p>';
+    } else if (r.reason === "position") {
+      html = '<p class="verdict">Right. One attachment, on <code>OU=Warehouse-South</code>.</p><p>The settings sit on the position, so they reach every account placed there, all ' + r.southTotal + ', and nothing in the north container. No account was touched to get there.</p>';
+    } else if (r.reason === "redundant") {
+      var names = r.individual.map(labelFor).join(", ");
+      html = '<p class="verdict">The reach is right, with extra attachments.</p><p>The container attachment already reaches all ' + r.southTotal + '. The separate attachments on ' + names + ' change nothing today, and each one is another thing someone has to record and explain later. Remove them and the reach stays the same.</p>';
+    } else {
+      html = '<p class="verdict">The reach is right, but it is attached to ' + r.individual.length + ' separate accounts.</p><p>All ' + r.southTotal + ' south clerks get the settings and no north clerk does. The settings sit on the entries, though, not on the position they share. Keep this arrangement for a moment and see what the next arrival does to it, or move it to the position first.</p>';
+    }
+    showFeedback(feedback, r.verdict, html);
+    live.textContent = "";
+    if (r.verdict !== "wrong") {
+      pass2.hidden = false;
+    }
+  }
+
+  function predict() {
+    var radios = document.querySelectorAll('input[name="pred"]');
+    for (var i = 0; i < radios.length; i++) { if (radios[i].checked) { state.predicted = radios[i].value; } }
+    document.getElementById("arrive-btn").disabled = !state.predicted || state.seventhAdded;
+  }
+
+  function arrive() {
+    if (state.seventhAdded || !state.predicted) { return; }
+    var before = JSON.parse(JSON.stringify(state.attached));
+    state.seventhAdded = true;
+    var radios = document.querySelectorAll('input[name="pred"]');
+    for (var i = 0; i < radios.length; i++) { radios[i].disabled = true; }
+    document.getElementById("arrive-btn").disabled = true;
+    render();
+    var hit = reaches(DATA.seventh, before);
+    var predictedYes = state.predicted === "yes";
+    var matched = predictedYes === hit;
+    var r = evaluate(state.attached, accounts());
+    var html;
+    if (hit) {
+      html = '<p class="verdict">' + (matched ? 'Your prediction held.' : 'It does reach them.') + ' South clerk 7 gets the settings.</p>' +
+        '<p>The settings are attached to <code>OU=Warehouse-South</code>, and the new account was placed there. Nobody attached anything to it. Being placed in that position was enough.</p>';
+    } else {
+      html = '<p class="verdict">' + (matched ? 'Your prediction held.' : 'It does not reach them.') + ' South clerk 7 gets no settings.</p>' +
+        '<p>Your attachments still reach the accounts they sit on. The new account was placed in the container, and nothing is attached to the container, so its position carries nothing to it. Every future starter would need its own attachment.</p>' +
+        '<p>Attach the settings to <code>OU=Warehouse-South</code> instead and watch the count: 7 of 7, with one attachment.</p>';
+    }
+    showFeedback(feedback2, hit ? "correct" : "near", html);
+    live.textContent = "South clerk 7 created. " + r.southReached + " of " + r.southTotal + " south clerks reached.";
+  }
+
+  document.getElementById("check-btn").addEventListener("click", check);
+  document.getElementById("clear-btn").addEventListener("click", function () {
+    state.attached = {};
+    render();
+    live.textContent = "All attachments removed.";
+  });
+  document.querySelectorAll('input[name="pred"]').forEach(function (r) { r.addEventListener("change", predict); });
+  document.getElementById("arrive-btn").addEventListener("click", arrive);
+
+  render();
+})();
+</script>
+</body>
+</html>

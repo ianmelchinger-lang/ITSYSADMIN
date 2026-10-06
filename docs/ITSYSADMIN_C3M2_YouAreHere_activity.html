@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Give them what the other warehouse has</title>
+<style>
+:root {
+  --bg: #1b2027;
+  --surface: #232a33;
+  --raised: #2b333e;
+  --line: #3a4552;
+  --ink: #e8e6e1;
+  --muted: #a6afb9;
+  --accent: #8ec5cc;
+  --accent-ink: #12262a;
+  --miss: #e2b45f;
+  --known: #9fcf9a;
+  --focus: #f2d58a;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; line-height: 1.3; font-weight: 650; margin: 0 0 0.75rem; }
+h3 { font-size: 1.05rem; font-weight: 650; margin: 0 0 0.4rem; }
+p { margin: 0 0 1rem; max-width: 38rem; }
+.lede { color: var(--ink); }
+.muted { color: var(--muted); }
+code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  background: var(--raised);
+  border-radius: 3px;
+  padding: 0.05em 0.3em;
+}
+
+fieldset { border: 0; margin: 1.75rem 0 0; padding: 0; }
+legend { font-size: 1.2rem; font-weight: 650; margin-bottom: 0.9rem; padding: 0; }
+.choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 0.85rem;
+  align-items: start;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.choice:hover { border-left-color: var(--accent); }
+.choice input { margin: 0.3rem 0 0; width: 1.15rem; height: 1.15rem; accent-color: var(--accent); }
+.choice input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.choice:has(input:checked) { border-left-color: var(--accent); background: var(--raised); }
+.choice:has(input:disabled) { cursor: default; }
+.choice:has(input:disabled):not(:has(input:checked)) { opacity: 0.55; }
+.choice-title { font-weight: 650; display: block; }
+.choice-text { color: var(--muted); display: block; margin-top: 0.2rem; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.25rem; }
+button {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.6rem 1.15rem;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+}
+.primary { background: var(--accent); color: var(--accent-ink); }
+.primary:disabled { background: var(--raised); color: var(--muted); border-color: var(--line); cursor: default; }
+.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+button:focus-visible, summary:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.hint { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+#reveal { margin-top: 2.25rem; }
+#reveal[hidden] { display: none; }
+.committed { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.25rem; }
+.miss {
+  border-left: 4px solid var(--miss);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin-bottom: 1.5rem;
+}
+.miss ol { margin: 0.25rem 0 1rem; padding-left: 1.3rem; max-width: 37rem; }
+.miss li { margin-bottom: 0.4rem; }
+.miss p:last-child { margin-bottom: 0; }
+
+details {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem 1.1rem;
+  margin-bottom: 0.75rem;
+}
+summary { cursor: pointer; font-weight: 600; }
+details[open] summary { margin-bottom: 0.75rem; }
+details p:last-child { margin-bottom: 0; }
+
+.path-wrap { margin: 2rem 0 1.5rem; }
+.path {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem;
+}
+.leg {
+  border: 2px dashed var(--miss);
+  border-radius: 6px;
+  padding: 0.75rem 0.8rem;
+  background: var(--surface);
+}
+.leg.known { border-style: solid; border-color: var(--known); }
+.leg-name { font-weight: 650; display: block; }
+.leg-state { display: block; font-size: 0.92rem; color: var(--muted); margin-top: 0.25rem; }
+.leg.known .leg-state { color: var(--known); }
+.leg:not(.known) .leg-state { color: var(--miss); }
+.joint { align-self: center; color: var(--muted); font-size: 1.3rem; }
+
+.capability {
+  background: var(--raised);
+  border-radius: 6px;
+  padding: 1.25rem 1.3rem;
+  margin-top: 1.5rem;
+}
+.capability p { margin-bottom: 0.6rem; }
+.capability p:last-child { margin-bottom: 0; }
+.capability strong { color: var(--accent); font-weight: 650; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #reveal.shown { animation: rise 260ms ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.45rem; }
+  .path { grid-template-columns: 1fr; }
+  .joint { justify-self: center; transform: rotate(90deg); }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Give them what the other warehouse has</h1>
+  <p class="lede">A second warehouse has just joined the network at a mid-market retailer. You are the junior systems administrator. Six new starters need access, and the request from operations is one sentence: give them what the other warehouse has.</p>
+  <p>The retailer keeps its accounts in a directory, the system that stores every account and answers who someone is. Inside it, accounts belong to <em>groups</em>, which are named sets of accounts that can be given access together, and sit in <em>containers</em>, which are named places in the directory where accounts are kept.</p>
+  <p>Three things are already on your desk. Each looks like the start of an answer.</p>
+
+  <form id="commit-form" novalidate>
+    <fieldset>
+      <legend>Which one do you act on first?</legend>
+
+      <label class="choice" for="opt-ticket">
+        <input type="radio" name="reading" id="opt-ticket" value="ticket">
+        <span>
+          <span class="choice-title">The help-desk ticket</span>
+          <span class="choice-text">One new starter cannot open the warehouse folder. Fix that person's access, then repeat it for the other five.</span>
+        </span>
+      </label>
+
+      <label class="choice" for="opt-list">
+        <input type="radio" name="reading" id="opt-list" value="list">
+        <span>
+          <span class="choice-title">The group's membership list</span>
+          <span class="choice-text">The group <code>grp-warehouse-ops</code> already lists exactly the right people. Add the six starters to it, and their access should follow.</span>
+        </span>
+      </label>
+
+      <label class="choice" for="opt-copy">
+        <input type="radio" name="reading" id="opt-copy" value="copy">
+        <span>
+          <span class="choice-title">An account at the other warehouse</span>
+          <span class="choice-text">A clerk there already has everything the job needs. Copy that account six times, and the starters are ready this afternoon.</span>
+        </span>
+      </label>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="primary" id="commit-btn" disabled>Lock in my choice</button>
+      <p class="hint" id="commit-hint">Choose one to continue.</p>
+    </div>
+  </form>
+
+  <section id="reveal" hidden aria-labelledby="reveal-heading">
+    <h2 id="reveal-heading" tabindex="-1">What your reading misses</h2>
+    <p class="committed" id="committed-line"></p>
+
+    <div class="miss" data-reading="ticket" hidden>
+      <p>In this directory, access is granted to groups and to containers rather than to individual accounts. So one complaint about one person fits at least three different causes:</p>
+      <ol>
+        <li>The person is in no group that the access was granted to.</li>
+        <li>The group that holds the access has a <em>scope</em>, a setting on the group that decides where its access can apply, and that scope does not reach this folder.</li>
+        <li>The person's account sits in a container that the granted settings do not cover.</li>
+      </ol>
+      <p>Nothing in the ticket tells these apart, and reading it again will not either. Fixing one person may get one starter working. It leaves you unable to say why it worked, or why the other five are still waiting.</p>
+    </div>
+
+    <div class="miss" data-reading="list" hidden>
+      <p>A group carries two things: its members, and a <em>scope</em>, a setting on the group that decides what it may contain and where its access can apply. Membership answers who is in the group. Scope answers where the group's access can land.</p>
+      <p>A membership list shows only the first. A group with every right name on it can still grant nothing to a folder its scope cannot reach. The list cannot warn you, because scope belongs to the group itself, not to anyone listed in it.</p>
+    </div>
+
+    <div class="miss" data-reading="copy" hidden>
+      <p>Copying an account reproduces where it sits and which groups it belongs to. It does not reproduce the reason for either. If the original clerk still holds access left over from an old role, or authority nobody wrote down, all six starters now hold it too.</p>
+      <p>That is a finding in its own right. DISA's Active Directory hardening guidance requires that the accounts holding delegated authority over directory objects can be listed, each with a reason on record. Six copies of an unexplained account give six more entries nobody can explain.</p>
+    </div>
+
+    <h3>The other two readings</h3>
+    <div id="others"></div>
+
+    <div class="path-wrap">
+      <h2>What all three miss</h2>
+      <p>Each reading answers one question: who ends up with access? The question underneath is different. Where was the access granted, and what carries it to each person?</p>
+      <div class="path" role="img" aria-label="Three parts of a right's path. Where it was granted: unknown. What carries it to the person: unknown. Who ends up with it: known.">
+        <div class="leg"><span class="leg-name">Where it was granted</span><span class="leg-state">Unknown from your desk</span></div>
+        <span class="joint" aria-hidden="true">&#8250;</span>
+        <div class="leg"><span class="leg-name">What carries it to the person</span><span class="leg-state">Unknown from your desk</span></div>
+        <span class="joint" aria-hidden="true">&#8250;</span>
+        <div class="leg known"><span class="leg-name">Who ends up with it</span><span class="leg-state">The only part the three items show</span></div>
+      </div>
+      <p>All three items on your desk describe the last part. None of them shows the first two.</p>
+    </div>
+
+    <div class="capability">
+      <p><strong>The missing capability</strong></p>
+      <p>Saying, for any piece of access, where it was granted and what route carries it to each person, and setting that up before anyone depends on it.</p>
+      <p>Without it, you can make access work. You cannot account for it.</p>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="secondary" id="reset-btn">Start over</button>
+    </div>
+  </section>
+
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var READINGS = {
+    ticket: "The help-desk ticket",
+    list: "The group's membership list",
+    copy: "An account at the other warehouse"
+  };
+  var ORDER = ["ticket", "list", "copy"];
+
+  var state = { committed: null };
+
+  var form = document.getElementById("commit-form");
+  var radios = form.querySelectorAll('input[name="reading"]');
+  var commitBtn = document.getElementById("commit-btn");
+  var hint = document.getElementById("commit-hint");
+  var reveal = document.getElementById("reveal");
+  var heading = document.getElementById("reveal-heading");
+  var committedLine = document.getElementById("committed-line");
+  var others = document.getElementById("others");
+  var live = document.getElementById("live");
+  var resetBtn = document.getElementById("reset-btn");
+  var misses = reveal.querySelectorAll(".miss[data-reading]");
+
+  function selected() {
+    for (var i = 0; i < radios.length; i++) {
+      if (radios[i].checked) { return radios[i].value; }
+    }
+    return null;
+  }
+
+  function onChange() {
+    var has = selected() !== null;
+    commitBtn.disabled = !has;
+    hint.textContent = has ? "Your choice is locked when you continue." : "Choose one to continue.";
+  }
+
+  function buildOthers(chosen) {
+    others.innerHTML = "";
+    ORDER.forEach(function (key) {
+      if (key === chosen) { return; }
+      var source = reveal.querySelector('.miss[data-reading="' + key + '"]');
+      var d = document.createElement("details");
+      var s = document.createElement("summary");
+      s.textContent = READINGS[key];
+      d.appendChild(s);
+      Array.prototype.forEach.call(source.children, function (child) {
+        d.appendChild(child.cloneNode(true));
+      });
+      others.appendChild(d);
+    });
+  }
+
+  function commit(event) {
+    event.preventDefault();
+    var choice = selected();
+    if (!choice || state.committed) { return; }
+    state.committed = choice;
+
+    for (var i = 0; i < radios.length; i++) { radios[i].disabled = true; }
+    commitBtn.disabled = true;
+    hint.textContent = "Choice locked.";
+
+    Array.prototype.forEach.call(misses, function (m) {
+      m.hidden = m.getAttribute("data-reading") !== choice;
+    });
+    committedLine.textContent = "You chose to act first on: " + READINGS[choice] + ".";
+    buildOthers(choice);
+
+    reveal.hidden = false;
+    reveal.classList.remove("shown");
+    void reveal.offsetWidth;
+    reveal.classList.add("shown");
+    live.textContent = "Choice locked. What your reading misses is shown below.";
+    heading.focus();
+  }
+
+  function reset() {
+    state.committed = null;
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].disabled = false;
+      radios[i].checked = false;
+    }
+    reveal.hidden = true;
+    reveal.classList.remove("shown");
+    others.innerHTML = "";
+    onChange();
+    live.textContent = "Choice cleared.";
+    radios[0].focus();
+  }
+
+  for (var i = 0; i < radios.length; i++) { radios[i].addEventListener("change", onChange); }
+  form.addEventListener("submit", commit);
+  resetBtn.addEventListener("click", reset);
+})();
+</script>
+</body>
+</html>

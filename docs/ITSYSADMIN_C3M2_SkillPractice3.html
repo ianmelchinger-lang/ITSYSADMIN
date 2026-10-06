@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choose the governing container</title>
+<style>
+:root {
+  --bg: #1b2027;
+  --surface: #232a33;
+  --raised: #2b333e;
+  --line: #3a4552;
+  --ink: #e8e6e1;
+  --muted: #a6afb9;
+  --accent: #8ec5cc;
+  --accent-ink: #12262a;
+  --ok: #9fcf9a;
+  --near: #e2b45f;
+  --wrong: #e58f84;
+  --focus: #f2d58a;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; line-height: 1.3; font-weight: 650; margin: 0 0 0.75rem; }
+p { margin: 0 0 1rem; max-width: 38rem; }
+code { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.92em; }
+
+.containers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin: 1.25rem 0 1.75rem;
+  padding: 0;
+  list-style: none;
+}
+.box {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  padding: 0.8rem 0.95rem;
+}
+.box h3 { font-size: 1rem; font-weight: 650; margin: 0 0 0.5rem; }
+.box dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.6rem; font-size: 0.93rem; }
+.box dt { color: var(--muted); }
+.box dd { margin: 0; }
+.box .holds { margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed var(--line); font-size: 0.93rem; color: var(--muted); }
+.box .holds strong { color: var(--ink); font-weight: 600; }
+
+.objects { list-style: none; margin: 0; padding: 0; }
+.obj {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 6px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.8rem;
+}
+.obj.correct { border-left-color: var(--ok); }
+.obj.wrong { border-left-color: var(--wrong); }
+.obj h3 { font-size: 1.05rem; font-weight: 650; margin: 0 0 0.3rem; }
+.obj .kind { color: var(--muted); font-weight: 400; font-size: 0.93rem; }
+.obj p { margin-bottom: 0.6rem; }
+.place { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.place label { font-size: 0.95rem; color: var(--muted); }
+select {
+  font: inherit;
+  font-size: 0.97rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  min-width: 14rem;
+  max-width: 100%;
+}
+select:disabled { color: var(--muted); }
+.note { margin: 0.65rem 0 0; padding: 0.55rem 0.8rem; border-radius: 4px; background: var(--bg); font-size: 0.96rem; }
+.note[hidden] { display: none; }
+.note .tag { display: block; font-weight: 650; }
+.obj.correct .note .tag { color: var(--ok); }
+.obj.wrong .note .tag { color: var(--wrong); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.25rem; }
+button.btn {
+  font: inherit; font-weight: 600; border-radius: 6px; padding: 0.6rem 1.15rem; cursor: pointer;
+  border: 1px solid var(--accent);
+}
+.primary { background: var(--accent); color: var(--accent-ink); }
+.primary:disabled { background: var(--raised); color: var(--muted); border-color: var(--line); cursor: default; }
+.hint { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+.summary { margin-top: 1.25rem; border-radius: 6px; padding: 1rem 1.1rem; background: var(--raised); border-left: 4px solid var(--line); }
+.summary[hidden] { display: none; }
+.summary.correct { border-left-color: var(--ok); }
+.summary.near { border-left-color: var(--near); }
+.summary.wrong { border-left-color: var(--wrong); }
+.summary .verdict { font-weight: 650; }
+.summary.correct .verdict { color: var(--ok); }
+.summary.near .verdict { color: var(--near); }
+.summary.wrong .verdict { color: var(--wrong); }
+.summary p:last-child { margin-bottom: 0; }
+
+#pass2 { margin-top: 2.25rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+#pass2[hidden] { display: none; }
+fieldset { border: 0; margin: 0 0 1rem; padding: 0; }
+legend { font-weight: 600; margin-bottom: 0.5rem; padding: 0; }
+.radio-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.radio-row label {
+  display: flex; align-items: center; gap: 0.45rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.45rem 0.8rem; cursor: pointer; font-size: 0.97rem;
+}
+.radio-row label:has(input:checked) { border-color: var(--accent); background: var(--raised); }
+.radio-row input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; margin: 0; }
+
+.compare { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1rem; font-size: 0.96rem; }
+.compare th, .compare td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.compare th { color: var(--muted); font-weight: 600; }
+.compare td.changed { color: var(--near); font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+
+input:focus-visible, select:focus-visible, button:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .note:not([hidden]), .summary:not([hidden]) { animation: show 220ms ease-out; }
+  @keyframes show { from { opacity: 0; } to { opacity: 1; } }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.45rem; }
+  .containers { grid-template-columns: 1fr; }
+  select { min-width: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Choose the governing container</h1>
+  <p>An organizational unit is a container in the directory. Placing an object inside one settles two things at once: who may administer it, and which settings govern it. Both are set on the container, so the object takes them from its position.</p>
+  <p>The four containers below are already set up. Nothing you do here changes what they carry.</p>
+
+  <ul class="containers" id="containers" aria-label="Containers and what each one carries"></ul>
+
+  <h2>Place each object</h2>
+  <p>Read what each object needs, then choose the container whose administrator and settings match it. Where an object physically sits does not decide it.</p>
+
+  <ol class="objects" id="objects"></ol>
+
+  <div class="actions">
+    <button type="button" class="btn primary" id="check-btn" disabled>Check my placements</button>
+    <p class="hint" id="check-hint">Place all six objects to check.</p>
+  </div>
+
+  <div class="summary" id="summary" hidden tabindex="-1" role="status"></div>
+
+  <section id="pass2" hidden aria-labelledby="pass2-heading">
+    <h2 id="pass2-heading" tabindex="-1">Move one account</h2>
+    <p><code>b.iqbal</code> is moved from <code>OU=Warehouse-South</code> to <code>OU=Warehouse-North</code>. Nobody edits the account itself. Predict both results before the move.</p>
+
+    <fieldset>
+      <legend>After the move, who may administer <code>b.iqbal</code>?</legend>
+      <div class="radio-row">
+        <label for="p-admin-help"><input type="radio" name="p-admin" id="p-admin-help" value="grp-helpdesk"> <code>grp-helpdesk</code></label>
+        <label for="p-admin-north"><input type="radio" name="p-admin" id="p-admin-north" value="grp-north-site-admins"> <code>grp-north-site-admins</code></label>
+        <label for="p-admin-both"><input type="radio" name="p-admin" id="p-admin-both" value="both"> Both</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Which settings govern it?</legend>
+      <div class="radio-row">
+        <label for="p-set-south"><input type="radio" name="p-set" id="p-set-south" value="South sign-in settings"> South sign-in settings</label>
+        <label for="p-set-north"><input type="radio" name="p-set" id="p-set-north" value="North sign-in settings"> North sign-in settings</label>
+        <label for="p-set-both"><input type="radio" name="p-set" id="p-set-both" value="both"> Both</label>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="move-btn" disabled>Move the account</button>
+    </div>
+    <div class="summary" id="summary2" hidden tabindex="-1" role="status"></div>
+  </section>
+
+  <p class="visually-hidden" aria-live="polite" id="live"></p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var CONTAINERS = [
+    { id: "south", name: "OU=Warehouse-South", admin: "grp-helpdesk", adminText: "may reset passwords on accounts here", settings: "South sign-in settings" },
+    { id: "north", name: "OU=Warehouse-North", admin: "grp-north-site-admins", adminText: "administer accounts here", settings: "North sign-in settings" },
+    { id: "servers", name: "OU=Servers", admin: "grp-server-admins", adminText: "administer objects here", settings: "Server settings" },
+    { id: "svc", name: "OU=Service-Accounts", admin: "grp-server-admins", adminText: "administer accounts here", settings: "Service-account settings" }
+  ];
+  var BY_ID = {};
+  CONTAINERS.forEach(function (c) { BY_ID[c.id] = c; });
+
+  // Each object's needs are the source of truth; the key is computed from them.
+  var OBJECTS = [
+    { id: "biqbal", label: "b.iqbal", code: true, kind: "user account",
+      text: "A clerk at the south warehouse. When the password needs resetting, the help desk does it. Needs the south sign-in settings.",
+      admin: "grp-helpdesk", settings: "South sign-in settings" },
+    { id: "sc1", label: "South clerk 1", kind: "user account",
+      text: "A new starter at the south warehouse. The help desk handles password resets. Needs the south sign-in settings.",
+      admin: "grp-helpdesk", settings: "South sign-in settings" },
+    { id: "nc1", label: "North clerk 1", kind: "user account",
+      text: "A clerk at the north warehouse. The north site admins are responsible for the account. Needs the north sign-in settings.",
+      admin: "grp-north-site-admins", settings: "North sign-in settings" },
+    { id: "nc2", label: "North clerk 2", kind: "user account",
+      text: "Employed at the north warehouse and covering shifts at the south warehouse this month. The north site admins stay responsible for the account, and it keeps the north sign-in settings.",
+      admin: "grp-north-site-admins", settings: "North sign-in settings" },
+    { id: "srv", label: "South file server", kind: "computer",
+      text: "Sits physically in the south warehouse and holds the warehouse folder. The server admins manage it. Needs the server settings.",
+      admin: "grp-server-admins", settings: "Server settings" },
+    { id: "bkp", label: "Nightly backup account", kind: "service account",
+      text: "A program uses it to sign in each night at the south warehouse. Only the server admins may reset its password. Needs the service-account settings.",
+      admin: "grp-server-admins", settings: "Service-account settings" }
+  ];
+  OBJECTS.forEach(function (o) {
+    var match = CONTAINERS.filter(function (c) { return c.admin === o.admin && c.settings === o.settings; });
+    o.key = match.length === 1 ? match[0].id : null;
+  });
+
+  var state = { placed: {}, checked: false, allRight: false, moved: false };
+  var live = document.getElementById("live");
+
+  function nameOf(o) { return o.code ? "<code>" + o.label + "</code>" : o.label; }
+
+  function renderContainers() {
+    var ul = document.getElementById("containers");
+    ul.innerHTML = "";
+    CONTAINERS.forEach(function (c) {
+      var inside = OBJECTS.filter(function (o) { return currentPlace(o) === c.id; });
+      var li = document.createElement("li");
+      li.className = "box";
+      li.innerHTML = '<h3><code>' + c.name + '</code></h3>' +
+        '<dl><dt>Administered by</dt><dd><code>' + c.admin + '</code>, who ' + c.adminText + '</dd>' +
+        '<dt>Settings</dt><dd>' + c.settings + '</dd></dl>' +
+        '<p class="holds">' + (inside.length ? 'Holds: <strong>' + inside.map(function (o) { return o.label; }).join(", ") + '</strong>' : 'Holds nothing yet') + '</p>';
+      ul.appendChild(li);
+    });
+  }
+
+  function currentPlace(o) {
+    if (o.id === "biqbal" && state.moved) { return "north"; }
+    return state.placed[o.id] || null;
+  }
+
+  function renderObjects() {
+    var ol = document.getElementById("objects");
+    OBJECTS.forEach(function (o) {
+      var li = document.createElement("li");
+      li.className = "obj";
+      li.id = "obj-" + o.id;
+      var opts = '<option value="">Choose a container</option>' + CONTAINERS.map(function (c) {
+        return '<option value="' + c.id + '">' + c.name + '</option>';
+      }).join("");
+      li.innerHTML = '<h3>' + nameOf(o) + ' <span class="kind">' + o.kind + '</span></h3>' +
+        '<p>' + o.text + '</p>' +
+        '<div class="place"><label for="sel-' + o.id + '">Place in</label><select id="sel-' + o.id + '">' + opts + '</select></div>' +
+        '<p class="note" hidden aria-live="polite"></p>';
+      ol.appendChild(li);
+      li.querySelector("select").addEventListener("change", function (e) {
+        if (e.target.value) { state.placed[o.id] = e.target.value; } else { delete state.placed[o.id]; }
+        li.className = "obj";
+        li.querySelector(".note").hidden = true;
+        state.allRight = false;
+        document.getElementById("pass2").hidden = true;
+        document.getElementById("summary").hidden = true;
+        renderContainers();
+        refreshCheck();
+      });
+    });
+  }
+
+  function refreshCheck() {
+    var n = Object.keys(state.placed).length;
+    var btn = document.getElementById("check-btn");
+    btn.disabled = n < OBJECTS.length || state.moved;
+    document.getElementById("check-hint").textContent = n < OBJECTS.length ?
+      "Place all six objects to check. " + n.toLocaleString("en-US") + " of 6 placed." : "Ready to check.";
+  }
+
+  function check() {
+    if (state.moved) { return; }
+    state.checked = true;
+    var wrong = [];
+    OBJECTS.forEach(function (o) {
+      var li = document.getElementById("obj-" + o.id);
+      var note = li.querySelector(".note");
+      var c = BY_ID[state.placed[o.id]];
+      if (c.id === o.key) {
+        li.className = "obj correct";
+        note.innerHTML = '<span class="tag">Placed by what governs it.</span>In <code>' + c.name + '</code>, <code>' + c.admin + '</code> administers it and the ' + c.settings.toLowerCase() + ' apply, which is what it needs.';
+      } else {
+        wrong.push(o);
+        li.className = "obj wrong";
+        var clash = [];
+        if (c.admin !== o.admin) { clash.push('<code>' + c.admin + '</code> would administer it'); }
+        if (c.settings !== o.settings) { clash.push('the ' + c.settings.toLowerCase() + ' would apply'); }
+        note.innerHTML = '<span class="tag">Not this container.</span>In <code>' + c.name + '</code>, ' + clash.join(", and ") + '. ' +
+          'Start with who must administer this object, then check which settings it needs.';
+      }
+      note.hidden = false;
+    });
+
+    var s = document.getElementById("summary");
+    if (wrong.length === 0) {
+      s.className = "summary correct";
+      s.innerHTML = '<p class="verdict">Every object sits where its administrator and settings come from.</p>' +
+        '<p>Two objects physically at the south warehouse ended up outside its container: the file server and the backup account. One account covering south shifts stayed in the north container. Each placement followed who governs the object, not where it sits.</p>';
+      state.allRight = true;
+      document.getElementById("pass2").hidden = false;
+    } else if (wrong.length === 1) {
+      s.className = "summary near";
+      s.innerHTML = '<p class="verdict">The structure is right except for one object: ' + nameOf(wrong[0]) + '.</p><p>Its note names what its current container would do to it.</p>';
+    } else {
+      s.className = "summary wrong";
+      s.innerHTML = '<p class="verdict">' + wrong.length.toLocaleString("en-US") + ' objects sit where the wrong administrator or settings would reach them.</p>' +
+        '<p>Placement decides who administers an object and which settings govern it. For each flagged object, start with who must administer it.</p>';
+    }
+    s.hidden = false;
+    s.focus();
+  }
+
+  function predicted(name) {
+    var r = document.querySelector('input[name="' + name + '"]:checked');
+    return r ? r.value : null;
+  }
+  function refreshMove() {
+    document.getElementById("move-btn").disabled = state.moved || !predicted("p-admin") || !predicted("p-set");
+  }
+
+  function move() {
+    if (state.moved || !state.allRight) { return; }
+    var o = OBJECTS[0];
+    var before = BY_ID[currentPlace(o)];
+    state.moved = true;
+    var after = BY_ID[currentPlace(o)];
+
+    var pa = predicted("p-admin"), ps = predicted("p-set");
+    document.querySelectorAll('#pass2 input[type="radio"]').forEach(function (r) { r.disabled = true; });
+    document.getElementById("move-btn").disabled = true;
+    document.querySelectorAll(".objects select").forEach(function (sel) { sel.disabled = true; });
+    document.getElementById("sel-biqbal").value = "north";
+    document.getElementById("check-btn").disabled = true;
+    document.getElementById("check-hint").textContent = "Placements are fixed after the move.";
+    var note = document.querySelector("#obj-biqbal .note");
+    note.innerHTML = '<span class="tag">Moved.</span>Now in <code>' + after.name + '</code>. The account itself was not edited.';
+    renderContainers();
+
+    var adminRight = pa === after.admin, setRight = ps === after.settings;
+    var html = '<div class="table-wrap"><table class="compare"><thead><tr><th scope="col"></th><th scope="col">Before the move</th><th scope="col">After the move</th></tr></thead><tbody>' +
+      '<tr><th scope="row">Container</th><td><code>' + before.name + '</code></td><td class="changed"><code>' + after.name + '</code></td></tr>' +
+      '<tr><th scope="row">Administered by</th><td><code>' + before.admin + '</code></td><td class="changed"><code>' + after.admin + '</code></td></tr>' +
+      '<tr><th scope="row">Settings</th><td>' + before.settings + '</td><td class="changed">' + after.settings + '</td></tr>' +
+      '<tr><th scope="row">The account itself</th><td>Unchanged</td><td>Unchanged</td></tr>' +
+      '</tbody></table></div>';
+    var verdict;
+    if (adminRight && setRight) { verdict = "Both predictions held."; }
+    else if (adminRight || setRight) { verdict = "One prediction held: " + (adminRight ? "the administrator" : "the settings") + "."; }
+    else { verdict = "Neither prediction held."; }
+    html = '<p class="verdict">' + verdict + '</p>' + html +
+      '<p>Both facts changed together because both come from the container. The delegation on <code>OU=Warehouse-South</code> is exactly as it was. It still covers every account placed there, and <code>b.iqbal</code> is no longer one of them. Neither fact carries over from the old position.</p>';
+
+    var s2 = document.getElementById("summary2");
+    s2.className = "summary " + (adminRight && setRight ? "correct" : "near");
+    s2.innerHTML = html;
+    s2.hidden = false;
+    s2.focus();
+    live.textContent = "b.iqbal moved to OU=Warehouse-North.";
+  }
+
+  renderContainers();
+  renderObjects();
+  refreshCheck();
+  document.getElementById("check-btn").addEventListener("click", check);
+  document.querySelectorAll('#pass2 input[type="radio"]').forEach(function (r) { r.addEventListener("change", refreshMove); });
+  document.getElementById("move-btn").addEventListener("click", move);
+})();
+</script>
+</body>
+</html>
