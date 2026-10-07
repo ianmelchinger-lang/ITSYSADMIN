@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test the Right Service</title>
+<style>
+  :root {
+    --bg: #121b24;
+    --surface: #18242f;
+    --surface-raised: #1f2d3a;
+    --line: #2d3d4c;
+    --text: #e3e9ef;
+    --muted: #a3b2bf;
+    --signal-ok: #72d1b2;
+    --signal-hold: #e8b65a;
+    --focus: #8fc9ff;
+    --chosen: #24384a;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.0625rem; line-height: 1.6;
+  }
+  main { max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 {
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-weight: 600; line-height: 1.25; margin: 0;
+  }
+  h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-top: 2.25rem; }
+  p { margin: 0.75rem 0 0; }
+  .host { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.95em; white-space: nowrap; }
+
+  /* The four claims, set as a reference key */
+  .claims { list-style: none; margin: 1rem 0 0; padding: 0; border-top: 1px solid var(--line); }
+  .claims li {
+    display: grid; grid-template-columns: 15rem 1fr; gap: 1rem;
+    padding: 0.7rem 0; border-bottom: 1px solid var(--line);
+  }
+  .claims .claim { font-weight: 600; }
+  .claims .means { color: var(--muted); }
+
+  .results { margin-top: 1rem; border-top: 1px solid var(--line); }
+  .result {
+    display: grid; grid-template-columns: 2rem 1fr 15rem; gap: 0.6rem 1rem; align-items: start;
+    padding: 0.9rem 0; border-bottom: 1px solid var(--line);
+  }
+  .result .num { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 0.15rem; }
+  .result .changed { display: block; color: var(--signal-hold); font-size: 0.88rem; font-weight: 600; }
+  .result .before { display: block; color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
+  .result select {
+    font: inherit; font-size: 0.95rem; width: 100%;
+    color: var(--text); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 4px; padding: 0.45rem 0.5rem;
+  }
+  .result select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .fb { grid-column: 2 / 4; font-size: 0.95rem; margin: 0; padding-left: 0.75rem; border-left: 3px solid var(--line); }
+  .fb:empty { display: none; }
+  .fb.ok { border-left-color: var(--signal-ok); }
+  .fb.no { border-left-color: var(--signal-hold); }
+  .moved { color: var(--signal-hold); font-weight: 600; }
+
+  .summary {
+    margin-top: 1.25rem; padding: 0.9rem 1rem; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line);
+  }
+  .summary:empty { display: none; }
+  .summary.ok { border-left-color: var(--signal-ok); }
+  .summary.near, .summary.no { border-left-color: var(--signal-hold); }
+  .summary p:first-child { margin-top: 0; }
+
+  .actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  button {
+    font: inherit; font-weight: 600; color: var(--bg); background: var(--signal-ok);
+    border: 0; border-radius: 4px; padding: 0.65rem 1.2rem; cursor: pointer;
+  }
+  button.quiet { color: var(--text); background: transparent; border: 1px solid var(--line); }
+  button:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  button[hidden] { display: none; }
+
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .claims li { grid-template-columns: 1fr; gap: 0.1rem; }
+    .result { grid-template-columns: 1.6rem 1fr; }
+    .result select, .fb { grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Test the Right Service</h1>
+  <p>Reachable and manageable are two separate facts about a server. Each capability on a server is its own service, and each test touches only one of them. A result supports the claim about the service it touched, from the machine it ran on, and nothing more.</p>
+  <p>You are at <span class="host">hq-win-02</span>, your operator workstation. You want to know whether you can manage <span class="host">hq-win-01</span> from here.</p>
+
+  <h2>The four claims</h2>
+  <ul class="claims" id="claims"></ul>
+
+  <h2 id="task-h" tabindex="-1">The results</h2>
+  <p id="task-text"></p>
+  <div class="results" id="results"></div>
+
+  <div class="summary" id="summary" aria-live="polite"></div>
+  <div class="actions">
+    <button type="button" id="check">Check my sorting</button>
+    <button type="button" id="advance" class="quiet" hidden>Move where one test ran</button>
+    <button type="button" id="restart" class="quiet" hidden>Start over</button>
+  </div>
+</main>
+
+<script>
+var CLAIMS = [
+  { id: "reach",  claim: "Reachable from hq-win-02", means: "It is powered on, and the network can route traffic to it from your workstation." },
+  { id: "other",  claim: "Another service answers", means: "One particular service is running. It says nothing about the management transport." },
+  { id: "manage", claim: "Manageable from hq-win-02", means: "The management transport is running and accepts requests from your workstation." },
+  { id: "none",   claim: "Says nothing about hq-win-02", means: "A secondhand report, or a test run from somewhere else." }
+];
+
+var RESULTS = [
+  { text: "From hq-win-02, you ping hq-win-01. It answers.",
+    key: "reach",
+    ok: "The network answered the ping. hq-win-01 is powered on and routable from your workstation, and that is all a ping can show.",
+    hint: "Ask which service on hq-win-01 answers a ping." },
+  { text: "From hq-win-02, you open a desktop session to hq-win-01. Its screen appears.",
+    key: "other",
+    ok: "The desktop-session service answered. It is running, and it is a different service from the transport the consoles use.",
+    hint: "Ask whether a desktop session travels over the same service the consoles use." },
+  { text: "From hq-win-02, a management console asks hq-win-01 which services are running. A list comes back.",
+    key: "manage",
+    ok: "A management request came back. The transport is running and accepts requests from hq-win-02.",
+    hint: "Ask what had to be running on hq-win-01, and accepting your machine, for this answer to come back.",
+    pass2: {
+      text: "At hq-win-01\u2019s own console, a management console asks which services are running. A list comes back.",
+      key: "none",
+      ok: "Run at the server itself, this request never crossed the network. The services are running. Nothing here shows whether a request from hq-win-02 would reach the server.",
+      hint: "Ask which machine sent this request, and whether it crossed the network."
+    } },
+  { text: "The colleague who built hq-win-01 says it\u2019s up and answering.",
+    key: "none",
+    ok: "This is an account, not a result. It names no test, no service, and no machine it was run from.",
+    hint: "Ask what test this describes, and where it ran." },
+  { text: "From hq-win-02, a browser gateway asks hq-win-01 for its running services. A list comes back.",
+    key: "manage",
+    ok: "The gateway hands its request to the same transport as the console. Same evidence, through a different front end.",
+    hint: "Ask what the gateway\u2019s request travels over to reach hq-win-01." },
+  { text: "From hq-win-02, you open a shared folder on hq-win-01 and see its files.",
+    key: "other",
+    ok: "The file-sharing service answered. It is one more service, separate from the transport.",
+    hint: "Ask which service on hq-win-01 serves a shared folder." }
+];
+
+var W = ["no","one","two","three","four","five","six","seven","eight","nine","ten"];
+function w(x) { return x < W.length ? W[x] : x.toLocaleString("en-US"); }
+function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+function claimName(id) { return CLAIMS.filter(function (c) { return c.id === id; })[0].claim; }
+function hostify(t) {
+  return t.replace(/hq-win-0\d/g, function (m) { return '<span class="host">' + m + '</span>'; });
+}
+
+var state = { pass: 1, answers: {}, pass1: {} };
+var $ = function (id) { return document.getElementById(id); };
+
+function current(i) { var r = RESULTS[i]; return (state.pass === 2 && r.pass2) ? r.pass2 : r; }
+
+CLAIMS.forEach(function (c) {
+  var li = document.createElement("li");
+  li.innerHTML = '<span class="claim">' + hostify(c.claim) + '</span><span class="means">' + hostify(c.means) + '</span>';
+  $("claims").appendChild(li);
+});
+
+function render() {
+  $("task-text").innerHTML = state.pass === 1
+    ? "Sort each result under the strongest claim it supports. Then check your sorting."
+    : "One test has moved. Re-sort the results. Your earlier choice is shown under each one.";
+  var box = $("results"); box.innerHTML = "";
+  RESULTS.forEach(function (r, i) {
+    var cur = current(i);
+    var row = document.createElement("div"); row.className = "result";
+    var num = document.createElement("span"); num.className = "num"; num.setAttribute("aria-hidden", "true");
+    num.textContent = (i + 1).toLocaleString("en-US");
+    var txt = document.createElement("div");
+    var id = "sel" + i;
+    var lab = document.createElement("label"); lab.setAttribute("for", id);
+    lab.innerHTML = hostify(cur.text);
+    if (state.pass === 2 && r.pass2) {
+      var ch = document.createElement("span"); ch.className = "changed"; ch.textContent = "Where this test ran has changed";
+      txt.appendChild(ch);
+    }
+    txt.appendChild(lab);
+    if (state.pass === 2) {
+      var b = document.createElement("span"); b.className = "before";
+      b.innerHTML = "Before: " + hostify(claimName(state.pass1[i]));
+      txt.appendChild(b);
+    }
+    var sel = document.createElement("select"); sel.id = id;
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Choose a claim"; sel.appendChild(o0);
+    CLAIMS.forEach(function (c) {
+      var o = document.createElement("option"); o.value = c.id; o.textContent = c.claim;
+      if (state.answers[i] === c.id) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", function () { state.answers[i] = sel.value || undefined; var f = $("fb" + i); f.textContent = ""; f.className = "fb"; });
+    var fb = document.createElement("p"); fb.className = "fb"; fb.id = "fb" + i;
+    row.appendChild(num); row.appendChild(txt); row.appendChild(sel); row.appendChild(fb);
+    box.appendChild(row);
+  });
+}
+
+function check() {
+  var key = RESULTS.map(function (r, i) { return current(i).key; });
+  var missing = [], wrong = [];
+  key.forEach(function (k, i) { if (!state.answers[i]) missing.push(i); else if (state.answers[i] !== k) wrong.push(i); });
+  var sum = $("summary"); sum.className = "summary";
+  if (missing.length) {
+    sum.innerHTML = "<p>Sort every result first. Still open: " + missing.map(function (i) { return "result " + (i + 1); }).join(", ") + ".</p>";
+    return;
+  }
+  key.forEach(function (k, i) {
+    var f = $("fb" + i), c = current(i);
+    if (state.answers[i] === k) {
+      f.innerHTML = hostify(c.ok); f.className = "fb ok";
+      if (state.pass === 2 && state.pass1[i] !== k) f.innerHTML += ' <span class="moved">Moved.</span>';
+    } else { f.innerHTML = hostify(c.hint); f.className = "fb no"; }
+  });
+  var n = key.length;
+  if (!wrong.length) {
+    sum.className = "summary ok";
+    if (state.pass === 1) {
+      state.pass1 = key.slice();
+      sum.innerHTML = "<p>All " + w(n) + " are sorted correctly. Only two results support the claim you wanted, and both are management requests sent from " + hostify("hq-win-02") + " that came back. The ping, the desktop session, and the shared folder each confirm a different service.</p>" +
+        "<p>Now move one assumption: where one of the tests ran.</p>";
+      $("check").hidden = true; $("advance").hidden = false;
+    } else {
+      var moved = key.filter(function (k, i) { return k !== state.pass1[i]; }).length;
+      sum.innerHTML = "<p>All " + w(n) + " are sorted correctly. " + cap(w(moved)) + " result moved. The answer it returned looks exactly as it did before. What changed is where the request came from. Where a test ran is part of what it proves.</p>" +
+        "<p>Use this whenever you report on a server: \u201cI know it is ___ because I ran ___ from ___.\u201d</p>";
+      $("check").hidden = true; $("restart").hidden = false;
+    }
+  } else if (wrong.length === 1) {
+    sum.className = "summary near";
+    sum.innerHTML = "<p>Close. The sorting is right apart from one result: result " + (wrong[0] + 1) + ". The note under it gives the question that decides it.</p>";
+  } else {
+    sum.className = "summary no";
+    sum.innerHTML = "<p>" + cap(w(wrong.length)) + " results need another look. Each result supports only the claim about the service it touched, from the machine it ran on. Start with two questions for each one. Which service on " + hostify("hq-win-01") + " answered? Which machine sent the test?</p>";
+  }
+}
+
+function advance() {
+  state.pass = 2; state.answers = {};
+  $("advance").hidden = true; $("check").hidden = false;
+  $("summary").innerHTML = ""; $("summary").className = "summary";
+  render(); $("task-h").focus();
+}
+function restart() {
+  state = { pass: 1, answers: {}, pass1: {} };
+  $("restart").hidden = true; $("check").hidden = false; $("advance").hidden = true;
+  $("summary").innerHTML = ""; $("summary").className = "summary";
+  render(); $("task-h").focus();
+}
+
+$("check").addEventListener("click", check);
+$("advance").addEventListener("click", advance);
+$("restart").addEventListener("click", restart);
+render();
+</script>
+</body>
+</html>

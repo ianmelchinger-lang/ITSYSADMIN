@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predict the Request</title>
+<style>
+  :root {
+    --bg: #121b24;
+    --surface: #18242f;
+    --surface-raised: #1f2d3a;
+    --line: #2d3d4c;
+    --text: #e3e9ef;
+    --muted: #a3b2bf;
+    --signal-ok: #72d1b2;
+    --signal-hold: #e8b65a;
+    --signal-stop: #ef8a80;
+    --focus: #8fc9ff;
+    --chosen: #24384a;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.0625rem; line-height: 1.6;
+  }
+  main { max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 {
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-weight: 600; line-height: 1.25; margin: 0;
+  }
+  h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-top: 2.25rem; }
+  p { margin: 0.75rem 0 0; }
+  .host { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.95em; }
+
+  /* Fixed facts */
+  .facts { list-style: none; margin: 1rem 0 0; padding: 0; border-top: 1px solid var(--line); }
+  .facts li {
+    display: grid; grid-template-columns: 11rem 1fr; gap: 1rem;
+    padding: 0.7rem 0; border-bottom: 1px solid var(--line);
+  }
+  .facts .name { color: var(--muted); font-size: 0.95rem; }
+
+  .transport {
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    margin-top: 1.5rem; padding: 0.9rem 1rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .lamp {
+    width: 0.85rem; height: 0.85rem; border-radius: 50%;
+    background: var(--signal-stop); box-shadow: 0 0 0 3px rgba(239,138,128,0.18);
+    flex: none;
+  }
+  .transport.is-on .lamp { background: var(--signal-ok); box-shadow: 0 0 0 3px rgba(114,209,178,0.2); }
+  .transport strong { font-weight: 600; }
+
+  /* Rows */
+  .rows { margin-top: 1rem; border-top: 1px solid var(--line); }
+  fieldset.row {
+    border: 0; margin: 0; padding: 0.9rem 0;
+    border-bottom: 1px solid var(--line);
+    display: grid; grid-template-columns: 2rem 1fr 16rem; gap: 0.75rem 1rem; align-items: start;
+  }
+  .row .num { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 0.1rem; }
+  .row legend { float: left; width: 100%; padding: 0; }
+  .row .scenario { grid-column: 2; }
+  .row .where { display: block; color: var(--muted); font-size: 0.92rem; }
+  .row .what { display: block; }
+  .row .before { display: block; color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
+  .pick { grid-column: 3; display: flex; gap: 0.4rem; }
+  .pick label {
+    flex: 1; text-align: center; padding: 0.45rem 0.4rem; font-size: 0.95rem; white-space: nowrap;
+    border: 1px solid var(--line); border-radius: 4px; background: var(--surface); cursor: pointer;
+  }
+  .pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .pick input:checked + span { font-weight: 600; }
+  .pick label:has(input:checked) { background: var(--chosen); border-color: var(--focus); }
+  .pick label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .fb { grid-column: 2 / 4; font-size: 0.95rem; margin: 0; padding-left: 0.75rem; border-left: 3px solid var(--line); }
+  .fb:empty { display: none; }
+  .fb.ok { border-left-color: var(--signal-ok); }
+  .fb.no { border-left-color: var(--signal-hold); }
+  .moved { color: var(--signal-hold); font-weight: 600; font-size: 0.88rem; }
+
+  .actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  button {
+    font: inherit; font-weight: 600; color: var(--bg); background: var(--signal-ok);
+    border: 0; border-radius: 4px; padding: 0.65rem 1.2rem; cursor: pointer;
+  }
+  button.quiet { color: var(--text); background: transparent; border: 1px solid var(--line); }
+  button:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  button[hidden] { display: none; }
+
+  .summary {
+    margin-top: 1.25rem; padding: 0.9rem 1rem; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line);
+  }
+  .summary:empty { display: none; }
+  .summary.ok { border-left-color: var(--signal-ok); }
+  .summary.near, .summary.no { border-left-color: var(--signal-hold); }
+  .summary p:first-child { margin-top: 0; }
+
+  .sr { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .transport .lamp { transition: background-color 300ms ease, box-shadow 300ms ease; }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .facts li { grid-template-columns: 1fr; gap: 0.1rem; }
+    fieldset.row { grid-template-columns: 1.6rem 1fr; }
+    .pick { grid-column: 2; }
+    .fb { grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Predict the Request</h1>
+  <p>Every console, gateway, or command prompt pointed at a server is a front end. It collects what you want done and hands it to one service on that server: the remote management transport. Whether a request gets through depends on that service, not on the tool.</p>
+
+  <h2>The setup</h2>
+  <ul class="facts">
+    <li><span class="name host">hq-win-01</span><span>The server you need to manage.</span></li>
+    <li><span class="name host">hq-win-02</span><span>Your operator workstation, set up for this exercise. It is a permitted origin: a machine the transport on <span class="host">hq-win-01</span> is set to accept connections from.</span></li>
+    <li><span class="name">Help-desk laptop</span><span>Another machine on the network. It is not a permitted origin.</span></li>
+  </ul>
+
+  <div class="transport" id="transport" role="status">
+    <span class="lamp" aria-hidden="true"></span>
+    <span id="transport-text"></span>
+  </div>
+
+  <h2 id="task-h" tabindex="-1">Your predictions</h2>
+  <p id="task-text"></p>
+  <div class="rows" id="rows"></div>
+
+  <div class="summary" id="summary" aria-live="polite"></div>
+  <div class="actions">
+    <button type="button" id="check">Check my predictions</button>
+    <button type="button" id="advance" class="quiet" hidden>Switch the transport on and predict again</button>
+    <button type="button" id="restart" class="quiet" hidden>Start over</button>
+  </div>
+</main>
+
+<script>
+var THROUGH = "through", REFUSED = "refused";
+
+/* Each scenario carries its outcome and feedback for each transport state.
+   Outcomes are derived from three conditions, below, and checked against the key in code. */
+var SCENARIOS = [
+  { where: "At hq-win-02, in a management console", what: "Ask hq-win-01 which services are running.",
+    crosses: true, origin: "permitted", isEnable: false,
+    off: { ok: "Refused. The console's request travels over the transport on hq-win-01, and the transport is off.",
+           hint: "Ask what this request travels over to reach hq-win-01, and whether that is running." },
+    on:  { ok: "Gets through. The transport is running, and hq-win-02 is a permitted origin.",
+           hint: "Ask two questions. Is the transport running? Does it accept hq-win-02?" } },
+  { where: "At hq-win-02, in a browser gateway", what: "Ask hq-win-01 which services are running.",
+    crosses: true, origin: "permitted", isEnable: false,
+    off: { ok: "Refused, for the same reason as the console. The gateway hands its request to the same transport.",
+           hint: "Ask whether the gateway uses a different service on hq-win-01 from the console." },
+    on:  { ok: "Gets through, exactly as the console does. Same transport, same result.",
+           hint: "Compare this row with the console row. What differs between them on hq-win-01?" } },
+  { where: "At hq-win-02, at a command prompt", what: "Send the instruction that switches the transport on.",
+    crosses: true, origin: "permitted", isEnable: true,
+    off: { ok: "Refused. This instruction would have to travel over the transport it is meant to start.",
+           hint: "Ask which service would carry this instruction to hq-win-01." },
+    on:  { ok: "Gets through. The transport is already running, so the instruction arrives and finds nothing to do.",
+           hint: "The transport is now running. Ask whether anything still blocks a request from hq-win-02." } },
+  { where: "At hq-win-01's own console", what: "Ask which services are running.",
+    crosses: false, origin: "local", isEnable: false,
+    off: { ok: "Gets through. You are at the server, so nothing crosses the network and the transport is not involved.",
+           hint: "Ask whether this request has to cross the network at all." },
+    on:  { ok: "Gets through, as before. A request made at the server never depended on the transport.",
+           hint: "Ask whether this request has to cross the network at all." } },
+  { where: "At hq-win-01's own console", what: "Send the instruction that switches the transport on.",
+    crosses: false, origin: "local", isEnable: true,
+    off: { ok: "Gets through. This is out-of-band access: a route to the server that works without the transport. It is how the transport gets switched on.",
+           hint: "Ask whether this instruction needs the transport to reach the server." },
+    on:  { ok: "Gets through. The transport is already on, so nothing changes.",
+           hint: "Ask whether this instruction needs the transport to reach the server." } },
+  { where: "At the help-desk laptop, in a management console", what: "Ask hq-win-01 which services are running.",
+    crosses: true, origin: "not-permitted", isEnable: false,
+    off: { ok: "Refused. The transport is off, and the laptop is not a permitted origin either.",
+           hint: "Ask whether the transport is running. Then ask whether it accepts this machine." },
+    on:  { ok: "Still refused. The transport is running, but it does not accept connections from the laptop.",
+           hint: "The transport is running. Ask whether it accepts connections from this machine." } },
+  { where: "At hq-win-02, in a management tool you have never used", what: "Ask hq-win-01 which services are running.",
+    crosses: true, origin: "permitted", isEnable: false,
+    off: { ok: "Refused. A new front end hands its request to the same transport, so it fails the same way.",
+           hint: "Ask what this tool's request travels over to reach hq-win-01." },
+    on:  { ok: "Gets through. Any front end works once the transport is running and accepts your machine.",
+           hint: "Ask whether a new tool changes what the request travels over." } }
+];
+
+/* The rule the concept teaches. */
+function outcome(s, transportOn) {
+  if (!s.crosses) return THROUGH;
+  if (!transportOn) return REFUSED;
+  return s.origin === "permitted" ? THROUGH : REFUSED;
+}
+
+var state = { pass: 1, transportOn: false, answers: {}, pass1: {}, solved: false };
+var $ = function (id) { return document.getElementById(id); };
+
+function setTransport() {
+  $("transport").classList.toggle("is-on", state.transportOn);
+  $("transport-text").innerHTML = state.transportOn
+    ? 'Transport on <span class="host">hq-win-01</span>: <strong>running</strong>. It was switched on at the server\u2019s own console.'
+    : 'Transport on <span class="host">hq-win-01</span>: <strong>off</strong>.';
+  $("task-text").innerHTML = hostify(state.pass === 1
+    ? "For each request, predict whether it reaches hq-win-01 or is refused. Then check your prediction."
+    : "The transport is now running. Predict each request again. Your earlier prediction is shown under each one.");
+}
+
+function hostify(text) {
+  return text.replace(/hq-win-0\d(?:'s)?/g, function (m) {
+    var base = m.replace("'s", ""); var tail = m.length > base.length ? "\u2019s" : "";
+    return '<span class="host">' + base + '</span>' + tail;
+  });
+}
+
+function render() {
+  var box = $("rows"); box.innerHTML = "";
+  SCENARIOS.forEach(function (s, i) {
+    var fs = document.createElement("fieldset"); fs.className = "row";
+    var num = document.createElement("span"); num.className = "num"; num.setAttribute("aria-hidden", "true");
+    num.textContent = (i + 1).toLocaleString("en-US");
+    var sc = document.createElement("div"); sc.className = "scenario";
+    var lg = document.createElement("legend"); lg.className = "sr";
+    lg.textContent = "Request " + (i + 1) + ". " + s.where + ". " + s.what;
+    sc.innerHTML = '<span class="where">' + hostify(s.where) + '</span><span class="what">' + hostify(s.what) + '</span>';
+    if (state.pass === 2) {
+      var b = document.createElement("span"); b.className = "before";
+      b.textContent = "With the transport off: " + (state.pass1[i] === THROUGH ? "gets through" : "refused");
+      sc.appendChild(b);
+    }
+    var pick = document.createElement("div"); pick.className = "pick";
+    [[THROUGH, "Gets through"], [REFUSED, "Refused"]].forEach(function (o) {
+      var lab = document.createElement("label");
+      var inp = document.createElement("input");
+      inp.type = "radio"; inp.name = "r" + i; inp.value = o[0];
+      inp.checked = state.answers[i] === o[0];
+      inp.addEventListener("change", function () { state.answers[i] = o[0]; clearRowFeedback(i); });
+      var sp = document.createElement("span"); sp.textContent = o[1];
+      lab.appendChild(inp); lab.appendChild(sp); pick.appendChild(lab);
+    });
+    var fb = document.createElement("p"); fb.className = "fb"; fb.id = "fb" + i;
+    fs.appendChild(lg); fs.appendChild(num); fs.appendChild(sc); fs.appendChild(pick); fs.appendChild(fb);
+    box.appendChild(fs);
+  });
+}
+
+function clearRowFeedback(i) { var f = $("fb" + i); f.textContent = ""; f.className = "fb"; }
+
+function check() {
+  var key = SCENARIOS.map(function (s) { return outcome(s, state.transportOn); });
+  var missing = [], wrong = [];
+  key.forEach(function (k, i) {
+    if (!state.answers[i]) missing.push(i);
+    else if (state.answers[i] !== k) wrong.push(i);
+  });
+  var sum = $("summary"); sum.className = "summary";
+  if (missing.length) {
+    sum.innerHTML = "<p>Make a prediction for every request first. Still open: " +
+      missing.map(function (i) { return "request " + (i + 1); }).join(", ") + ".</p>";
+    return;
+  }
+  key.forEach(function (k, i) {
+    var f = $("fb" + i), msg = state.transportOn ? SCENARIOS[i].on : SCENARIOS[i].off;
+    if (state.answers[i] === k) { f.innerHTML = hostify(msg.ok); f.className = "fb ok"; }
+    else { f.innerHTML = hostify(msg.hint); f.className = "fb no"; }
+    if (state.pass === 2 && state.answers[i] === k && state.pass1[i] !== k) {
+      var m = document.createElement("span"); m.className = "moved"; m.textContent = " Moved.";
+      f.appendChild(m);
+    }
+  });
+
+  var n = key.length;
+  var W = ["no","one","two","three","four","five","six","seven","eight","nine","ten"];
+  var w = function (x) { return x < W.length ? W[x] : x.toLocaleString("en-US"); };
+  var cap = function (t) { return t.charAt(0).toUpperCase() + t.slice(1); };
+  if (wrong.length === 0) {
+    sum.className = "summary ok";
+    if (state.pass === 1) {
+      state.pass1 = key.slice(); state.solved = true;
+      sum.innerHTML = "<p>All " + w(n) + " are right. Every request that crosses the network depends on the transport, whichever front end sends it. The only request that can switch the transport on is the one that arrives without it.</p>" +
+        "<p>Now move one assumption: switch the transport on and predict again.</p>";
+      $("advance").hidden = false; $("check").hidden = true;
+    } else {
+      var moved = key.filter(function (k, i) { return k !== state.pass1[i]; }).length;
+      var stayed = n - moved;
+      sum.innerHTML = "<p>All " + w(n) + " are right. " + cap(w(moved)) +
+        " outcomes moved and " + w(stayed) + " stayed. Requests made at the server never depended on the transport. The laptop is still refused, because a running transport accepts only permitted origins.</p>" +
+        "<p>The front end never decided anything. What decided each outcome was where the request came from and what was running on " + hostify("hq-win-01") + ".</p>";
+      $("check").hidden = true; $("restart").hidden = false;
+    }
+  } else if (wrong.length === 1) {
+    sum.className = "summary near";
+    sum.innerHTML = "<p>Close. The pattern is right, and one prediction is out of place: request " + (wrong[0] + 1) + ". The note under it gives the question that decides it.</p>";
+  } else {
+    sum.className = "summary no";
+    sum.innerHTML = "<p>" + cap(w(wrong.length)) + " predictions need another look. One question decides every row: does this request have to travel over the transport on " + hostify("hq-win-01") + "? If it does, it gets through only when the transport is running and accepts the machine it comes from. Start with the rows where you are not sitting at the server.</p>";
+  }
+}
+
+function advance() {
+  state.pass = 2; state.transportOn = true; state.answers = {};
+  $("advance").hidden = true; $("check").hidden = false;
+  $("summary").innerHTML = ""; $("summary").className = "summary";
+  setTransport(); render(); $("task-h").focus();
+}
+
+function restart() {
+  state = { pass: 1, transportOn: false, answers: {}, pass1: {}, solved: false };
+  $("restart").hidden = true; $("check").hidden = false; $("advance").hidden = true;
+  $("summary").innerHTML = ""; $("summary").className = "summary";
+  setTransport(); render(); $("task-h").focus();
+}
+
+$("check").addEventListener("click", check);
+$("advance").addEventListener("click", advance);
+$("restart").addEventListener("click", restart);
+setTransport(); render();
+</script>
+</body>
+</html>

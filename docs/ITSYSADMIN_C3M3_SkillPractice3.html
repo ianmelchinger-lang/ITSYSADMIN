@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Both Ends of the Session</title>
+<style>
+  :root {
+    --bg: #121b24;
+    --surface: #18242f;
+    --surface-raised: #1f2d3a;
+    --line: #2d3d4c;
+    --text: #e3e9ef;
+    --muted: #a3b2bf;
+    --signal-ok: #72d1b2;
+    --signal-hold: #e8b65a;
+    --signal-stop: #ef8a80;
+    --focus: #8fc9ff;
+    --chosen: #24384a;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.0625rem; line-height: 1.6;
+  }
+  main { max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 {
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-weight: 600; line-height: 1.25; margin: 0;
+  }
+  h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-top: 2.25rem; }
+  p { margin: 0.75rem 0 0; }
+  .host { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.95em; white-space: nowrap; }
+
+  .rule {
+    margin-top: 1.25rem; padding: 0.9rem 1rem;
+    border-left: 4px solid var(--signal-hold); background: var(--surface); border-radius: 0 4px 4px 0;
+  }
+  .rule p:first-child { margin-top: 0; }
+
+  .configs { margin-top: 1rem; border-top: 1px solid var(--line); }
+  .config {
+    display: grid; grid-template-columns: 2rem 1fr 15rem; gap: 0.6rem 1rem; align-items: start;
+    padding: 0.9rem 0; border-bottom: 1px solid var(--line);
+  }
+  .config.is-locked { opacity: 0.7; }
+  .config.is-new { background: linear-gradient(var(--chosen), var(--chosen)) left / 4px 100% no-repeat; padding-left: 0.6rem; }
+  .config .num { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 0.15rem; }
+  .ends { display: grid; gap: 0.3rem; }
+  .end { display: grid; grid-template-columns: 11rem 1fr; gap: 0.75rem; }
+  .end .who { color: var(--muted); font-size: 0.95rem; }
+  .end .set.accepts { color: var(--signal-hold); }
+  .end .set.refuses { color: var(--signal-ok); }
+  .config select {
+    font: inherit; font-size: 0.95rem; width: 100%;
+    color: var(--text); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 4px; padding: 0.45rem 0.5rem;
+  }
+  .config select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .fb { grid-column: 2 / 4; font-size: 0.95rem; margin: 0; padding-left: 0.75rem; border-left: 3px solid var(--line); }
+  .fb:empty { display: none; }
+  .fb.ok { border-left-color: var(--signal-ok); }
+  .fb.no { border-left-color: var(--signal-hold); }
+
+  fieldset.record { border: 1px solid var(--line); border-radius: 4px; margin: 1rem 0 0; padding: 0.9rem 1rem 1rem; background: var(--surface); }
+  .record legend { font-weight: 600; padding: 0 0.35rem; }
+  .record label { display: grid; grid-template-columns: 1.25rem 1fr; gap: 0.75rem; align-items: start; margin-top: 0.6rem; cursor: pointer; }
+  .record input { width: 1.1rem; height: 1.1rem; margin: 0.3rem 0 0; accent-color: var(--signal-ok); }
+  .record input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .record .sub { display: block; color: var(--muted); font-size: 0.92rem; }
+  #fb-record { margin-top: 0.75rem; grid-column: auto; }
+
+  .summary {
+    margin-top: 1.25rem; padding: 0.9rem 1rem; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line);
+  }
+  .summary:empty { display: none; }
+  .summary.ok { border-left-color: var(--signal-ok); }
+  .summary.near, .summary.no { border-left-color: var(--signal-hold); }
+  .summary p:first-child { margin-top: 0; }
+
+  .actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  button {
+    font: inherit; font-weight: 600; color: var(--bg); background: var(--signal-ok);
+    border: 0; border-radius: 4px; padding: 0.65rem 1.2rem; cursor: pointer;
+  }
+  button.quiet { color: var(--text); background: transparent; border: 1px solid var(--line); }
+  button:focus-visible, [tabindex="-1"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  button[hidden] { display: none; }
+
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .config { grid-template-columns: 1.6rem 1fr; }
+    .config select, .fb { grid-column: 2; }
+    .end { grid-template-columns: 1fr; gap: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Both Ends of the Session</h1>
+  <p>A management session connects two configured machines: the one doing the managing and the one being managed. When you sign in, a credential leaves your workstation, crosses the network, and arrives at the server. Each end has its own setting for how it sends or accepts that credential, and the session runs only on terms both ends allow.</p>
+  <div class="rule">
+    <p>Hardening guidance for Windows Server requires the management transport to be configured so that credentials do not cross it in plain text. It applies that rule at both ends of the session.</p>
+    <p>Plain text matters because anyone who can watch the network traffic can read a credential sent that way.</p>
+  </div>
+
+  <h2 id="task-h" tabindex="-1">Predict each session</h2>
+  <p id="task-text"></p>
+  <div class="configs" id="configs"></div>
+
+  <fieldset class="record" id="record">
+    <legend>Which machines must the change record name?</legend>
+    <div id="record-items"></div>
+    <p class="fb" id="fb-record"></p>
+  </fieldset>
+
+  <div class="summary" id="summary" aria-live="polite"></div>
+  <div class="actions">
+    <button type="button" id="check">Check my answers</button>
+    <button type="button" id="advance" class="quiet" hidden>Add a second managing machine</button>
+    <button type="button" id="restart" class="quiet" hidden>Start over</button>
+  </div>
+</main>
+
+<script>
+var OUTCOMES = [
+  { id: "fails",   label: "Session fails" },
+  { id: "plain",   label: "Runs in plain text" },
+  { id: "half",    label: "Runs; only one end protected" },
+  { id: "met",     label: "Runs protected at both ends" }
+];
+var SET = {
+  srvAccepts: { text: "Accepts plain-text credentials", cls: "accepts" },
+  srvRefuses: { text: "Refuses plain-text credentials", cls: "refuses" },
+  wsPlain:    { text: "Signs in only with plain text", cls: "accepts" },
+  wsRefuses:  { text: "Refuses plain text", cls: "refuses" }
+};
+
+/* The rule the concept teaches, applied in code. */
+function outcome(serverRefuses, clientRefuses) {
+  if (serverRefuses && !clientRefuses) return "fails";
+  if (!serverRefuses && !clientRefuses) return "plain";
+  if (!serverRefuses && clientRefuses) return "half";
+  return "met";
+}
+
+var CONFIGS = [
+  { server: false, client: false, clientName: "hq-win-02",
+    ok: "Both ends allow plain text, so the session runs, and anyone watching the network can read the credential.",
+    hint: "Ask what each end allows, then whether plain text is still on the table." },
+  { server: true, client: false, clientName: "hq-win-02",
+    ok: "The server refuses the only method the workstation offers. With no method in common the session fails, and the error looks like a broken server.",
+    hint: "Ask whether the two ends have any method in common." },
+  { server: false, client: true, clientName: "hq-win-02",
+    ok: "The workstation refuses plain text, so its own sessions are protected. The server still accepts plain text from any other machine that offers it.",
+    hint: "Ask what the server would accept from a machine other than hq-win-02." },
+  { server: true, client: true, clientName: "hq-win-02",
+    ok: "Both ends refuse plain text. The session runs, and the rule holds at both ends.",
+    hint: "Ask what each end allows, then what they share." }
+];
+var PASS2_CONFIG = { server: true, client: false, clientName: "Second admin workstation",
+  ok: "Your change set two ends, and this session has a third. The second workstation still offers only plain text, so its sessions now fail.",
+  hint: "Ask what this workstation offers, and what the server now accepts." };
+
+var MACHINES_P1 = [
+  { id: "srv", name: "hq-win-01", sub: "The server being managed.", need: true },
+  { id: "ws",  name: "hq-win-02", sub: "Your workstation. It manages hq-win-01.", need: true },
+  { id: "lap", name: "Help-desk laptop", sub: "Not a permitted origin. It does not manage hq-win-01.", need: false }
+];
+var MACHINES_P2 = MACHINES_P1.concat([
+  { id: "ws2", name: "Second admin workstation", sub: "A permitted origin. It also manages hq-win-01.", need: true }
+]);
+
+var W = ["no","one","two","three","four","five","six","seven","eight","nine","ten"];
+function w(x) { return x < W.length ? W[x] : x.toLocaleString("en-US"); }
+function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+function hostify(t) { return t.replace(/hq-win-0\d/g, function (m) { return '<span class="host">' + m + '</span>'; }); }
+function outLabel(id) { return OUTCOMES.filter(function (o) { return o.id === id; })[0].label; }
+
+var state = { pass: 1, answers: {}, record: {} };
+var $ = function (id) { return document.getElementById(id); };
+
+function rows() { return state.pass === 1 ? CONFIGS : CONFIGS.concat([PASS2_CONFIG]); }
+function machines() { return state.pass === 1 ? MACHINES_P1 : MACHINES_P2; }
+
+function render() {
+  $("task-text").innerHTML = state.pass === 1
+    ? "For each pair of settings, choose what happens when " + hostify("hq-win-02") + " opens a management session to " + hostify("hq-win-01") + ". Then mark which machines the change record must name."
+    : "A second admin workstation also manages " + hostify("hq-win-01") + ". Its setting was never changed. Predict its session, and mark the record again.";
+  var box = $("configs"); box.innerHTML = "";
+  rows().forEach(function (c, i) {
+    var locked = state.pass === 2 && i < CONFIGS.length;
+    var row = document.createElement("div");
+    row.className = "config" + (locked ? " is-locked" : "") + (state.pass === 2 && !locked ? " is-new" : "");
+    var num = document.createElement("span"); num.className = "num"; num.setAttribute("aria-hidden", "true");
+    num.textContent = (i + 1).toLocaleString("en-US");
+    var ends = document.createElement("div"); ends.className = "ends";
+    var srv = c.server ? SET.srvRefuses : SET.srvAccepts;
+    var cli = c.client ? SET.wsRefuses : SET.wsPlain;
+    var id = "sel" + i;
+    var srLabel = "Session " + (i + 1) + ". Server hq-win-01: " + srv.text + ". " + c.clientName + ": " + cli.text + ".";
+    ends.innerHTML =
+      '<div class="end"><span class="who">Server ' + hostify("hq-win-01") + '</span><span class="set ' + srv.cls + '">' + srv.text + '</span></div>' +
+      '<div class="end"><span class="who">' + hostify(c.clientName) + '</span><span class="set ' + cli.cls + '">' + cli.text + (state.pass === 2 && !locked ? " (unchanged)" : "") + '</span></div>';
+    var sel = document.createElement("select"); sel.id = id; sel.setAttribute("aria-label", srLabel + " What happens?");
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "What happens?"; sel.appendChild(o0);
+    OUTCOMES.forEach(function (o) {
+      var op = document.createElement("option"); op.value = o.id; op.textContent = o.label;
+      if (state.answers[i] === o.id) op.selected = true; sel.appendChild(op);
+    });
+    if (locked) { sel.value = outcome(c.server, c.client); sel.disabled = true; }
+    sel.addEventListener("change", function () { state.answers[i] = sel.value || undefined; var f = $("fb" + i); f.textContent = ""; f.className = "fb"; });
+    var fb = document.createElement("p"); fb.className = "fb"; fb.id = "fb" + i;
+    row.appendChild(num); row.appendChild(ends); row.appendChild(sel); row.appendChild(fb);
+    box.appendChild(row);
+  });
+
+  var rb = $("record-items"); rb.innerHTML = "";
+  machines().forEach(function (m) {
+    var lab = document.createElement("label");
+    var inp = document.createElement("input"); inp.type = "checkbox"; inp.id = "m-" + m.id;
+    inp.checked = !!state.record[m.id];
+    inp.addEventListener("change", function () { state.record[m.id] = inp.checked; $("fb-record").textContent = ""; $("fb-record").className = "fb"; });
+    var sp = document.createElement("span");
+    sp.innerHTML = '<span class="' + (m.name.indexOf("hq-win") === 0 ? "host" : "") + '">' + m.name + '</span><span class="sub">' + hostify(m.sub) + '</span>';
+    lab.appendChild(inp); lab.appendChild(sp); rb.appendChild(lab);
+  });
+  $("fb-record").textContent = ""; $("fb-record").className = "fb";
+}
+
+function check() {
+  var list = rows(), firstOpen = state.pass === 1 ? 0 : CONFIGS.length;
+  var missing = [], wrong = [];
+  for (var i = firstOpen; i < list.length; i++) {
+    var k = outcome(list[i].server, list[i].client);
+    if (!state.answers[i]) missing.push("session " + (i + 1));
+    else if (state.answers[i] !== k) wrong.push("session " + (i + 1));
+  }
+  var anyMarked = machines().some(function (m) { return state.record[m.id]; });
+  if (!anyMarked) missing.push("the change record");
+  var sum = $("summary"); sum.className = "summary";
+  if (missing.length) { sum.innerHTML = "<p>Answer everything first. Still open: " + missing.join(", ") + ".</p>"; return; }
+
+  for (var j = firstOpen; j < list.length; j++) {
+    var f = $("fb" + j), kk = outcome(list[j].server, list[j].client);
+    if (state.answers[j] === kk) { f.innerHTML = hostify(list[j].ok); f.className = "fb ok"; }
+    else { f.innerHTML = hostify(list[j].hint); f.className = "fb no"; }
+  }
+
+  var ms = machines();
+  var missed = ms.filter(function (m) { return m.need && !state.record[m.id]; });
+  var extra = ms.filter(function (m) { return !m.need && state.record[m.id]; });
+  var fr = $("fb-record");
+  if (!missed.length && !extra.length) {
+    fr.className = "fb ok";
+    fr.innerHTML = state.pass === 1
+      ? "Both ends: the server and the workstation that manages it. The laptop never opens a session to " + hostify("hq-win-01") + ", so the rule does not reach it."
+      : "Every end: the server and both machines that manage it. The laptop still does not manage " + hostify("hq-win-01") + ".";
+  } else {
+    fr.className = "fb no";
+    wrong.push("the change record");
+    fr.innerHTML = extra.length && !missed.length
+      ? "Ask whether every machine you marked ever opens a management session to " + hostify("hq-win-01") + "."
+      : "Ask which machines a credential leaves and arrives at in a management session to " + hostify("hq-win-01") + ".";
+  }
+
+  if (!wrong.length) {
+    sum.className = "summary ok";
+    if (state.pass === 1) {
+      sum.innerHTML = "<p>All correct. Change only the server and the work stops. Change only the workstation and the work carries on with the exposure still open. Only session " + w(4) + " meets the rule, because it holds at both ends.</p>" +
+        "<p>Now move one assumption: how many machines manage the server.</p>";
+      $("check").hidden = true; $("advance").hidden = false;
+    } else {
+      sum.innerHTML = "<p>All correct. The change looked finished after two ends, and the server had a third. The record grew from " + w(2) + " machines to " + w(3) + ", and the end nobody listed is the one whose sessions now fail.</p>" +
+        "<p>Whenever you change how credentials cross a remote session, list every machine it governs before you call the change done.</p>";
+      $("check").hidden = true; $("restart").hidden = false;
+    }
+  } else if (wrong.length === 1) {
+    sum.className = "summary near";
+    sum.innerHTML = "<p>Close. Everything else is right; " + wrong[0] + " is out of place. The note beside it gives the question that decides it.</p>";
+  } else {
+    sum.className = "summary no";
+    sum.innerHTML = "<p>" + cap(w(wrong.length)) + " answers need another look. A session runs only on terms both ends allow, and the rule binds both ends. For each session, start by asking what each end allows.</p>";
+  }
+}
+
+function advance() {
+  state.pass = 2; state.record = {};
+  state.answers = {};
+  $("advance").hidden = true; $("check").hidden = false;
+  $("summary").innerHTML = ""; $("summary").className = "summary";
+  render(); $("task-h").focus();
+}
+function restart() {
+  state = { pass: 1, answers: {}, record: {} };
+  $("restart").hidden = true; $("check").hidden = false; $("advance").hidden = true;
+  $("summary").innerHTML = ""; $("summary").className = "summary";
+  render(); $("task-h").focus();
+}
+
+$("check").addEventListener("click", check);
+$("advance").addEventListener("click", advance);
+$("restart").addEventListener("click", restart);
+render();
+</script>
+</body>
+</html>

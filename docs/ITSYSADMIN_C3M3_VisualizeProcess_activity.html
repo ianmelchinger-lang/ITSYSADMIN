@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From Refused to Managed</title>
+<style>
+  :root {
+    --bg: #121b24;
+    --surface: #18242f;
+    --surface-raised: #1f2d3a;
+    --line: #2d3d4c;
+    --text: #e3e9ef;
+    --muted: #a3b2bf;
+    --signal-ok: #72d1b2;
+    --signal-hold: #e8b65a;
+    --focus: #8fc9ff;
+    --chosen: #24384a;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1.0625rem; line-height: 1.6;
+  }
+  main { max-width: 48rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 {
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-weight: 600; line-height: 1.25; margin: 0;
+  }
+  h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-top: 2.25rem; }
+  p { margin: 0.75rem 0 0; }
+  .host { font-family: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace; font-size: 0.95em; white-space: nowrap; }
+
+  /* The path: three stages joined by a spine */
+  .stage { position: relative; padding-left: 2.25rem; margin-top: 2rem; }
+  .stage::before {
+    content: ""; position: absolute; left: 0.7rem; top: 0.35rem; bottom: -2rem;
+    width: 2px; background: var(--line);
+  }
+  .stage:last-of-type::before { bottom: 0.5rem; }
+  .stage .dot {
+    position: absolute; left: 0.3rem; top: 0.35rem; width: 0.95rem; height: 0.95rem;
+    border-radius: 50%; background: var(--bg); border: 2px solid var(--muted);
+  }
+  .stage.flag .dot { border-color: var(--signal-hold); background: var(--signal-hold); }
+  .stage.good .dot { border-color: var(--signal-ok); background: var(--signal-ok); }
+  .stage h2 { margin-top: 0; }
+  .stage .intro { color: var(--muted); margin-top: 0.3rem; }
+
+  fieldset.pick { border: 0; margin: 0.75rem 0 0; padding: 0; }
+  .pick legend { position: absolute; left: -9999px; }
+  .opt {
+    display: grid; grid-template-columns: 1.25rem 1fr; gap: 0.8rem; align-items: start;
+    margin-top: 0.5rem; padding: 0.7rem 0.9rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
+  }
+  .opt input { margin: 0.3rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--signal-ok); }
+  .opt input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .opt:has(input:checked) { background: var(--chosen); border-color: var(--focus); }
+
+  ol.steps { list-style: none; margin: 0.75rem 0 0; padding: 0; counter-reset: step; }
+  .step {
+    display: grid; grid-template-columns: 1.75rem 1fr auto; gap: 0.75rem; align-items: start;
+    padding: 0.7rem 0.75rem; margin-top: 0.5rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .step.flag { border-color: var(--signal-hold); }
+  .step .pos { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 0.05rem; }
+  .step .note { display: block; margin-top: 0.4rem; font-size: 0.93rem; padding-left: 0.6rem; border-left: 3px solid var(--signal-hold); }
+  .ctrl { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
+  .ctrl button {
+    font: inherit; font-size: 0.88rem; font-weight: 600;
+    color: var(--text); background: transparent; border: 1px solid var(--line);
+    border-radius: 4px; padding: 0.3rem 0.55rem; cursor: pointer; min-width: 2.4rem;
+  }
+  .ctrl button:disabled { opacity: 0.35; cursor: default; }
+  .out-h { margin-top: 1.25rem; font-size: 1rem; font-weight: 600; color: var(--muted); }
+  .out-empty { color: var(--muted); font-size: 0.95rem; margin-top: 0.4rem; }
+  ul.out { list-style: none; margin: 0; padding: 0; }
+  ul.out .step { background: transparent; border-style: dashed; }
+
+  .summary {
+    margin-top: 1.75rem; padding: 0.9rem 1rem; border-radius: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line);
+  }
+  .summary:empty { display: none; }
+  .summary.ok { border-left-color: var(--signal-ok); }
+  .summary.near, .summary.no { border-left-color: var(--signal-hold); }
+  .summary p:first-child { margin-top: 0; }
+
+  .actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .actions button {
+    font: inherit; font-weight: 600; color: var(--bg); background: var(--signal-ok);
+    border: 0; border-radius: 4px; padding: 0.65rem 1.2rem; cursor: pointer;
+  }
+  .actions button.quiet { color: var(--text); background: transparent; border: 1px solid var(--line); }
+  button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .sr { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .stage { padding-left: 1.75rem; }
+    .step { grid-template-columns: 1.5rem 1fr; }
+    .ctrl { grid-column: 1 / 3; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title"></h1>
+  <p id="intro"></p>
+
+  <section class="stage" id="stage-problem" aria-labelledby="h-problem">
+    <span class="dot" aria-hidden="true"></span>
+    <h2 id="h-problem"></h2>
+    <p class="intro" id="i-problem"></p>
+    <fieldset class="pick" id="pick-problem"><legend id="l-problem"></legend></fieldset>
+  </section>
+
+  <section class="stage" id="stage-steps" aria-labelledby="h-steps">
+    <span class="dot" aria-hidden="true"></span>
+    <h2 id="h-steps"></h2>
+    <p class="intro" id="i-steps"></p>
+    <ol class="steps" id="steps" aria-label="Your path, in order"></ol>
+    <p class="out-h">Left out of the path</p>
+    <ul class="out" id="out" aria-label="Steps left out"></ul>
+    <p class="out-empty" id="out-empty">Nothing yet.</p>
+  </section>
+
+  <section class="stage" id="stage-signal" aria-labelledby="h-signal">
+    <span class="dot" aria-hidden="true"></span>
+    <h2 id="h-signal"></h2>
+    <p class="intro" id="i-signal"></p>
+    <fieldset class="pick" id="pick-signal"><legend id="l-signal"></legend></fieldset>
+  </section>
+
+  <div class="summary" id="summary" aria-live="polite"></div>
+  <div class="actions">
+    <button type="button" id="check">Check my path</button>
+    <button type="button" id="restart" class="quiet">Start over</button>
+  </div>
+  <p class="sr" aria-live="polite" id="status"></p>
+</main>
+
+<script>
+/* Content block. The skeleton below renders whatever this object holds. */
+var CONTENT = {
+  title: "From Refused to Managed",
+  intro: "Put the whole path together: what the problem is, the steps that solve it, and the signal that tells you it worked.",
+  problem: {
+    heading: "The problem",
+    intro: "Pick the statement an administrator could act on.",
+    options: [
+      { id: "p-net", text: "The network between head office and the warehouse is down.",
+        why: "The ping from hq-win-02 answered, so the network can reach the server. Ask which statement matches every result on the desk." },
+      { id: "p-ok", text: "hq-win-01 answers on the network, but refuses management requests from hq-win-02.", correct: true,
+        why: "It separates reachable from manageable and names both machines, so it points at the service to fix." },
+      { id: "p-tool", text: "The management console on hq-win-02 is faulty and needs replacing.",
+        why: "Every front end hands its request to the same transport on the server. Ask whether a new tool would change that." }
+    ]
+  },
+  steps: {
+    heading: "The steps",
+    intro: "Use Up and Down to put the steps in order. Leave out any step that doesn't belong.",
+    items: [
+      { id: "check6",   text: "From hq-win-02, ask the same question again and compare it with the answer at the server's own console." },
+      { id: "ping",     text: "Ping hq-win-01 to confirm it can be managed.", distractor: true,
+        why: "A ping shows the server is reachable. It cannot show the server is manageable." },
+      { id: "enable",   text: "At hq-win-01's own console, switch on the management transport." },
+      { id: "target",   text: "State the target state and how you'll check it: the same question answered from hq-win-02 as at the server's own console." },
+      { id: "record",   text: "Write down the method, the machine it was switched on at, where it may be used from, and who authorized it." },
+      { id: "remote",   text: "From hq-win-02, send the instruction that switches the transport on.", distractor: true,
+        why: "That instruction would have to travel over the transport it is meant to start." },
+      { id: "harden",   text: "Set both hq-win-01 and hq-win-02 to refuse plain-text credentials." },
+      { id: "refusal",  text: "From hq-win-02, ask hq-win-01 the question and record the refusal." },
+      { id: "confirm",  text: "Confirm the transport is running and accepting connections from permitted origins." }
+    ],
+    /* Each rule: every step in `first` must come before every step in `then`. */
+    rules: [
+      { first: ["target"], then: ["refusal", "enable", "harden"],
+        why: "The target state and its check come before you test or change anything, so there is something to measure the result against." },
+      { first: ["refusal"], then: ["enable"],
+        why: "Record the refusal before you switch anything on. That \u201cbefore\u201d is what the final answer is compared with." },
+      { first: ["enable"], then: ["confirm", "check6"],
+        why: "Nothing from hq-win-02 can reach hq-win-01 until the transport is on." },
+      { first: ["harden"], then: ["check6"],
+        why: "Ask the final question after both ends are set, so the check covers the configuration you are leaving in place." },
+      { first: ["enable"], then: ["record"],
+        why: "The record names the machine the transport was switched on at, so it comes after that happens." }
+    ]
+  },
+  signal: {
+    heading: "The signal that it worked",
+    intro: "Pick the result that proves the target state.",
+    options: [
+      { id: "s-ping", text: "hq-win-01 answers a ping from hq-win-02.",
+        why: "That was already true before anything changed. Ask which result could not have happened at the start." },
+      { id: "s-ok", text: "The same question gets the same answer from hq-win-02 as at hq-win-01's own console.", correct: true,
+        why: "It asks the machine, from the place you need to work, and compares the answer with the one at the server itself." },
+      { id: "s-quiet", text: "Switching on the transport finished without an error.",
+        why: "That reports on the tool, not the machine. Ask which result comes from asking hq-win-01 directly." }
+    ]
+  },
+  successClose: "Your order is one of several that work. Steps with no dependency between them, such as setting both ends and confirming the transport, can swap places. What cannot move is anything that depends on the transport being on, or on the target state being stated."
+};
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function hostify(t) { return t.replace(/hq-win-0\d/g, function (m) { return '<span class="host">' + m + '</span>'; }); }
+  var W = ["no","one","two","three","four","five","six","seven","eight","nine","ten"];
+  function w(x) { return x < W.length ? W[x] : x.toLocaleString("en-US"); }
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  var byId = {}; CONTENT.steps.items.forEach(function (s) { byId[s.id] = s; });
+
+  var state;
+  function fresh() {
+    return { order: CONTENT.steps.items.map(function (s) { return s.id; }), out: [], problem: null, signal: null, flags: {} };
+  }
+
+  document.title = CONTENT.title;
+  $("title").textContent = CONTENT.title;
+  $("intro").textContent = CONTENT.intro;
+  ["problem", "steps", "signal"].forEach(function (k) {
+    $("h-" + k).textContent = CONTENT[k].heading;
+    $("i-" + k).textContent = CONTENT[k].intro;
+  });
+  $("l-problem").textContent = CONTENT.problem.heading;
+  $("l-signal").textContent = CONTENT.signal.heading;
+
+  function renderPick(kind) {
+    var fs = $("pick-" + kind);
+    Array.prototype.slice.call(fs.querySelectorAll("label")).forEach(function (n) { n.remove(); });
+    CONTENT[kind].options.forEach(function (o) {
+      var lab = document.createElement("label"); lab.className = "opt";
+      var inp = document.createElement("input"); inp.type = "radio"; inp.name = kind; inp.value = o.id; inp.id = o.id;
+      inp.checked = state[kind] === o.id;
+      inp.addEventListener("change", function () { state[kind] = o.id; clearFeedback(); });
+      var sp = document.createElement("span"); sp.innerHTML = hostify(o.text);
+      lab.appendChild(inp); lab.appendChild(sp); fs.appendChild(lab);
+    });
+  }
+
+  function stepItem(id, idx, inPath) {
+    var s = byId[id];
+    var li = document.createElement("li"); li.className = "step" + (state.flags[id] ? " flag" : "");
+    var pos = document.createElement("span"); pos.className = "pos";
+    pos.textContent = inPath ? (idx + 1).toLocaleString("en-US") : "\u2013";
+    var body = document.createElement("span"); body.innerHTML = hostify(s.text);
+    if (state.flags[id]) {
+      var n = document.createElement("span"); n.className = "note"; n.innerHTML = hostify(state.flags[id]); body.appendChild(n);
+    }
+    var ctrl = document.createElement("span"); ctrl.className = "ctrl";
+    var short = s.text.length > 48 ? s.text.slice(0, 48) + "\u2026" : s.text;
+    if (inPath) {
+      ctrl.appendChild(btn("Up", "Move up: " + short, idx === 0, function () { move(idx, -1); }, "up-" + id));
+      ctrl.appendChild(btn("Down", "Move down: " + short, idx === state.order.length - 1, function () { move(idx, 1); }, "down-" + id));
+      ctrl.appendChild(btn("Leave out", "Leave out: " + short, false, function () { leaveOut(id); }, "out-" + id));
+    } else {
+      ctrl.appendChild(btn("Put back", "Put back at the end of the path: " + short, false, function () { putBack(id); }, "back-" + id));
+    }
+    li.appendChild(pos); li.appendChild(body); li.appendChild(ctrl);
+    return li;
+  }
+  function btn(text, label, disabled, fn, id) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = text; b.id = id;
+    b.setAttribute("aria-label", label); b.disabled = disabled; b.addEventListener("click", fn); return b;
+  }
+
+  function renderSteps(focusId) {
+    var ol = $("steps"); ol.innerHTML = "";
+    state.order.forEach(function (id, i) { ol.appendChild(stepItem(id, i, true)); });
+    var ul = $("out"); ul.innerHTML = "";
+    state.out.forEach(function (id) { ul.appendChild(stepItem(id, 0, false)); });
+    $("out-empty").hidden = state.out.length > 0;
+    if (focusId) {
+      var el = $(focusId);
+      if (el && !el.disabled) el.focus();
+      else if (el) { var alt = el.parentNode.querySelector("button:not(:disabled)"); if (alt) alt.focus(); }
+    }
+  }
+
+  function move(i, d) {
+    var j = i + d; if (j < 0 || j >= state.order.length) return;
+    var id = state.order[i]; state.order[i] = state.order[j]; state.order[j] = id;
+    clearFeedback(); renderSteps((d < 0 ? "up-" : "down-") + id);
+    $("status").textContent = "Moved to position " + (j + 1) + " of " + state.order.length + ".";
+  }
+  function leaveOut(id) {
+    state.order = state.order.filter(function (x) { return x !== id; }); state.out.push(id);
+    clearFeedback(); renderSteps("back-" + id);
+    $("status").textContent = "Left out of the path.";
+  }
+  function putBack(id) {
+    state.out = state.out.filter(function (x) { return x !== id; }); state.order.push(id);
+    clearFeedback(); renderSteps("out-" + id);
+    $("status").textContent = "Put back at the end of the path, position " + state.order.length + ".";
+  }
+
+  function clearFeedback() {
+    var had = Object.keys(state.flags).length;
+    state.flags = {};
+    $("summary").innerHTML = ""; $("summary").className = "summary";
+    ["problem", "steps", "signal"].forEach(function (k) { $("stage-" + k).className = "stage"; });
+    if (had) renderSteps();
+  }
+
+  /* The check: returns every issue with the element it concerns. */
+  function assess() {
+    var issues = [];
+    var prob = CONTENT.problem.options.filter(function (o) { return o.id === state.problem; })[0];
+    var sig = CONTENT.signal.options.filter(function (o) { return o.id === state.signal; })[0];
+    if (!prob.correct) issues.push({ stage: "problem", where: "the problem statement", why: prob.why });
+    state.order.forEach(function (id) {
+      if (byId[id].distractor) issues.push({ stage: "steps", step: id, where: "a step that does not belong in the path", why: byId[id].why });
+    });
+    state.out.forEach(function (id) {
+      if (!byId[id].distractor) issues.push({ stage: "steps", step: id, where: "a step left out of the path", why: "This step belongs in the path. Ask what the target state depends on." });
+    });
+    var pos = {}; state.order.forEach(function (id, i) { pos[id] = i; });
+    CONTENT.steps.rules.forEach(function (r) {
+      r.first.forEach(function (a) {
+        r.then.forEach(function (b) {
+          if (pos[a] !== undefined && pos[b] !== undefined && pos[a] > pos[b]) {
+            issues.push({ stage: "steps", step: b, where: "the order of two steps", why: r.why });
+          }
+        });
+      });
+    });
+    if (!sig.correct) issues.push({ stage: "signal", where: "the signal", why: sig.why });
+    return issues;
+  }
+
+  function check() {
+    var missing = [];
+    if (!state.problem) missing.push("the problem");
+    if (!state.signal) missing.push("the signal");
+    var sum = $("summary");
+    if (missing.length) { sum.className = "summary"; sum.innerHTML = "<p>Choose " + missing.join(" and ") + " first.</p>"; return; }
+    var issues = assess();
+    state.flags = {};
+    ["problem", "steps", "signal"].forEach(function (k) {
+      var bad = issues.some(function (x) { return x.stage === k; });
+      $("stage-" + k).className = "stage " + (bad ? "flag" : "good");
+    });
+    if (!issues.length) {
+      sum.className = "summary ok";
+      var prob = CONTENT.problem.options.filter(function (o) { return o.correct; })[0];
+      var sig = CONTENT.signal.options.filter(function (o) { return o.correct; })[0];
+      sum.innerHTML = "<p>The path holds. " + hostify(prob.why) + " " + hostify(sig.why) + "</p><p>" + hostify(CONTENT.successClose) + "</p>";
+      renderSteps();
+    } else if (issues.length === 1) {
+      var x = issues[0];
+      if (x.step) state.flags[x.step] = x.why;
+      sum.className = "summary near";
+      sum.innerHTML = "<p>Close. The structure is right, and one element is out of place: " + x.where + ". " + (x.step ? "It is marked in the path." : hostify(x.why)) + "</p>";
+      renderSteps();
+    } else {
+      sum.className = "summary no";
+      sum.innerHTML = "<p>" + cap(w(issues.length)) + " pieces are out of place. The stages marked in amber hold them. Each step's position is decided by what it depends on. Start with the first change you make: what must already be true before it?</p>";
+      renderSteps();
+    }
+  }
+
+  function restart() {
+    state = fresh();
+    $("summary").innerHTML = ""; $("summary").className = "summary";
+    ["problem", "steps", "signal"].forEach(function (k) { $("stage-" + k).className = "stage"; });
+    renderPick("problem"); renderPick("signal"); renderSteps();
+    var first = document.querySelector('input[name="problem"]'); if (first) first.focus();
+  }
+
+  $("check").addEventListener("click", check);
+  $("restart").addEventListener("click", restart);
+  state = fresh();
+  renderPick("problem"); renderPick("signal"); renderSteps();
+})();
+</script>
+</body>
+</html>
