@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assemble the Path from Report to Record</title>
+<style>
+  :root {
+    --bg: #16222d;
+    --panel: #1e2e3b;
+    --panel-2: #243747;
+    --line: #34495c;
+    --ink: #e8eef2;
+    --muted: #a3b5c3;
+    --accent: #e9b949;
+    --accent-ink: #1a1405;
+    --rail: #6fc3c0;
+    --rail-bg: #1f3c40;
+    --near: #e9b949;
+    --wrong: #ea9282;
+    --set-aside: #7f93a3;
+    --focus: #ffd97a;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: 2rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.6rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  .lede { color: var(--muted); font-size: 1.0625rem; }
+  .note { color: var(--muted); font-size: 0.95rem; }
+
+  .chain { list-style: none; margin: 1.25rem 0 0; padding: 0; position: relative; }
+  .chain::before { content: ""; position: absolute; left: 1.15rem; top: 1.4rem; bottom: 1.4rem; width: 2px; background: var(--line); }
+  .chain.solved::before { background: var(--rail); }
+  .link { position: relative; display: grid; grid-template-columns: 2.3rem 1fr auto; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem; }
+  .node {
+    width: 2.3rem; height: 2.3rem; border-radius: 50%; display: grid; place-items: center;
+    background: var(--bg); border: 2px solid var(--line);
+    font-family: var(--serif); font-weight: 600; font-variant-numeric: tabular-nums; position: relative; z-index: 1;
+  }
+  .chain.solved .node { border-color: var(--rail); color: var(--rail); background: var(--rail-bg); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.65rem 0.9rem; }
+  .card .kind { display: block; color: var(--muted); font-size: 0.85rem; }
+  .card .label { display: block; }
+  .link.bookend .card { border-left: 4px solid var(--accent); }
+  .card .aside { display: flex; gap: 0.45rem; align-items: center; margin-top: 0.35rem; color: var(--muted); font-size: 0.875rem; cursor: pointer; width: fit-content; }
+  .card .aside input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--accent); }
+  .card .new { margin-left: 0.4rem; padding: 0 0.4rem; border-radius: 3px; background: var(--accent); color: var(--accent-ink); font-size: 0.75rem; font-weight: 600; }
+  .link.out .node { border-style: dashed; color: var(--set-aside); }
+  .link.out .card { border-style: dashed; background: transparent; }
+  .link.out .label { color: var(--set-aside); text-decoration: line-through; text-decoration-color: var(--set-aside); }
+  .link.flag .card { border-color: var(--near); }
+  .moves { display: flex; gap: 0.35rem; }
+  .moves button { width: 2.5rem; height: 2.5rem; padding: 0; border-radius: 6px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font-size: 1.05rem; cursor: pointer; line-height: 1; }
+  .moves button:hover:not(:disabled) { border-color: var(--muted); }
+  .moves button:disabled { color: var(--line); cursor: default; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .primary { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  .quiet { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  .quiet:hover { border-color: var(--muted); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .aside:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+
+  .feedback { margin-top: 1.5rem; padding: 1rem 1.2rem; border-radius: 6px; background: var(--panel); border-left: 4px solid var(--line); }
+  .feedback:empty { display: none; }
+  .feedback.correct { border-left-color: var(--rail); }
+  .feedback.near { border-left-color: var(--near); }
+  .feedback.wrong { border-left-color: var(--wrong); }
+  .feedback .verdict { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; margin: 0 0 0.4rem; }
+  .feedback p:last-child { margin-bottom: 0; }
+  .pass2 { margin-top: 2.25rem; padding-top: 0.25rem; border-top: 1px solid var(--line); }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .feedback.show { animation: settle 300ms ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.65rem; }
+    .link { grid-template-columns: 2.3rem 1fr; }
+    .moves { grid-column: 2; }
+    .actions button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Assemble the Path from Report to Record</h1>
+  <p class="lede">A report that says only "it will not connect" has to travel to one located link, a confirmed repair, and a record the next person can read. The order of the moves matters more than any single move. A sound move made at the wrong point can still mislead.</p>
+  <p>Build the whole path, from the problem to the signal that the work succeeded. Use the arrow buttons to move a card. Two cards do not belong on the path: mark them to leave them out. More than one order can be sound, and the check flags only orders that break a dependency.</p>
+
+  <h2 id="task-title">Order the path</h2>
+  <ol class="chain" id="chain" aria-labelledby="task-title"></ol>
+  <p class="sr-only" id="status" role="status" aria-live="polite"></p>
+
+  <div class="actions"><button type="button" class="primary" id="check">Check the path</button></div>
+  <div class="feedback" id="feedback" tabindex="-1"></div>
+
+  <div class="pass2" id="pass2-offer" hidden>
+    <h2>Move one assumption</h2>
+    <p>Run the same path for a different located link. This time the storefront host answers and a single port on it does not, so the fault is in the application itself. The application belongs to its owner, not to you. A new card joins the path. Rebuild it.</p>
+    <div class="actions"><button type="button" class="primary" id="go-pass2">Move the located link</button></div>
+  </div>
+  <div class="actions" id="restart-row" hidden><button type="button" class="quiet" id="restart">Start over</button></div>
+</main>
+
+<script>
+(function () {
+  var CARDS = {
+    problem: { kind: "The problem", label: "One request fails, and the report reads the same wherever the break is.", bookend: true },
+    open:    { kind: "Document", label: "Open the record with the report as it was received." },
+    define:  { kind: "Define", label: "Restate the report as one exact request: who, from where, to what name and port, since when." },
+    sketch:  { kind: "Isolate", label: "Sketch the request's path and mark any control that refuses a probe." },
+    tests:   { kind: "Isolate", label: "Run tests that split the chain, from the user's own place." },
+    locate:  { kind: "Isolate", label: "Name the link between the last test that passed and the first that failed." },
+    change:  { kind: "Test", label: "Make one change, with its result predicted first." },
+    resolve: { kind: "Resolve", label: "Repeat the user's own request, from the user's own place." },
+    close:   { kind: "Document", label: "Close the record: symptom, located link, action, and what remains." },
+    signal:  { kind: "The signal", label: "The user's own request passes again, and the record names the link.", bookend: true },
+    restart: { kind: "Test", label: "Restart whatever fixed it last time, before running any test.", decoy: true },
+    quiet:   { kind: "Resolve", label: "Count it fixed once callers stop reporting the fault.", decoy: true },
+    handoff: { kind: "Hand off", label: "Pass the located link to the application's owner, with both test results attached.", fresh: true }
+  };
+  var PLAIN = {
+    problem: "the problem card", open: "opening the record", define: "restating the request", sketch: "sketching the path",
+    tests: "running tests that split the chain", locate: "naming the link", change: "making one change",
+    resolve: "repeating the user's request", close: "closing the record", signal: "the signal card",
+    restart: "the restart-before-testing card", quiet: "the callers-stop-reporting card", handoff: "handing off to the application's owner"
+  };
+
+  // Dependencies: [before, after, why]. Checked only when both cards are on the path.
+  var DEPS = [
+    ["define", "sketch", "The path can only be sketched once the request is exact, because the sketch needs a from and a to."],
+    ["sketch", "tests", "Any control that refuses a probe is marked before a test meets it, so a refused probe is not read as a fault."],
+    ["tests", "locate", "A link is named only from tests already run."],
+    ["locate", "change", "Nothing changes until the link is located."],
+    ["change", "resolve", "The user's own request is repeated after the repair, to confirm it."],
+    ["open", "change", "The record opens before anything changes, so it holds the report as it arrived."],
+    ["resolve", "close", "The record closes after the user's request passes again, because it records that result."],
+    ["open", "close", "A record is opened before it is closed."],
+    ["locate", "handoff", "The owner receives a located link, so the link is named first."],
+    ["handoff", "resolve", "The owner's repair comes before the user's request is repeated."],
+    ["handoff", "close", "The record closes after the hand-off, because the hand-off is the action it records."]
+  ];
+
+  var PASSES = {
+    1: { members: ["problem", "open", "define", "sketch", "tests", "locate", "change", "resolve", "close", "signal"],
+         start: ["tests", "open", "restart", "problem", "locate", "signal", "define", "resolve", "change", "quiet", "close", "sketch"] },
+    2: { members: ["problem", "open", "define", "sketch", "tests", "locate", "handoff", "resolve", "close", "signal"] }
+  };
+
+  var WHY_OUT = {
+    restart: "A restart before any test changes a running system before anyone has located the fault. It has no place on this path.",
+    quiet: "Callers going quiet is not the signal. Only the user's own request passing again, recorded against the link, shows the work succeeded.",
+    change: "This time the fault is in the application, which belongs to its owner. You hand the located link over rather than changing it yourself."
+  };
+  var WHY_IN = "Every real step of the method is on this path, from the problem to the signal.";
+
+  var pass = 1;
+  var order = PASSES[1].start.slice();
+  var out = {};
+  var solvedOrder = null;
+  var chainEl = document.getElementById("chain");
+  var fb = document.getElementById("feedback");
+  var statusEl = document.getElementById("status");
+
+  function render(focusId, focusDir) {
+    chainEl.innerHTML = "";
+    var n = 0;
+    order.forEach(function (id, i) {
+      var c = CARDS[id];
+      var li = document.createElement("li");
+      li.className = "link" + (out[id] ? " out" : "") + (c.bookend ? " bookend" : "");
+      li.dataset.id = id;
+      if (!out[id]) n++;
+      li.innerHTML =
+        '<span class="node" aria-hidden="true">' + (out[id] ? "\u2013" : n) + '</span>' +
+        '<div class="card"><span class="kind">' + c.kind + (pass === 2 && c.fresh ? '<span class="new">new</span>' : '') + '</span>' +
+        '<span class="label">' + c.label + '</span>' +
+        (c.bookend ? '' : '<label class="aside"><input type="checkbox" data-aside="' + id + '"' + (out[id] ? " checked" : "") + '> Leave out of this path</label>') +
+        '</div>' +
+        '<div class="moves">' +
+          '<button type="button" data-move="up" data-id="' + id + '" aria-label="Move up: ' + PLAIN[id] + '"' + (i === 0 ? " disabled" : "") + '>\u2191</button>' +
+          '<button type="button" data-move="down" data-id="' + id + '" aria-label="Move down: ' + PLAIN[id] + '"' + (i === order.length - 1 ? " disabled" : "") + '>\u2193</button>' +
+        '</div>';
+      chainEl.appendChild(li);
+    });
+    chainEl.classList.remove("solved");
+    if (focusId) {
+      var btn = chainEl.querySelector('[data-move="' + focusDir + '"][data-id="' + focusId + '"]');
+      if (!btn || btn.disabled) btn = chainEl.querySelector('button[data-id="' + focusId + '"]:not(:disabled)');
+      if (btn) btn.focus();
+    }
+  }
+  function clearFeedback() { fb.className = "feedback"; fb.innerHTML = ""; }
+
+  chainEl.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-move]");
+    if (!b) return;
+    var id = b.dataset.id, i = order.indexOf(id), j = b.dataset.move === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= order.length) return;
+    order.splice(i, 1); order.splice(j, 0, id);
+    clearFeedback(); render(id, b.dataset.move);
+    statusEl.textContent = "Moved " + PLAIN[id] + " to place " + (j + 1) + " of " + order.length + ".";
+  });
+  chainEl.addEventListener("change", function (e) {
+    var c = e.target.closest("input[data-aside]");
+    if (!c) return;
+    var id = c.dataset.aside;
+    out[id] = c.checked;
+    clearFeedback(); render();
+    var again = chainEl.querySelector('input[data-aside="' + id + '"]'); if (again) again.focus();
+    statusEl.textContent = (c.checked ? "Left out: " : "Back on the path: ") + PLAIN[id] + ".";
+  });
+
+  // ---- The check: dependency violations plus membership, computed from the rules above ----
+  function evaluate(p, ord, outMap) {
+    var members = PASSES[p].members;
+    var kept = ord.filter(function (id) { return !outMap[id]; });
+    var errors = [];
+    // Membership
+    ord.forEach(function (id) {
+      var shouldBe = members.indexOf(id) !== -1;
+      if (shouldBe && outMap[id]) errors.push({ type: "missing", id: id, msg: "Bring back " + PLAIN[id] + ". " + WHY_IN });
+      if (!shouldBe && !outMap[id]) errors.push({ type: "extra", id: id, msg: WHY_OUT[id] });
+    });
+    // Bookends
+    if (kept[0] !== "problem") errors.push({ type: "order", id: "problem", msg: "The problem comes first. Every move after it works on that one failing request." });
+    if (kept[kept.length - 1] !== "signal") errors.push({ type: "order", id: "signal", msg: "The signal comes last. It is how you know every move before it worked." });
+    // Dependencies, only among cards that are on the path
+    DEPS.forEach(function (d) {
+      var a = kept.indexOf(d[0]), b = kept.indexOf(d[1]);
+      if (a !== -1 && b !== -1 && a > b) errors.push({ type: "order", id: d[1], pair: [d[0], d[1]], msg: d[2] });
+    });
+    return errors;
+  }
+
+  function show(state, html) {
+    fb.className = "feedback " + state; fb.innerHTML = html;
+    void fb.offsetWidth; fb.classList.add("show"); fb.focus();
+  }
+  function flag(ids) {
+    ids.forEach(function (id) { var li = chainEl.querySelector('li[data-id="' + id + '"]'); if (li) li.classList.add("flag"); });
+  }
+
+  document.getElementById("check").addEventListener("click", function () {
+    var errs = evaluate(pass, order, out);
+    if (errs.length === 0) {
+      chainEl.classList.add("solved");
+      if (pass === 1) {
+        solvedOrder = order.slice();
+        show("correct",
+          '<p class="verdict">The path holds.</p>' +
+          '<p>It runs from one failing request, through an exact restatement, a sketch with its controls marked, tests that split the chain, and a named link. Then come one predicted change, the user\'s own request repeated, and a record that closes on what remains.</p>' +
+          '<p>The record could open at several points, and every one of them is sound as long as it opens before anything changes.</p>');
+        document.getElementById("pass2-offer").hidden = false;
+      } else {
+        show("correct",
+          '<p class="verdict">The path holds, with a hand-off in place of a change.</p>' +
+          '<p>Locating the link is still yours, and so is the record. When the link is the application itself, the next move is to pass it to the application\'s owner with the evidence, not to change it. The user\'s own request is repeated after the owner\'s repair, and the signal stays the same.</p>');
+        document.getElementById("restart-row").hidden = false;
+      }
+      return;
+    }
+    if (errs.length === 1) {
+      var e1 = errs[0];
+      var lead = e1.type === "order" ? "Close. One dependency is broken." : (e1.type === "extra" ? "Close. One card does not belong on this path." : "Close. One card is missing from the path.");
+      show("near", '<p class="verdict">' + lead + '</p><p>' + e1.msg + '</p>');
+      flag(e1.pair || [e1.id]);
+      return;
+    }
+    var membership = errs.filter(function (e) { return e.type !== "order"; }).length;
+    var first = errs.filter(function (e) { return e.type === "order"; })[0];
+    var start = first
+      ? "Start with the problem and the signal, which bracket everything else. Then work from what has to be true before anything changes: an exact request, a marked path, tests, and a located link."
+      : "Read each card and ask whether it belongs on a method that changes nothing before the link is located, and that counts success only by the user's own request.";
+    show("wrong",
+      '<p class="verdict">Not yet. ' + errs.length + ' things need another look.</p>' +
+      '<p>Each move depends on the ones it needs being done first' + (membership ? ', and a card belongs on the path only if the method uses it' : '') + '.</p>' +
+      '<p>' + start + '</p>');
+  });
+
+  document.getElementById("go-pass2").addEventListener("click", function () {
+    pass = 2;
+    order = solvedOrder.slice();
+    // Distractors stay where the learner left them; the new card enters at the end of the path.
+    order.push("handoff");
+    out = { restart: true, quiet: true };
+    clearFeedback();
+    document.getElementById("pass2-offer").hidden = true;
+    render();
+    var t = document.getElementById("task-title"); t.setAttribute("tabindex", "-1"); t.focus();
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    pass = 1; order = PASSES[1].start.slice(); out = {}; solvedOrder = null;
+    clearFeedback();
+    document.getElementById("restart-row").hidden = true;
+    render();
+    var first = chainEl.querySelector("button[data-move]:not(:disabled)"); if (first) first.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

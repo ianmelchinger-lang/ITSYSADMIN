@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare Results, Isolate the Fault</title>
+<style>
+  :root {
+    --bg: #16222d;
+    --panel: #1e2e3b;
+    --panel-2: #243747;
+    --line: #34495c;
+    --ink: #e8eef2;
+    --muted: #a3b5c3;
+    --accent: #e9b949;
+    --accent-ink: #1a1405;
+    --pass: #6fc3c0;
+    --pass-bg: #1f3c40;
+    --fail: #ea9282;
+    --fail-bg: #43292a;
+    --near: #e9b949;
+    --focus: #ffd97a;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: 2rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.6rem; }
+  h3 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  .lede { color: var(--muted); font-size: 1.0625rem; }
+  code { font-family: var(--mono); font-size: 0.92em; white-space: nowrap; }
+  .note { color: var(--muted); font-size: 0.95rem; }
+
+  .givens { background: var(--panel); border-left: 4px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; }
+  .givens ul { margin: 0.25rem 0 0; padding-left: 1.2rem; }
+  .givens li { margin-bottom: 0.3rem; }
+
+  .pair { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.1rem 1rem; margin: 1.25rem 0; }
+  .pair.flag-correct { border-color: var(--pass); }
+  .pair.flag-near { border-color: var(--near); }
+  .pair.flag-wrong { border-color: var(--fail); }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9375rem; }
+  th, td { text-align: left; vertical-align: middle; }
+  thead th { font-weight: 600; color: var(--muted); padding: 0 0.5rem 0.5rem; line-height: 1.3; }
+  thead th .v { display: block; font-weight: 600; }
+  thead th .v.pass { color: var(--pass); }
+  thead th .v.fail { color: var(--fail); }
+  thead th .moved { display: inline-block; margin-left: 0.35rem; padding: 0 0.4rem; border-radius: 3px; background: var(--accent); color: var(--accent-ink); font-size: 0.75rem; }
+  tbody th { font-weight: 400; padding: 0.4rem 0.75rem 0.4rem 0; width: 34%; }
+  td.reach { width: 18%; padding: 0 0.5rem; }
+  td.reach span { display: block; height: 2.1rem; }
+  td.reach.on.pass span { background: var(--pass-bg); border-left: 3px solid var(--pass); }
+  td.reach.on.fail span { background: var(--fail-bg); border-left: 3px solid var(--fail); }
+  tbody tr + tr td.reach.on span { border-top: 1px solid var(--bg); }
+  td.could { padding: 0.25rem 0 0.25rem 0.5rem; }
+  td.could label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.25rem 0.35rem; border-radius: 4px; }
+  td.could input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); }
+  td.could label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 1px; }
+  tr.mark-near th { color: var(--near); }
+
+  .pfb { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+  .pfb:empty { display: none; }
+  .pfb .verdict { font-weight: 600; margin: 0 0 0.25rem; }
+  .pfb.correct .verdict { color: var(--pass); }
+  .pfb.near .verdict { color: var(--near); }
+  .pfb.wrong .verdict { color: var(--fail); }
+  .pfb p { margin-bottom: 0.5rem; }
+  .pfb p:last-child { margin-bottom: 0; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .primary { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  .quiet { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  .quiet:hover { border-color: var(--muted); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .summary { margin-top: 1.5rem; padding: 1rem 1.2rem; border-radius: 6px; background: var(--panel); border-left: 4px solid var(--line); }
+  .summary:empty { display: none; }
+  .summary.all { border-left-color: var(--pass); }
+  .summary .verdict { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; margin: 0 0 0.4rem; }
+  .summary p:last-child { margin-bottom: 0; }
+  .short { display: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  table { table-layout: fixed; }
+  caption { white-space: normal; }
+  thead th:first-child { width: 36%; }
+  thead th:nth-child(2), thead th:nth-child(3) { width: 17%; }
+  thead th:last-child { width: 30%; }
+  .pass2 { margin-top: 2.25rem; padding-top: 0.25rem; border-top: 1px solid var(--line); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pfb.show, .summary.show { animation: settle 280ms ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 0.9rem 2.5rem; }
+    h1 { font-size: 1.65rem; }
+    .pair { padding: 0.9rem 0.7rem; }
+    table { font-size: 0.875rem; }
+    thead th:first-child, tbody th { width: 42%; }
+    thead th:nth-child(2), thead th:nth-child(3) { width: 19%; }
+    thead th:last-child { width: 20%; }
+    td.reach { padding: 0 0.25rem; }
+    .long { display: none; }
+    .short { display: inline; }
+    td.could { padding-left: 0.25rem; }
+    thead th { padding: 0 0.3rem 0.5rem; }
+    .actions button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Compare Results, Isolate the Fault</h1>
+  <p class="lede">Fault isolation means narrowing a failure to one link by comparing tests. A test that passes clears every link it crossed. A test that fails tells you one of its links is broken, without saying which. Put two results side by side and you can strike some links and keep others.</p>
+
+  <div class="givens">
+    <p class="note">The same request in every case</p>
+    <p>The management machine <code>cld-lnx-02</code> opens the storefront by its name, <code>storefront.corp.example</code>. That request fails. Assume exactly one link is broken, and that every test reports honestly on the links it crosses.</p>
+    <p class="note">The tests, by how far each one reaches</p>
+    <ul>
+      <li>Test 1 reaches this machine's own address, <code>10.240.1.4</code>.</li>
+      <li>Test 2 reaches the gateway out of <code>sn-mgmt</code>.</li>
+      <li>Test 3 reaches <code>cld-lnx-01</code> at <code>10.240.0.4</code>.</li>
+      <li>Test 4 reaches the web service at <code>10.240.0.4</code>, TCP 443.</li>
+      <li>Test 5 is the users' own request, by name.</li>
+    </ul>
+  </div>
+
+  <h2 id="task-title">Mark where the break could still be</h2>
+  <p id="task-text">Each pair shows two results and the links each test crossed. For each pair, tick every link where the one break could still be. One tick means you have located it. Several ticks mean you have narrowed it, and that is a correct answer when the results allow no more.</p>
+
+  <div id="pairs"></div>
+
+  <div class="actions">
+    <button type="button" class="primary" id="check">Check all four</button>
+  </div>
+  <div class="summary" id="summary" tabindex="-1" aria-live="polite"></div>
+
+  <div class="pass2" id="pass2-offer" hidden>
+    <h2>Move one verdict in each pair</h2>
+    <p>Keep the tests the same. In each pair, one result now comes out the other way. Mark again where the break could be.</p>
+    <div class="actions"><button type="button" class="primary" id="go-pass2">Move the verdicts</button></div>
+  </div>
+  <div class="actions" id="restart-row" hidden><button type="button" class="quiet" id="restart">Start over</button></div>
+</main>
+
+<script>
+(function () {
+  // Links in the order the request meets them.
+  var LINKS = ["name", "own", "gateway", "way", "service"];
+  var LABEL = {
+    name: 'The name <code>storefront.corp.example</code>',
+    own: "This machine's own address",
+    gateway: 'The gateway out of <code>sn-mgmt</code>',
+    way: 'The way to <code>cld-lnx-01</code>',
+    service: 'The web service on TCP 443'
+  };
+  var PLAIN = { name: "the name", own: "this machine's own address", gateway: "the gateway out of sn-mgmt", way: "the way to cld-lnx-01", service: "the web service" };
+  // Which links each test crosses.
+  var CROSSES = {
+    1: ["own"],
+    2: ["own", "gateway"],
+    3: ["own", "gateway", "way"],
+    4: ["own", "gateway", "way", "service"],
+    5: ["own", "gateway", "way", "service", "name"]
+  };
+
+  // Each pair: two tests and their verdicts. Pass 2 moves exactly one verdict per pair.
+  var PAIRS = {
+    1: [
+      { a: 4, va: "pass", b: 5, vb: "fail" },
+      { a: 2, va: "pass", b: 4, vb: "fail" },
+      { a: 1, va: "fail", b: 4, vb: "fail" },
+      { a: 1, va: "pass", b: 2, vb: "pass" }
+    ],
+    2: [
+      { a: 4, va: "fail", b: 5, vb: "fail", moved: "a" },
+      { a: 2, va: "pass", b: 4, vb: "pass", moved: "b" },
+      { a: 1, va: "pass", b: 4, vb: "fail", moved: "a" },
+      { a: 1, va: "pass", b: 2, vb: "fail", moved: "b" }
+    ]
+  };
+
+  // The rule, computed: the users' request (test 5) fails throughout and exactly one link is broken.
+  // A passing test clears what it crossed; every failing test must cross the break.
+  function possible(pair) {
+    var results = [{ t: pair.a, v: pair.va }, { t: pair.b, v: pair.vb }, { t: 5, v: "fail" }];
+    return LINKS.filter(function (L) {
+      return results.every(function (r) {
+        var crossed = CROSSES[r.t].indexOf(L) !== -1;
+        return r.v === "pass" ? !crossed : crossed;
+      });
+    });
+  }
+
+  var pass = 1;
+  var pairsEl = document.getElementById("pairs");
+
+  function verdictWord(v) { return v === "pass" ? "passed" : "failed"; }
+
+  function render() {
+    pairsEl.innerHTML = "";
+    PAIRS[pass].forEach(function (p, i) {
+      var div = document.createElement("section");
+      div.className = "pair";
+      div.setAttribute("aria-labelledby", "pair-h-" + i);
+      var head =
+        '<h3 id="pair-h-' + i + '">Pair ' + (i + 1) + ': test ' + p.a + ' ' + verdictWord(p.va) + ', test ' + p.b + ' ' + verdictWord(p.vb) + '</h3>' +
+        '<table><caption class="note" style="text-align:left;caption-side:top;padding-bottom:0.5rem;">Shaded cells show the links each test crossed.</caption><thead><tr><th scope="col">Link</th>' +
+        colHead(p.a, p.va, p.moved === "a") + colHead(p.b, p.vb, p.moved === "b") +
+        '<th scope="col"><span class="long">Break could be here</span><span class="short">Could be here</span></th></tr></thead><tbody>';
+      var rows = LINKS.map(function (L) {
+        return '<tr data-link="' + L + '"><th scope="row">' + LABEL[L] + '</th>' +
+          reachCell(p.a, p.va, L) + reachCell(p.b, p.vb, L) +
+          '<td class="could"><label><input type="checkbox" data-pair="' + i + '" value="' + L + '"><span class="long">Could be</span><span class="sr-only short-sr">Could be here: ' + PLAIN[L] + '</span></label></td></tr>';
+      }).join("");
+      div.innerHTML = head + rows + '</tbody></table><div class="pfb" id="pfb-' + i + '"></div>';
+      pairsEl.appendChild(div);
+    });
+  }
+  function colHead(t, v, moved) {
+    return '<th scope="col">Test ' + t + '<span class="v ' + v + '">' + verdictWord(v) +
+      (moved ? '<span class="moved">moved</span>' : '') + '</span></th>';
+  }
+  function reachCell(t, v, L) {
+    var on = CROSSES[t].indexOf(L) !== -1;
+    return '<td class="reach' + (on ? " on " + v : "") + '"><span aria-label="' + (on ? "Test " + t + " crossed this link" : "Not crossed") + '" role="img"></span></td>';
+  }
+
+  function chosen(i) {
+    return Array.prototype.map.call(pairsEl.querySelectorAll('input[data-pair="' + i + '"]:checked'), function (c) { return c.value; });
+  }
+
+  function listPlain(arr) {
+    var w = arr.map(function (x) { return PLAIN[x]; });
+    if (w.length <= 1) return w.join("");
+    return w.slice(0, -1).join(", ") + (w.length > 2 ? "," : "") + " and " + w[w.length - 1];
+  }
+
+  // Why a single link is in or out, phrased from the results that decide it.
+  function reasonOut(p, L) {
+    if (p.va === "pass" && CROSSES[p.a].indexOf(L) !== -1) return "Test " + p.a + " passed and crossed " + PLAIN[L] + ", so that link is cleared.";
+    if (p.vb === "pass" && CROSSES[p.b].indexOf(L) !== -1) return "Test " + p.b + " passed and crossed " + PLAIN[L] + ", so that link is cleared.";
+    var f = [p.va === "fail" ? p.a : null, p.vb === "fail" ? p.b : null].filter(Boolean);
+    for (var k = 0; k < f.length; k++) if (CROSSES[f[k]].indexOf(L) === -1) return "Test " + f[k] + " failed without crossing " + PLAIN[L] + ", so the break cannot be there.";
+    return "";
+  }
+  function reasonIn(p, L) {
+    return "No passing test crossed " + PLAIN[L] + ", and every failing result crossed it, so the break could still be there.";
+  }
+
+  function nextMove(key) {
+    if (key.length === 1) return "";
+    // A test whose reach ends inside the stretch splits it.
+    for (var t = 1; t <= 4; t++) {
+      var c = CROSSES[t].filter(function (L) { return key.indexOf(L) !== -1; }).length;
+      if (c > 0 && c < key.length) return "<p>Not located yet. Test " + t + " would split this stretch: it crosses some of these links and not others.</p>";
+    }
+    return "<p>Not located yet. A test that reaches partway into this stretch is the next move.</p>";
+  }
+
+  function feedbackFor(i, p) {
+    var key = possible(p), got = chosen(i);
+    var extra = got.filter(function (L) { return key.indexOf(L) === -1; });
+    var missing = key.filter(function (L) { return got.indexOf(L) === -1; });
+    var diff = extra.length + missing.length;
+
+    if (diff === 0) {
+      var html = key.length === 1
+        ? "<p>Located: " + PLAIN[key[0]] + ". Every failing result crosses it, and no passing result clears it.</p>"
+        : "<p>Narrowed to " + listPlain(key) + ". " + "Every failing result crosses these links, and no passing result clears them.</p>" + nextMove(key);
+      if (key.length === 1 && key[0] === "service") html += "<p>The machine answers and the service does not. The question now passes to the application's owner, with both results attached.</p>";
+      if (key.length === 2 && key.indexOf("service") !== -1 && key.indexOf("way") !== -1) html += "<p>If test 3 then passes, the machine answers and the service does not. That question passes to the application's owner, with both results attached.</p>";
+      return { state: "correct", head: "Right.", html: html };
+    }
+    if (got.length === 0) {
+      return { state: "wrong", head: "Not yet.", html:
+        "<p>A failing result always leaves at least one link where the break could be. The users' own request fails here, so the break is somewhere.</p>" +
+        "<p>Start with any test that passed and strike every link it crossed. Then keep only the links that every failing result crossed.</p>" };
+    }
+    if (diff === 1) {
+      var L = extra[0] || missing[0];
+      var why = extra.length ? reasonOut(p, L) : reasonIn(p, L);
+      return { state: "near", head: "Close. One link is off.", flag: L, html:
+        "<p>Look again at " + PLAIN[L] + ". " + why + "</p>" };
+    }
+    var first = (p.va === "pass" || p.vb === "pass")
+      ? "Start with the test that passed. Strike every link it crossed. Then keep only the links that every failing result crossed."
+      : "Both tests failed, so a pass cannot clear anything here. Keep only the links that both failing tests crossed.";
+    return { state: "wrong", head: "Not yet.", html:
+      "<p>A pass clears every link it crossed. A fail keeps the break somewhere among the links it crossed.</p><p>" + first + "</p>" };
+  }
+
+  document.getElementById("check").addEventListener("click", function () {
+    var right = 0;
+    PAIRS[pass].forEach(function (p, i) {
+      var r = feedbackFor(i, p);
+      var box = document.getElementById("pfb-" + i);
+      var sec = box.parentNode;
+      sec.className = "pair flag-" + r.state;
+      Array.prototype.forEach.call(sec.querySelectorAll("tr.mark-near"), function (tr) { tr.classList.remove("mark-near"); });
+      if (r.flag) { var tr = sec.querySelector('tr[data-link="' + r.flag + '"]'); if (tr) tr.classList.add("mark-near"); }
+      box.className = "pfb " + r.state;
+      box.innerHTML = '<p class="verdict">' + r.head + "</p>" + r.html;
+      void box.offsetWidth; box.classList.add("show");
+      if (r.state === "correct") right++;
+    });
+    var s = document.getElementById("summary");
+    s.className = "summary" + (right === 4 ? " all" : "");
+    if (right === 4) {
+      s.innerHTML = pass === 1
+        ? '<p class="verdict">All four read correctly.</p><p>Two results located a link outright. One pair could only narrow the break to a stretch, and one pair of passes left three links in play. Narrowing is a real answer: it tells you where the next test goes.</p>'
+        : '<p class="verdict">All four read correctly, with one verdict moved in each.</p><p>The tests did not change. Only one result did, and the place the break could be moved with it. The conclusion belongs to the comparison, never to a single result.</p>';
+      document.getElementById(pass === 1 ? "pass2-offer" : "restart-row").hidden = false;
+    } else {
+      s.innerHTML = '<p class="verdict">' + right + " of 4 read correctly.</p><p>Each pair's note names the rule that decides it. Change your ticks and check again.</p>";
+    }
+    void s.offsetWidth; s.classList.add("show");
+    s.focus();
+  });
+
+  pairsEl.addEventListener("change", function (e) {
+    var c = e.target.closest("input[data-pair]");
+    if (!c) return;
+    var box = document.getElementById("pfb-" + c.dataset.pair);
+    box.className = "pfb"; box.innerHTML = "";
+    box.parentNode.className = "pair";
+  });
+
+  document.getElementById("go-pass2").addEventListener("click", function () {
+    pass = 2;
+    render();
+    document.getElementById("pass2-offer").hidden = true;
+    var s = document.getElementById("summary"); s.className = "summary"; s.innerHTML = "";
+    document.getElementById("task-text").textContent = "One verdict in each pair has moved, and it is marked. Tick every link where the one break could still be.";
+    var t = document.getElementById("task-title"); t.setAttribute("tabindex", "-1"); t.focus();
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    pass = 1;
+    render();
+    document.getElementById("restart-row").hidden = true;
+    var s = document.getElementById("summary"); s.className = "summary"; s.innerHTML = "";
+    document.getElementById("task-text").textContent = "Each pair shows two results and the links each test crossed. For each pair, tick every link where the one break could still be. One tick means you have located it. Several ticks mean you have narrowed it, and that is a correct answer when the results allow no more.";
+    var first = pairsEl.querySelector("input"); if (first) first.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

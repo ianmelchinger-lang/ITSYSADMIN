@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lay Out the Chain</title>
+<style>
+  :root {
+    --bg: #16222d;
+    --panel: #1e2e3b;
+    --panel-2: #243747;
+    --line: #34495c;
+    --ink: #e8eef2;
+    --muted: #a3b5c3;
+    --accent: #e9b949;
+    --accent-ink: #1a1405;
+    --rail: #6fc3c0;
+    --rail-bg: #1f3c40;
+    --near: #e9b949;
+    --wrong: #ea9282;
+    --set-aside: #7f93a3;
+    --focus: #ffd97a;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: 2rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.6rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  .lede { color: var(--muted); font-size: 1.0625rem; }
+  code { font-family: var(--mono); font-size: 0.92em; white-space: nowrap; }
+
+  .request { background: var(--panel); border-left: 4px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; }
+  .request p { margin: 0; }
+  .request .what { font-family: var(--serif); font-size: 1.2rem; line-height: 1.45; margin-top: 0.3rem; }
+  .note { color: var(--muted); font-size: 0.95rem; }
+
+  /* The chain: one rail, cards hung on it */
+  .chain { list-style: none; margin: 1.25rem 0 0; padding: 0; position: relative; }
+  .chain::before {
+    content: ""; position: absolute; left: 1.15rem; top: 1.4rem; bottom: 1.4rem;
+    width: 2px; background: var(--line);
+  }
+  .chain.solved::before { background: var(--rail); }
+  .link {
+    position: relative; display: grid;
+    grid-template-columns: 2.3rem 1fr auto; gap: 0.75rem; align-items: center;
+    margin-bottom: 0.55rem;
+  }
+  .node {
+    width: 2.3rem; height: 2.3rem; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--bg); border: 2px solid var(--line);
+    font-family: var(--serif); font-weight: 600; font-variant-numeric: tabular-nums;
+    position: relative; z-index: 1;
+  }
+  .chain.solved .node { border-color: var(--rail); color: var(--rail); background: var(--rail-bg); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.7rem 0.9rem; }
+  .card .label { display: block; }
+  .card .aside { display: flex; gap: 0.45rem; align-items: center; margin-top: 0.35rem; color: var(--muted); font-size: 0.875rem; cursor: pointer; width: fit-content; }
+  .card .aside input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--accent); }
+  .link.out .node { border-style: dashed; color: var(--set-aside); }
+  .link.out .card { border-style: dashed; background: transparent; }
+  .link.out .label { color: var(--set-aside); text-decoration: line-through; text-decoration-color: var(--set-aside); }
+  .link.flag .card { border-color: var(--near); }
+  .moves { display: flex; gap: 0.35rem; }
+  .moves button {
+    width: 2.5rem; height: 2.5rem; padding: 0; border-radius: 6px;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    font-size: 1.05rem; cursor: pointer; line-height: 1;
+  }
+  .moves button:hover:not(:disabled) { border-color: var(--muted); }
+  .moves button:disabled { color: var(--line); cursor: default; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .primary {
+    font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px;
+    border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer;
+  }
+  .quiet {
+    font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px;
+    border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .quiet:hover { border-color: var(--muted); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .aside:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+
+  .feedback { margin-top: 1.5rem; padding: 1rem 1.2rem; border-radius: 6px; background: var(--panel); border-left: 4px solid var(--line); }
+  .feedback:empty { display: none; }
+  .feedback.correct { border-left-color: var(--rail); }
+  .feedback.near { border-left-color: var(--near); }
+  .feedback.wrong { border-left-color: var(--wrong); }
+  .feedback .verdict { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; margin: 0 0 0.4rem; }
+  .feedback p:last-child { margin-bottom: 0; }
+  .feedback ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; }
+  .feedback li { margin-bottom: 0.35rem; }
+
+  .pass2 { margin-top: 2.25rem; padding-top: 0.25rem; border-top: 1px solid var(--line); }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .feedback.show { animation: settle 300ms ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.65rem; }
+    .link { grid-template-columns: 2.3rem 1fr; }
+    .moves { grid-column: 2; }
+    .actions button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Lay Out the Chain</h1>
+  <p class="lede">A report that says only "it will not connect" reads the same wherever the fault sits. Writing the request out as the links it crosses turns that report into a list of places to look. A link is one thing the request needs to hold: a setting on the sending machine, a step across the network, or the service at the far end.</p>
+
+  <div class="request">
+    <p class="note" id="request-label">The request</p>
+    <p class="what" id="request-text"></p>
+  </div>
+
+  <h2 id="task-title">Put its links in order</h2>
+  <p id="task-text"></p>
+
+  <ol class="chain" id="chain" aria-labelledby="task-title"></ol>
+  <p class="sr-only" id="status" role="status" aria-live="polite"></p>
+
+  <div class="actions">
+    <button type="button" class="primary" id="check">Check the chain</button>
+  </div>
+
+  <div class="feedback" id="feedback" tabindex="-1"></div>
+
+  <div class="pass2" id="pass2-offer" hidden>
+    <h2>Move one assumption</h2>
+    <p>Keep everything else the same. Now the request goes to the storefront's address, <code>10.240.0.4</code>, instead of its name. Rebuild the chain for that request.</p>
+    <div class="actions">
+      <button type="button" class="primary" id="go-pass2">Change the request</button>
+    </div>
+  </div>
+
+  <div class="actions" id="restart-row" hidden>
+    <button type="button" class="quiet" id="restart">Start over</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  var LINKS = {
+    name:    { label: 'The name <code>storefront.corp.example</code> turns into an address', plain: "the name" },
+    own:     { label: 'This machine\u2019s own address, <code>10.240.1.4</code>, is set', plain: "this machine\u2019s own address" },
+    gateway: { label: 'The gateway out of <code>sn-mgmt</code> passes the request on', plain: "the gateway out of sn-mgmt" },
+    way:     { label: 'The way to <code>cld-lnx-01</code> at <code>10.240.0.4</code> carries it', plain: "the way to cld-lnx-01" },
+    service: { label: 'The web service on TCP 443 answers', plain: "the web service" }
+  };
+
+  // Why each link must come before the next one. Used to name the deciding dependency.
+  var WHY = {
+    "name>own":     "The request starts as a name. Until the name becomes an address, the machine has nowhere to send it.",
+    "own>gateway":  "A machine sends from its own address. Without one, there is nothing for a gateway to carry.",
+    "gateway>way":  "cld-lnx-01 sits on a different subnet, so the request leaves sn-mgmt through its gateway before it travels the way to cld-lnx-01.",
+    "way>service":  "The web service listens on cld-lnx-01, so the request reaches that machine before the service can answer."
+  };
+
+  var PASSES = {
+    1: {
+      request: 'The management machine <code>cld-lnx-02</code>, on subnet <code>sn-mgmt</code>, opens the storefront by its name, <code>storefront.corp.example</code>, on TCP 443.',
+      task: "Put the links in the order the request meets them, from the first thing it needs to the last. Use the arrow buttons to move a card. If a card is not part of this request\u2019s chain, mark it to leave it out.",
+      key: ["name", "own", "gateway", "way", "service"],
+      start: ["gateway", "service", "name", "way", "own"]
+    },
+    2: {
+      request: 'The management machine <code>cld-lnx-02</code>, on subnet <code>sn-mgmt</code>, opens the storefront by its address, <code>10.240.0.4</code>, on TCP 443.',
+      task: "Same machine, same storefront, one assumption moved: the request now goes by address. Rebuild the chain for this request. Leave out any card it no longer needs.",
+      key: ["own", "gateway", "way", "service"],
+      start: null // carries the learner's solved order forward
+    }
+  };
+
+  var pass = 1;
+  var order = PASSES[1].start.slice();
+  var out = {};          // id -> true when the learner leaves the card out
+  var solvedOrder = null;
+
+  var chainEl = document.getElementById("chain");
+  var fb = document.getElementById("feedback");
+  var statusEl = document.getElementById("status");
+
+  function render(focusId, focusDir) {
+    document.getElementById("request-text").innerHTML = PASSES[pass].request;
+    document.getElementById("task-text").textContent = PASSES[pass].task;
+    chainEl.innerHTML = "";
+    var n = 0;
+    order.forEach(function (id, i) {
+      var li = document.createElement("li");
+      li.className = "link" + (out[id] ? " out" : "");
+      li.dataset.id = id;
+      if (!out[id]) n++;
+      var num = out[id] ? "\u2013" : String(n);
+      li.innerHTML =
+        '<span class="node" aria-hidden="true">' + num + '</span>' +
+        '<div class="card"><span class="label">' + LINKS[id].label + '</span>' +
+        '<label class="aside"><input type="checkbox" data-aside="' + id + '"' + (out[id] ? " checked" : "") + '> Leave out of this chain</label></div>' +
+        '<div class="moves">' +
+          '<button type="button" data-move="up" data-id="' + id + '" aria-label="Move up: ' + LINKS[id].plain + '"' + (i === 0 ? " disabled" : "") + '>\u2191</button>' +
+          '<button type="button" data-move="down" data-id="' + id + '" aria-label="Move down: ' + LINKS[id].plain + '"' + (i === order.length - 1 ? " disabled" : "") + '>\u2193</button>' +
+        '</div>';
+      chainEl.appendChild(li);
+    });
+    chainEl.classList.remove("solved");
+    if (focusId) {
+      var btn = chainEl.querySelector('[data-move="' + focusDir + '"][data-id="' + focusId + '"]');
+      if (!btn || btn.disabled) btn = chainEl.querySelector('[data-id="' + focusId + '"]:not(:disabled)');
+      if (btn) btn.focus();
+    }
+  }
+
+  function clearFeedback() { fb.className = "feedback"; fb.innerHTML = ""; }
+
+  chainEl.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-move]");
+    if (!b) return;
+    var id = b.dataset.id, i = order.indexOf(id), j = b.dataset.move === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= order.length) return;
+    order.splice(i, 1); order.splice(j, 0, id);
+    clearFeedback();
+    render(id, b.dataset.move);
+    statusEl.textContent = "Moved " + LINKS[id].plain + " to place " + (j + 1) + " of " + order.length + ".";
+  });
+
+  chainEl.addEventListener("change", function (e) {
+    var c = e.target.closest("input[data-aside]");
+    if (!c) return;
+    var id = c.dataset.aside;
+    out[id] = c.checked;
+    clearFeedback();
+    render();
+    var again = chainEl.querySelector('input[data-aside="' + id + '"]');
+    if (again) again.focus();
+    statusEl.textContent = (c.checked ? "Left out: " : "Back in the chain: ") + LINKS[id].plain + ".";
+  });
+
+  // ---- The check: a deterministic key, three feedback states ----
+  function grade(p, ord, outMap) {
+    var key = PASSES[p].key;
+    var kept = ord.filter(function (id) { return !outMap[id]; });
+    var leftOut = ord.filter(function (id) { return outMap[id]; });
+    var wronglyOut = leftOut.filter(function (id) { return key.indexOf(id) !== -1; });
+    var wronglyIn = kept.filter(function (id) { return key.indexOf(id) === -1; });
+    var keptKeyOrder = kept.filter(function (id) { return key.indexOf(id) !== -1; });
+    var expected = key.filter(function (id) { return wronglyOut.indexOf(id) === -1; });
+    var misplaced = [];
+    for (var i = 0; i < keptKeyOrder.length; i++) if (keptKeyOrder[i] !== expected[i]) misplaced.push(keptKeyOrder[i]);
+    var membershipErrors = wronglyOut.length + wronglyIn.length;
+
+    if (membershipErrors === 0 && misplaced.length === 0) return { state: "correct" };
+    if (membershipErrors === 0 && misplaced.length === 2) return { state: "near", kind: "swap", pair: misplaced };
+    if (membershipErrors === 1 && misplaced.length === 0) return { state: "near", kind: "member", id: wronglyOut[0] || wronglyIn[0], wronglyIn: wronglyIn.length === 1 };
+    return { state: "wrong", wronglyIn: wronglyIn, wronglyOut: wronglyOut };
+  }
+
+  function show(state, html) {
+    fb.className = "feedback " + state;
+    fb.innerHTML = html;
+    void fb.offsetWidth; fb.classList.add("show");
+    fb.focus();
+  }
+
+  document.getElementById("check").addEventListener("click", function () {
+    var r = grade(pass, order, out);
+    if (r.state === "correct") {
+      chainEl.classList.add("solved");
+      if (pass === 1) {
+        solvedOrder = order.slice();
+        show("correct",
+          '<p class="verdict">That chain holds together.</p>' +
+          '<p>Each link depends on the one before it:</p><ul>' +
+          '<li>' + WHY["name>own"] + '</li><li>' + WHY["own>gateway"] + '</li><li>' + WHY["gateway>way"] + '</li><li>' + WHY["way>service"] + '</li></ul>' +
+          '<p>Each of the five is a separate place this request can stop, while the links before it still hold.</p>');
+        document.getElementById("pass2-offer").hidden = false;
+      } else {
+        show("correct",
+          '<p class="verdict">Four links this time.</p>' +
+          '<p>A request by address starts at <code>10.240.0.4</code>, so it skips the name link entirely. The same storefront, reached by address, depends on four links instead of five.</p>' +
+          '<p>The chain belongs to the request, not to the storefront. Change how the request is made and the list of places it can stop changes with it.</p>');
+        document.getElementById("restart-row").hidden = false;
+      }
+      return;
+    }
+    if (r.state === "near" && r.kind === "swap") {
+      show("near",
+        '<p class="verdict">Close. Two cards have traded places.</p>' +
+        '<p>The rest of the chain is in order. Look at <strong>' + LINKS[r.pair[0]].plain + '</strong> and <strong>' + LINKS[r.pair[1]].plain + '</strong>. Ask which of the two the other one needs first.</p>');
+      flag(r.pair);
+      return;
+    }
+    if (r.state === "near" && r.kind === "member") {
+      var msg = r.wronglyIn
+        ? '<p>The order is right, but <strong>' + LINKS[r.id].plain + '</strong> is still in the chain. Ask whether this request ever needs it.</p>'
+        : '<p>The order is right, but <strong>' + LINKS[r.id].plain + '</strong> is left out. Ask whether this request can reach the storefront without it.</p>';
+      show("near", '<p class="verdict">Close. The order is right, and one card is in or out by mistake.</p>' + msg);
+      flag([r.id]);
+      return;
+    }
+    // wrong: name the criterion and the first move, never the answer
+    var start = pass === 1
+      ? "Start from what the request begins as: a name. Find the card the machine needs before anything else can happen, then ask what that card makes possible next."
+      : "Start from what the request now begins as: an address. Ask whether any card turns a name into an address, and whether this request needs one. Then build forward from the sending machine.";
+    var extra = "";
+    if (pass === 1 && r.wronglyOut.length) extra = "<p>A request by name crosses every one of these cards, so none of them can be left out.</p>";
+    if (pass === 2 && r.wronglyOut.length) extra = "<p>Some card this request still crosses has been left out. Every link from the sending machine to the service still has to hold.</p>";
+    show("wrong",
+      '<p class="verdict">Not yet. The chain needs another look.</p>' +
+      '<p>Each link has to hold before the next one can do anything. A card belongs after every card it needs, and in the chain only if the request crosses it.</p>' + extra +
+      '<p>' + start + '</p>');
+  });
+
+  function flag(ids) {
+    ids.forEach(function (id) {
+      var li = chainEl.querySelector('li[data-id="' + id + '"]');
+      if (li) li.classList.add("flag");
+    });
+  }
+
+  document.getElementById("go-pass2").addEventListener("click", function () {
+    pass = 2;
+    order = solvedOrder.slice();
+    out = {};
+    clearFeedback();
+    document.getElementById("pass2-offer").hidden = true;
+    document.getElementById("request-label").textContent = "The request, with one assumption moved";
+    render();
+    document.getElementById("task-title").setAttribute("tabindex", "-1");
+    document.getElementById("task-title").focus();
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    pass = 1;
+    order = PASSES[1].start.slice();
+    out = {};
+    solvedOrder = null;
+    clearFeedback();
+    document.getElementById("pass2-offer").hidden = true;
+    document.getElementById("restart-row").hidden = true;
+    document.getElementById("request-label").textContent = "The request";
+    render();
+    var first = chainEl.querySelector("button[data-move]:not(:disabled)");
+    if (first) first.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

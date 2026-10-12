@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check the Record Against the Method</title>
+<style>
+  :root {
+    --bg: #16222d;
+    --panel: #1e2e3b;
+    --panel-2: #243747;
+    --sheet: #1a2833;
+    --line: #34495c;
+    --ink: #e8eef2;
+    --muted: #a3b5c3;
+    --accent: #e9b949;
+    --accent-ink: #1a1405;
+    --mark-bg: #4a3d1c;
+    --ok: #6fc3c0;
+    --near: #e9b949;
+    --wrong: #ea9282;
+    --focus: #ffd97a;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: 2rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.6rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  .lede { color: var(--muted); font-size: 1.0625rem; }
+  code { font-family: var(--mono); font-size: 0.92em; white-space: nowrap; }
+  .note { color: var(--muted); font-size: 0.95rem; }
+
+  .steps { background: var(--panel); border-left: 4px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; }
+  .steps ol { margin: 0.25rem 0 0; padding-left: 1.3rem; }
+  .steps li { margin-bottom: 0.3rem; }
+  .steps b { font-weight: 600; }
+
+  /* The runbook entry: one sheet, every sentence selectable */
+  .sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 1.25rem 1.35rem; margin-top: 1rem; }
+  .sheet .head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 0.6rem; margin-bottom: 0.9rem; }
+  .sheet .head strong { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
+  .sent {
+    display: block; width: 100%; text-align: left;
+    font: inherit; line-height: 1.55; color: var(--ink);
+    background: transparent; border: 1px solid transparent; border-radius: 5px;
+    padding: 0.45rem 0.6rem; margin: 0 0 0.25rem; cursor: pointer;
+  }
+  .sent:hover { border-color: var(--line); }
+  .sent[aria-pressed="true"] { background: var(--mark-bg); border-color: var(--accent); }
+  .sent .new { margin-left: 0.4rem; padding: 0 0.4rem; border-radius: 3px; background: var(--accent); color: var(--accent-ink); font-size: 0.75rem; font-weight: 600; }
+  .sent.res-flaw { box-shadow: inset 3px 0 0 var(--ok); }
+  .sent.res-fine { box-shadow: inset 3px 0 0 var(--wrong); }
+  .snote { margin: 0 0 0.6rem 0.6rem; padding: 0.15rem 0 0.15rem 0.8rem; border-left: 2px solid var(--line); font-size: 0.925rem; color: var(--muted); }
+  .snote:empty { display: none; }
+  .snote.flaw { border-left-color: var(--ok); }
+  .snote.fine { border-left-color: var(--wrong); }
+  .snote b { color: var(--ink); font-weight: 600; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .primary { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  .quiet { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  .quiet:hover { border-color: var(--muted); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .count { color: var(--muted); font-size: 0.95rem; margin-top: 0.75rem; font-variant-numeric: tabular-nums; }
+
+  .summary { margin-top: 1.5rem; padding: 1rem 1.2rem; border-radius: 6px; background: var(--panel); border-left: 4px solid var(--line); }
+  .summary:empty { display: none; }
+  .summary.correct { border-left-color: var(--ok); }
+  .summary.near { border-left-color: var(--near); }
+  .summary.wrong { border-left-color: var(--wrong); }
+  .summary .verdict { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; margin: 0 0 0.4rem; }
+  .summary p:last-child { margin-bottom: 0; }
+  .pass2 { margin-top: 2.25rem; padding-top: 0.25rem; border-top: 1px solid var(--line); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .summary.show, .snote.show { animation: settle 280ms ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.65rem; }
+    .sheet { padding: 1rem 0.75rem; }
+    .actions button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Check the Record Against the Method</h1>
+  <p class="lede">A runbook entry is the record a diagnosis leaves for the next person. It ties the reported symptom to the located link and to the action taken. An entry can read well and still show a method that broke down, and the next person inherits whatever it gets wrong.</p>
+
+  <div class="steps">
+    <p class="note">The five steps a sound entry records</p>
+    <ol>
+      <li><b>Define.</b> Restate the report as one exact request: who, from where, to what name and port, since when.</li>
+      <li><b>Isolate.</b> Choose tests that split the chain. Change nothing until the link is located.</li>
+      <li><b>Test.</b> Make one change at a time, and predict the result before looking.</li>
+      <li><b>Resolve.</b> Repeat the user's own request, from where the user made it.</li>
+      <li><b>Document.</b> Record the symptom, the located link, the action, and what remains. A root cause is the condition that has to go for the failure to stop recurring. A fix that restores service while that condition stays is a workaround.</li>
+    </ol>
+  </div>
+
+  <h2 id="task-title">Click the sentences that break the method</h2>
+  <p id="task-text">Click every sentence in this entry that breaks one of the five steps. Click a sentence again to clear it. Some sentences are sound, so leave those alone.</p>
+
+  <div class="sheet" role="group" aria-labelledby="task-title">
+    <div class="head"><strong>Runbook entry</strong><span class="note">Storefront order screen, regional office</span></div>
+    <div id="entry"></div>
+  </div>
+  <p class="count" id="count" aria-live="polite"></p>
+
+  <div class="actions"><button type="button" class="primary" id="check">Check the entry</button></div>
+  <div class="summary" id="summary" tabindex="-1" aria-live="polite"></div>
+
+  <div class="pass2" id="pass2-offer" hidden>
+    <h2>Move one assumption</h2>
+    <p>Keep the entry the same with one difference. The restart now happens after the link was located, on its own, with a prediction written first. Check the entry again.</p>
+    <div class="actions"><button type="button" class="primary" id="go-pass2">Move the restart</button></div>
+  </div>
+  <div class="actions" id="restart-row" hidden><button type="button" class="quiet" id="restart">Start over</button></div>
+</main>
+
+<script>
+(function () {
+  // Each sentence: text, and either the step it breaks (flaw) or why it is sound (fine).
+  var S = {
+    report:   { t: "Report as received: staff at the regional office cannot open the storefront's order screen, and the ticket says only that it will not connect.",
+                fine: "This keeps the report exactly as it arrived, which the record needs before anything else." },
+    define:   { t: "Restated: staff at the regional office open storefront.corp.example on TCP 443, failing since the start of business today.",
+                fine: "This is the define step done well: who, from where, to what name and port, and since when." },
+    restartEarly: { t: "Before running any test, I restarted the web service on cld-lnx-01, because a restart fixed it last time.",
+                flaw: ["Isolate", "It changes a running system before any test has located the link. Every result after it could reflect the restart rather than the fault."] },
+    template: { t: "The security group in front of cld-lnx-01 was rebuilt from its standard template last night.",
+                fine: "This records a recent change near the failure. It is context, and it changes nothing." },
+    sketch:   { t: "My path sketch marks that security group as the one control between the office and the web service.",
+                fine: "Marking any control on the path before a test meets it is part of isolating well." },
+    test3:    { t: "From a machine at the regional office, test 3 reached cld-lnx-01 at 10.240.0.4 and passed.",
+                fine: "A test run from the users' own place, recorded with its result." },
+    test4:    { t: "From the same machine, test 4 to the web service on TCP 443 failed.",
+                fine: "It differs from test 3 by one link, and it was run from the same place. That pairing is what locates the link." },
+    located:  { t: "Located link: the web service on cld-lnx-01, or the rule that admits TCP 443 to it.",
+                fine: "It names the link between the last test that passed and the first that failed, and no more than the two tests allow." },
+    restartLate1: { t: "With the link located, I restarted only the web service and predicted that test 4 would then pass.", fresh: true,
+                fine: "One change, made after the link was located, with the prediction written first. This is the test step, not a guess." },
+    restartLate2: { t: "Test 4 still failed, so the restart was not the repair.", fresh: true,
+                fine: "A result that contradicts the prediction is useful. It shows the reading was off before a repair is built on it." },
+    twoChanges: { t: "In one change, I added a rule admitting TCP 443 and rewrote the web service's listening settings.",
+                flaw: ["Test", "Two changes at once. If the request recovers, the recovery could belong to either change, and the record cannot say which."] },
+    desk:     { t: "To confirm the repair, I opened the order screen from my desk, and it loaded.",
+                flaw: ["Resolve", "The desk's path is not the users' path. The confirmation that counts is the users' own request, repeated from the regional office."] },
+    rootCause:{ t: "Root cause removed: the missing rule is back in the live security group.",
+                flaw: ["Document", "Adding the rule by hand restores service. The template that dropped the rule is unchanged, so the next rebuild drops it again. That is a workaround, recorded as a root cause."] },
+    remains:  { t: "Nothing remains open.",
+                flaw: ["Document", "Something does remain: the standard template still lacks the rule. The record has to say so, or the next person meets the same failure cold."] }
+  };
+
+  var ORDER = {
+    1: ["report", "define", "restartEarly", "template", "sketch", "test3", "test4", "located", "twoChanges", "desk", "rootCause", "remains"],
+    2: ["report", "define", "template", "sketch", "test3", "test4", "located", "restartLate1", "restartLate2", "twoChanges", "desk", "rootCause", "remains"]
+  };
+
+  var pass = 1;
+  var marked = {};
+  var entryEl = document.getElementById("entry");
+
+  function codeify(s) { return s.replace(/(cld-lnx-0\d|storefront\.corp\.example|10\.240\.0\.4)/g, "<code>$1</code>"); }
+
+  function render() {
+    entryEl.innerHTML = "";
+    ORDER[pass].forEach(function (id) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "sent";
+      b.dataset.id = id;
+      b.setAttribute("aria-pressed", marked[id] ? "true" : "false");
+      b.innerHTML = codeify(S[id].t) + (pass === 2 && S[id].fresh ? '<span class="new">moved</span>' : "");
+      var n = document.createElement("p");
+      n.className = "snote"; n.id = "note-" + id;
+      entryEl.appendChild(b); entryEl.appendChild(n);
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    var n = ORDER[pass].filter(function (id) { return marked[id]; }).length;
+    document.getElementById("count").textContent = n === 1 ? "1 sentence marked." : n.toLocaleString("en-US") + " sentences marked.";
+  }
+
+  function clearResults() {
+    Array.prototype.forEach.call(entryEl.querySelectorAll(".sent"), function (b) { b.classList.remove("res-flaw", "res-fine"); });
+    Array.prototype.forEach.call(entryEl.querySelectorAll(".snote"), function (n) { n.className = "snote"; n.innerHTML = ""; });
+    var s = document.getElementById("summary"); s.className = "summary"; s.innerHTML = "";
+  }
+
+  entryEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".sent");
+    if (!b) return;
+    var id = b.dataset.id;
+    marked[id] = !marked[id];
+    b.setAttribute("aria-pressed", marked[id] ? "true" : "false");
+    clearResults();
+    updateCount();
+  });
+
+  var NUDGE = {
+    Isolate: "a sentence where something changed before any test",
+    Test: "the sentence that describes the repair itself",
+    Resolve: "the sentence about confirming the repair",
+    Document: "the closing lines of the entry"
+  };
+
+  document.getElementById("check").addEventListener("click", function () {
+    clearResults();
+    var ids = ORDER[pass];
+    var flaws = ids.filter(function (id) { return S[id].flaw; });
+    var picked = ids.filter(function (id) { return marked[id]; });
+    var missed = flaws.filter(function (id) { return !marked[id]; });
+    var extra = picked.filter(function (id) { return !S[id].flaw; });
+
+    // Notes appear on every sentence the learner marked: the step it breaks, or why it is sound.
+    picked.forEach(function (id) {
+      var b = entryEl.querySelector('.sent[data-id="' + id + '"]');
+      var n = document.getElementById("note-" + id);
+      if (S[id].flaw) {
+        b.classList.add("res-flaw");
+        n.className = "snote flaw show";
+        n.innerHTML = "<b>Breaks the " + S[id].flaw[0] + " step.</b> " + S[id].flaw[1];
+      } else {
+        b.classList.add("res-fine");
+        n.className = "snote fine show";
+        n.innerHTML = "<b>Sound.</b> " + S[id].fine;
+      }
+    });
+
+    var s = document.getElementById("summary");
+    var off = missed.length + extra.length;
+    if (off === 0) {
+      s.className = "summary correct show";
+      s.innerHTML = pass === 1
+        ? '<p class="verdict">All five found, and nothing sound marked.</p><p>The entry breaks Isolate once, Test once, Resolve once, and Document twice. Every one of those sentences reads as diligent work. The method is what shows they are not.</p>'
+        : '<p class="verdict">Four this time, and the restart is no longer one of them.</p><p>The same action, a restart, is a guess before the link is located and a test after it, when it is made alone with a prediction written first. What decides the reading is the order, not the action.</p>';
+      document.getElementById(pass === 1 ? "pass2-offer" : "restart-row").hidden = false;
+    } else if (off === 1) {
+      s.className = "summary near show";
+      s.innerHTML = missed.length
+        ? '<p class="verdict">Close. One sentence that breaks the method is still unmarked.</p><p>It breaks the ' + S[missed[0]].flaw[0] + ' step. Look at ' + NUDGE[S[missed[0]].flaw[0]] + '.</p>'
+        : '<p class="verdict">Close. Every broken sentence is marked, plus one that is sound.</p><p>Its note says why it holds. Clear it and check again.</p>';
+    } else {
+      s.className = "summary wrong show";
+      s.innerHTML = '<p class="verdict">Not yet.</p><p>Read the entry against the five steps in order, not for how it sounds. Start with timing: find anything that changed before the link was located. Then check each change, where the repair was confirmed from, and whether the closing lines separate a workaround from a root cause.</p>';
+    }
+    s.focus();
+  });
+
+  document.getElementById("go-pass2").addEventListener("click", function () {
+    pass = 2; marked = {};
+    clearResults(); render();
+    document.getElementById("pass2-offer").hidden = true;
+    document.getElementById("task-text").textContent = "The restart has moved, and its sentences are marked. Click every sentence that still breaks one of the five steps.";
+    var t = document.getElementById("task-title"); t.setAttribute("tabindex", "-1"); t.focus();
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    pass = 1; marked = {};
+    clearResults(); render();
+    document.getElementById("restart-row").hidden = true;
+    document.getElementById("task-text").textContent = "Click every sentence in this entry that breaks one of the five steps. Click a sentence again to clear it. Some sentences are sound, so leave those alone.";
+    var first = entryEl.querySelector(".sent"); if (first) first.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

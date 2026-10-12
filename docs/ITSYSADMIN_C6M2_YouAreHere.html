@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three Results and a Ticket</title>
+<style>
+  :root {
+    --bg: #16222d;
+    --panel: #1e2e3b;
+    --panel-2: #243747;
+    --line: #34495c;
+    --ink: #e8eef2;
+    --muted: #a3b5c3;
+    --accent: #e9b949;
+    --accent-ink: #1a1405;
+    --cleared: #6fc3c0;
+    --cleared-bg: #1f3c40;
+    --noreply: #ea9282;
+    --untested: #7f93a3;
+    --focus: #ffd97a;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 1rem/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: 2rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.35rem; margin: 2.25rem 0 0.75rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  .lede { color: var(--muted); font-size: 1.0625rem; }
+  code.host { font-family: var(--mono); font-size: 0.92em; color: var(--ink); }
+
+  /* The ticket */
+  .ticket {
+    border-left: 4px solid var(--accent);
+    background: var(--panel);
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+  }
+  .ticket p { margin: 0; }
+  .ticket .quote { font-family: var(--serif); font-size: 1.3rem; margin-top: 0.35rem; }
+
+  /* The results */
+  .results { list-style: none; padding: 0; margin: 0 0 1.5rem; counter-reset: r; }
+  .results li {
+    counter-increment: r;
+    position: relative;
+    padding: 0.85rem 1rem 0.85rem 3rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .results li:first-child { border-top: 1px solid var(--line); }
+  .results li::before {
+    content: counter(r);
+    position: absolute; left: 1rem; top: 0.85rem;
+    font-family: var(--serif); font-weight: 600; color: var(--accent);
+  }
+  .note { color: var(--muted); font-size: 0.95rem; }
+
+  /* The commitment */
+  fieldset { border: 0; padding: 0; margin: 0; }
+  legend { font-family: var(--serif); font-size: 1.35rem; font-weight: 600; padding: 0; margin: 2rem 0 0.4rem; }
+  .hint { color: var(--muted); margin-bottom: 1rem; }
+  .choice {
+    display: flex; gap: 0.85rem; align-items: flex-start;
+    padding: 0.85rem 1rem; margin-bottom: 0.5rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    cursor: pointer;
+  }
+  .choice:hover { border-color: var(--muted); }
+  .choice input { margin: 0.3rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--accent); flex: none; }
+  .choice:has(input:checked) { border-color: var(--accent); background: var(--panel-2); }
+  .choice:has(input:disabled) { cursor: default; }
+  .choice strong { font-weight: 600; }
+
+  button {
+    font: 600 1rem/1 var(--sans);
+    padding: 0.85rem 1.4rem;
+    border-radius: 6px;
+    border: 2px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+    margin-top: 0.75rem;
+  }
+  button:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+  button.quiet { background: transparent; color: var(--ink); border-color: var(--line); }
+  button.quiet:hover { border-color: var(--muted); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .choice:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* The reveal */
+  #reveal[hidden] { display: none; }
+  #reveal { margin-top: 2.5rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+  #reveal h2:focus { outline: none; }
+  #reveal h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .yours {
+    background: var(--panel); border-left: 4px solid var(--accent);
+    padding: 0.85rem 1.1rem; margin: 0 0 1rem;
+  }
+  .yours .said { font-family: var(--serif); font-size: 1.15rem; margin: 0.2rem 0 0; }
+
+  /* The path map: the one memorable element */
+  .map {
+    display: grid;
+    grid-template-columns: 8rem repeat(5, minmax(0, 1fr));
+    grid-template-rows: auto auto auto;
+    gap: 6px;
+    margin: 1.25rem 0 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.35;
+  }
+  .map .colhead { color: var(--muted); padding: 0 0.35rem 0.25rem; align-self: end; }
+  .map .rowhead { padding: 0.6rem 0.5rem 0.6rem 0; align-self: center; }
+  .map .rowhead strong { display: block; font-weight: 600; }
+  .map .rowhead span { color: var(--muted); }
+  .cell {
+    border-radius: 4px; padding: 0.55rem 0.5rem;
+    min-height: 4.25rem;
+    display: flex; flex-direction: column; gap: 0.2rem;
+  }
+  .cell .status { font-weight: 600; }
+  .cell .why { color: var(--muted); }
+  .cell.cleared { background: var(--cleared-bg); border: 1px solid var(--cleared); }
+  .cell.cleared .status { color: var(--cleared); }
+  .cell.mixed { background: var(--cleared-bg); border: 1px solid var(--cleared); }
+  .cell.mixed .status { color: var(--cleared); }
+  .cell.untested { border: 1px dashed var(--untested); background: transparent; }
+  .cell.untested .status { color: var(--untested); }
+  .cell.shared { grid-column: 6; grid-row: 2 / span 2; justify-content: center; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; color: var(--muted); font-size: 0.875rem; margin-bottom: 1.5rem; }
+  .legend i { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 2px; vertical-align: -0.12rem; margin-right: 0.4rem; }
+  .legend .k-cleared { background: var(--cleared-bg); border: 1px solid var(--cleared); }
+  .legend .k-untested { border: 1px dashed var(--untested); }
+  .noreply { color: var(--noreply); }
+
+  .capability {
+    background: var(--panel); padding: 1.25rem 1.35rem; border-radius: 6px; margin-top: 1.5rem;
+  }
+  .capability p:last-child { margin-bottom: 0; }
+  .capability .name { font-family: var(--serif); font-size: 1.3rem; line-height: 1.35; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #reveal.shown { animation: settle 360ms ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+
+  @media (max-width: 720px) {
+    .map { grid-template-columns: 1fr; }
+    .map .colhead { display: none; }
+    .map .rowhead { padding-top: 1rem; }
+    .cell { min-height: 0; }
+    .cell::before { content: attr(data-link); color: var(--ink); font-size: 0.8125rem; }
+    .cell.shared { grid-column: auto; grid-row: auto; }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1.1rem 2.5rem; }
+    h1 { font-size: 1.65rem; }
+    button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Three Results and a Ticket</h1>
+  <p class="lede">You look after the storefront of a mid-market retailer during its seasonal peak. Staff at a regional office cannot open the storefront's order screen. The help desk passes you their ticket.</p>
+
+  <div class="ticket">
+    <p class="note">The ticket says</p>
+    <p class="quote">"It will not connect."</p>
+  </div>
+
+  <p>That is all it says. Before anyone asks what is wrong, you already have three results. You ran all three from your own desk.</p>
+
+  <ol class="results">
+    <li>The order screen opens, by its name <code class="host">storefront.corp.example</code>.</li>
+    <li>A ping to the storefront host gets no reply.</li>
+    <li>You look the name up with two tools. One returns an address. The other cannot find the name.</li>
+  </ol>
+
+  <form id="commit-form" novalidate onsubmit="return false;">
+    <fieldset id="choices">
+      <legend>Which reading do these results support?</legend>
+      <p class="hint">Choose the one you would act on. Your choice stays fixed once you commit.</p>
+
+      <label class="choice"><input type="radio" name="reading" value="host">
+        <span><strong>The storefront host is down.</strong> The ping got no reply.</span></label>
+      <label class="choice"><input type="radio" name="reading" value="name">
+        <span><strong>Name resolution is broken.</strong> One lookup could not find the name.</span></label>
+      <label class="choice"><input type="radio" name="reading" value="restart">
+        <span><strong>The web service is stuck.</strong> Restart it, as you did last time.</span></label>
+      <label class="choice"><input type="radio" name="reading" value="works">
+        <span><strong>The storefront works.</strong> It opens from your desk, so the ticket can close.</span></label>
+      <label class="choice"><input type="radio" name="reading" value="open">
+        <span><strong>None of these yet.</strong> The fault could still be in several places.</span></label>
+    </fieldset>
+    <button type="button" id="commit" disabled>Commit to this reading</button>
+  </form>
+
+  <section id="reveal" hidden aria-labelledby="reveal-title">
+    <h2 id="reveal-title" tabindex="-1">What your reading leaves out</h2>
+    <div class="yours">
+      <p class="note">You committed to</p>
+      <p class="said" id="said"></p>
+    </div>
+    <p id="misses"></p>
+
+    <h2>Where each result ran, and what it crossed</h2>
+    <p>The users' request and your tests both have to cross five links to reach the storefront. Your desk and the regional office reach it along different paths. The two paths meet only at the storefront host and its web service.</p>
+
+    <div class="map" role="table" aria-label="Which links each path's tests crossed">
+      <div role="row" style="display:contents">
+        <div class="colhead" role="columnheader"><span class="sr-only">Path</span></div>
+        <div class="colhead" role="columnheader">The name</div>
+        <div class="colhead" role="columnheader">This machine's own address</div>
+        <div class="colhead" role="columnheader">The gateway off its network</div>
+        <div class="colhead" role="columnheader">The way to the storefront host</div>
+        <div class="colhead" role="columnheader">The web service on TCP 443</div>
+      </div>
+
+      <div role="row" style="display:contents">
+        <div class="rowhead" role="rowheader"><strong>Your desk</strong><span>All three results ran here</span></div>
+        <div class="cell mixed" role="cell" data-link="The name"><span class="status">Crossed</span><span class="why">The page opened by name. The two lookup tools disagree.</span></div>
+        <div class="cell cleared" role="cell" data-link="This machine's own address"><span class="status">Crossed</span><span class="why">By the page and the ping</span></div>
+        <div class="cell cleared" role="cell" data-link="The gateway off its network"><span class="status">Crossed</span><span class="why">By the page and the ping</span></div>
+        <div class="cell cleared" role="cell" data-link="The way to the storefront host"><span class="status">Crossed</span><span class="why">The page got through. <span class="noreply">The ping drew no reply.</span></span></div>
+        <div class="cell cleared shared" role="cell" data-link="The web service on TCP 443 (shared by both paths)"><span class="status">Answered</span><span class="why">The page opened. Both paths end here.</span></div>
+      </div>
+
+      <div role="row" style="display:contents">
+        <div class="rowhead" role="rowheader"><strong>The regional office</strong><span>Where the users are</span></div>
+        <div class="cell untested" role="cell" data-link="The name"><span class="status">Untested</span><span class="why">No result ran from here</span></div>
+        <div class="cell untested" role="cell" data-link="This machine's own address"><span class="status">Untested</span><span class="why">No result ran from here</span></div>
+        <div class="cell untested" role="cell" data-link="The gateway off its network"><span class="status">Untested</span><span class="why">No result ran from here</span></div>
+        <div class="cell untested" role="cell" data-link="The way to the storefront host"><span class="status">Untested</span><span class="why">No result ran from here</span></div>
+      </div>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="k-cleared"></i>A result from your desk crossed this link</span>
+      <span><i class="k-untested"></i>Nothing has crossed this link yet</span>
+    </div>
+
+    <p>Every result is true. Each one describes the path it crossed, from the desk it ran on. The users' request has a path of its own, and four of its five links have not met a single test. The ticket would read the same wherever along that path the break sits.</p>
+
+    <div class="capability">
+      <p class="name">The capability this module builds is locating the one link where a request stops, and proving it with a test, before anything is changed.</p>
+      <p>It has to be in place before a repair can be chosen, confirmed, or written down for the next person.</p>
+    </div>
+
+    <button type="button" class="quiet" id="again">Start over</button>
+  </section>
+</main>
+
+<script>
+(function () {
+  var readings = {
+    host: {
+      said: "The storefront host is down. The ping got no reply.",
+      misses: "The order screen opened from your desk, so the storefront host answered across the same links the ping crossed. A ping sends one kind of probe, an echo request. A firewall or security group that admits no echo request makes a ping fail to a host that is working. That refusal is a control doing its job."
+    },
+    name: {
+      said: "Name resolution is broken. One lookup could not find the name.",
+      misses: "The two lookup tools disagree, and one of them returned an address. A lookup tool that fails shows that the source it asked had no answer, not that every source has none. Both lookups also ran from your desk. The regional office looks the name up along its own path."
+    },
+    restart: {
+      said: "The web service is stuck. Restart it, as you did last time.",
+      misses: "The order screen opened from your desk, so the web service is answering. A restart changes a running system before anyone has located the fault. It also reaches nothing on the regional office's side of the path."
+    },
+    works: {
+      said: "The storefront works. It opens from your desk, so the ticket can close.",
+      misses: "It works from your desk. Your desk and the regional office share the storefront host and its web service, and little else. Your success clears your own path. The office's own address, its gateway, its way to the storefront, and its lookup of the name have not been tested."
+    },
+    open: {
+      said: "None of these yet. The fault could still be in several places.",
+      misses: "That reading holds, and it is the uncommon one. The results narrow things down without naming a link. They clear the storefront host and its web service, and they leave four links on the regional office's path with no test across them. Holding off is half of the skill. The other half is turning that shorter list into one located link."
+    }
+  };
+
+  var form = document.getElementById("commit-form");
+  var radios = form.querySelectorAll('input[name="reading"]');
+  var commitBtn = document.getElementById("commit");
+  var reveal = document.getElementById("reveal");
+  var committed = null;
+
+  function selected() {
+    for (var i = 0; i < radios.length; i++) { if (radios[i].checked) return radios[i].value; }
+    return null;
+  }
+
+  for (var i = 0; i < radios.length; i++) {
+    radios[i].addEventListener("change", function () {
+      if (committed === null) commitBtn.disabled = selected() === null;
+    });
+  }
+
+  commitBtn.addEventListener("click", function () {
+    var v = selected();
+    if (!v || committed !== null) return;
+    committed = v;                                   // the commitment is recorded before anything is shown
+    for (var j = 0; j < radios.length; j++) radios[j].disabled = true;
+    commitBtn.disabled = true;
+    commitBtn.textContent = "Reading committed";
+    document.getElementById("said").textContent = readings[v].said;
+    document.getElementById("misses").textContent = readings[v].misses;
+    document.getElementById("reveal-title").textContent =
+      v === "open" ? "What your reading gets right" : "What your reading leaves out";
+    reveal.hidden = false;
+    reveal.classList.add("shown");
+    document.getElementById("reveal-title").focus();
+  });
+
+  document.getElementById("again").addEventListener("click", function () {
+    committed = null;
+    for (var j = 0; j < radios.length; j++) { radios[j].disabled = false; radios[j].checked = false; }
+    commitBtn.textContent = "Commit to this reading";
+    commitBtn.disabled = true;
+    reveal.hidden = true;
+    reveal.classList.remove("shown");
+    radios[0].focus();
+  });
+})();
+</script>
+</body>
+</html>

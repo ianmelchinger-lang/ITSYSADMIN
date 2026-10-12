@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weigh the Claim Against the Probe and the Place</title>
+<style>
+  :root {
+    --bg: #16222d;
+    --panel: #1e2e3b;
+    --panel-2: #243747;
+    --line: #34495c;
+    --ink: #e8eef2;
+    --muted: #a3b5c3;
+    --accent: #e9b949;
+    --accent-ink: #1a1405;
+    --ok: #6fc3c0;
+    --near: #e9b949;
+    --wrong: #ea9282;
+    --tag-probe: #2b3f52;
+    --tag-place: #3a3424;
+    --focus: #ffd97a;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.5rem 3.5rem; }
+  h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: 2rem; margin: 0 0 1rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.6rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  .lede { color: var(--muted); font-size: 1.0625rem; }
+  code { font-family: var(--mono); font-size: 0.92em; white-space: nowrap; }
+  .note { color: var(--muted); font-size: 0.95rem; }
+
+  .scale { background: var(--panel); border-left: 4px solid var(--accent); padding: 1rem 1.25rem; margin: 1.5rem 0; }
+  .scale dl { margin: 0; }
+  .scale dt { font-weight: 600; margin-top: 0.5rem; }
+  .scale dt:first-child { margin-top: 0; }
+  .scale dd { margin: 0; color: var(--muted); }
+
+  .claim { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.2rem; margin: 1.25rem 0; }
+  .claim.s-correct { border-color: var(--ok); }
+  .claim.s-near { border-color: var(--near); }
+  .claim.s-wrong { border-color: var(--wrong); }
+  .claim .said { font-family: var(--serif); font-size: 1.25rem; line-height: 1.35; margin: 0.15rem 0 0.9rem; }
+  .result { border-top: 1px solid var(--line); padding-top: 0.8rem; }
+  .result p { margin-bottom: 0.6rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
+  .tag { display: inline-flex; gap: 0.4rem; align-items: baseline; padding: 0.3rem 0.65rem; border-radius: 4px; font-size: 0.9rem; line-height: 1.35; }
+  .tag b { font-weight: 600; }
+  .tag.probe { background: var(--tag-probe); }
+  .tag.place { background: var(--tag-place); }
+  .tag .moved { margin-left: 0.25rem; padding: 0 0.4rem; border-radius: 3px; background: var(--accent); color: var(--accent-ink); font-size: 0.75rem; font-weight: 600; }
+
+  fieldset { border: 0; padding: 0; margin: 0; }
+  legend { font-weight: 600; padding: 0; margin-bottom: 0.45rem; }
+  .opt { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.55rem 0.75rem; margin-bottom: 0.4rem; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: var(--bg); }
+  .opt:hover { border-color: var(--muted); }
+  .opt input { margin: 0.28rem 0 0; width: 1.05rem; height: 1.05rem; accent-color: var(--accent); flex: none; }
+  .opt:has(input:checked) { border-color: var(--accent); background: var(--panel-2); }
+  .opt:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .ifb { margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px solid var(--line); }
+  .ifb:empty { display: none; }
+  .ifb .verdict { font-weight: 600; margin: 0 0 0.25rem; }
+  .ifb.correct .verdict { color: var(--ok); }
+  .ifb.near .verdict { color: var(--near); }
+  .ifb.wrong .verdict { color: var(--wrong); }
+  .ifb p { margin-bottom: 0.5rem; }
+  .ifb p:last-child { margin-bottom: 0; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .primary { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  .quiet { font: 600 1rem/1 var(--sans); padding: 0.85rem 1.4rem; border-radius: 6px; border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  .quiet:hover { border-color: var(--muted); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .summary { margin-top: 1.5rem; padding: 1rem 1.2rem; border-radius: 6px; background: var(--panel); border-left: 4px solid var(--line); }
+  .summary:empty { display: none; }
+  .summary.all { border-left-color: var(--ok); }
+  .summary.near { border-left-color: var(--near); }
+  .summary.wrong { border-left-color: var(--wrong); }
+  .summary .verdict { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; margin: 0 0 0.4rem; }
+  .summary p:last-child { margin-bottom: 0; }
+  .pass2 { margin-top: 2.25rem; padding-top: 0.25rem; border-top: 1px solid var(--line); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ifb.show, .summary.show { animation: settle 280ms ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+  @media (max-width: 480px) {
+    main { padding: 1.75rem 1rem 2.5rem; }
+    h1 { font-size: 1.65rem; }
+    .claim { padding: 0.95rem 0.85rem; }
+    .actions button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Weigh the Claim Against the Probe and the Place</h1>
+  <p class="lede">A test reports on the probe it sends, from the place where it runs. The probe is what the test actually sends: an echo request, a question put to one name source, or a real request for the page. The place is the machine it runs from. A claim in a ticket can be written only as strongly as those two allow.</p>
+  <p>The storefront of a mid-market retailer sits on the host <code>cld-lnx-01</code>. Staff at a regional office report that they cannot open its order screen. Each claim below comes with one result.</p>
+
+  <div class="scale">
+    <p class="note">How strongly a result can carry its claim</p>
+    <dl>
+      <dt>Supports the claim</dt>
+      <dd>The probe and the place both cover what the claim is about.</dd>
+      <dt>True for the tester's path, not the claim's</dt>
+      <dd>The result is solid, but it crossed a different path from the one the claim is about.</dd>
+      <dt>Another cause fits this result</dt>
+      <dd>The probe itself could explain the result, so the claim's cause is one possibility among others.</dd>
+    </dl>
+  </div>
+
+  <h2 id="task-title">Mark each claim</h2>
+  <p id="task-text">Read the probe and the place on each result, then choose how strongly the result carries its claim.</p>
+
+  <div id="claims"></div>
+
+  <div class="actions"><button type="button" class="primary" id="check">Check all four</button></div>
+  <div class="summary" id="summary" tabindex="-1" aria-live="polite"></div>
+
+  <div class="pass2" id="pass2-offer" hidden>
+    <h2>Move the place</h2>
+    <p>Keep every probe the same. Now each test runs from a machine at the regional office, where the staff are. Mark the four claims again.</p>
+    <div class="actions"><button type="button" class="primary" id="go-pass2">Run them from the regional office</button></div>
+  </div>
+  <div class="actions" id="restart-row" hidden><button type="button" class="quiet" id="restart">Start over</button></div>
+</main>
+
+<script>
+(function () {
+  var OPTIONS = [
+    { v: "supports", label: "Supports the claim" },
+    { v: "ownpath", label: "True for the tester's path, not the claim's" },
+    { v: "othercause", label: "Another cause fits this result" }
+  ];
+  var LABEL = { supports: "Supports the claim", ownpath: "True for the tester's path, not the claim's", othercause: "Another cause fits this result" };
+
+  var PLACE = { 1: "the administrator's desk", 2: "a machine at the regional office" };
+
+  // Each claim: one result. The probe never changes between passes; only the place does.
+  var CLAIMS = [
+    {
+      id: "host",
+      claim: "The storefront host is down.",
+      result: { 1: "A ping to cld-lnx-01 got no reply.", 2: "A ping to cld-lnx-01 got no reply." },
+      probe: "an echo request (ping)",
+      key: { 1: "othercause", 2: "othercause" },
+      why: {
+        othercause: "A ping sends one kind of probe, an echo request. A firewall or security group that admits no echo request makes a ping fail to a host that is working. The silence fits a down host and a refused probe equally well.",
+        placeNote: "Running it from the regional office does not change that. The probe is the problem here, not the place."
+      }
+    },
+    {
+      id: "office",
+      claim: "Staff at the regional office cannot open the order screen.",
+      result: { 1: "The order screen opened, by name.", 2: "The order screen did not open, by name." },
+      probe: "a real request for the page, by name, on TCP 443",
+      key: { 1: "ownpath", 2: "supports" },
+      why: {
+        ownpath: "The page really did open, so every link on the desk's path holds. The claim is about the regional office's path, and this result never crossed it. It neither confirms the ticket nor rules it out.",
+        supports: "This is the staff's own request, made from where the staff sit, and it failed. Its probe and its place both match the claim, so the result carries it."
+      }
+    },
+    {
+      id: "name",
+      claim: "Name resolution is broken.",
+      result: { 1: "One lookup tool could not find storefront.corp.example. A second tool, on the same machine, returned an address.", 2: "One lookup tool could not find storefront.corp.example. A second tool, on the same machine, returned an address." },
+      probe: "a name lookup that asks one source",
+      key: { 1: "othercause", 2: "othercause" },
+      why: {
+        othercause: "A lookup tool that fails shows that the source it asked had no answer, not that every source has none. Two tools can put the question to different sources, and here they disagree.",
+        placeNote: "Moving the lookups to the regional office does not change that. The disagreement is between sources, not places."
+      }
+    },
+    {
+      id: "desk",
+      claim: "The order screen opens from the administrator's desk.",
+      result: { 1: "The order screen opened, by name.", 2: "The order screen did not open, by name." },
+      probe: "a real request for the page, by name, on TCP 443",
+      key: { 1: "supports", 2: "ownpath" },
+      why: {
+        supports: "The real request ran from the very place the claim names, so its probe and its place both match the claim.",
+        ownpath: "The failure is real, and it belongs to the regional office's path. The claim is about the desk's path, which this result never crossed."
+      }
+    }
+  ];
+
+  var pass = 1;
+  var claimsEl = document.getElementById("claims");
+
+  function render() {
+    claimsEl.innerHTML = "";
+    CLAIMS.forEach(function (c, i) {
+      var sec = document.createElement("section");
+      sec.className = "claim";
+      sec.setAttribute("aria-labelledby", "c-h-" + i);
+      var opts = OPTIONS.map(function (o) {
+        return '<label class="opt"><input type="radio" name="c' + i + '" value="' + o.v + '"><span>' + o.label + '</span></label>';
+      }).join("");
+      sec.innerHTML =
+        '<p class="note">Claim ' + (i + 1) + '</p>' +
+        '<p class="said" id="c-h-' + i + '">"' + c.claim + '"</p>' +
+        '<div class="result"><p>' + codeify(c.result[pass]) + '</p>' +
+        '<div class="tags">' +
+          '<span class="tag probe"><b>Probe</b> ' + c.probe + '</span>' +
+          '<span class="tag place"><b>Place</b> ' + PLACE[pass] + (pass === 2 ? '<span class="moved">moved</span>' : '') + '</span>' +
+        '</div>' +
+        '<fieldset><legend>How strongly does this result carry the claim?</legend>' + opts + '</fieldset></div>' +
+        '<div class="ifb" id="ifb-' + i + '"></div>';
+      claimsEl.appendChild(sec);
+    });
+  }
+  function codeify(s) {
+    return s.replace(/(cld-lnx-0\d|storefront\.corp\.example)/g, "<code>$1</code>");
+  }
+
+  function grade(i) {
+    var c = CLAIMS[i];
+    var picked = claimsEl.querySelector('input[name="c' + i + '"]:checked');
+    var key = c.key[pass];
+    if (!picked) return { state: "wrong", html: "<p class=\"verdict\">No choice yet.</p><p>Read the probe first, then the place. Ask whether the claim is about what this probe tested, from this place.</p>" };
+    var v = picked.value;
+    if (v === key) {
+      var body = c.why[key];
+      if (pass === 2 && c.why.placeNote) body += " " + c.why.placeNote;
+      if (pass === 2 && (c.id === "office" || c.id === "desk")) body += " Moving the place is what changed this answer.";
+      return { state: "correct", html: '<p class="verdict">Right: ' + LABEL[key].toLowerCase() + '.</p><p>' + body + '</p>' };
+    }
+    // Near: the learner saw that the result falls short of the claim, but named the wrong reason.
+    var shortfalls = ["ownpath", "othercause"];
+    if (shortfalls.indexOf(v) !== -1 && shortfalls.indexOf(key) !== -1) {
+      var nearMsg = key === "othercause"
+        ? "You are right that this result falls short of the claim. The reason is the probe, not the place: look at what this test actually sent."
+        : "You are right that this result falls short of the claim. The reason is the place, not the probe: this probe is the real request, so look at where it ran.";
+      return { state: "near", html: '<p class="verdict">Close.</p><p>' + nearMsg + '</p>' };
+    }
+    var first = v === "supports"
+      ? "This result cannot carry the claim as written. Read the probe tag and ask what that probe actually tests. Then read the place tag and ask whose path it crossed."
+      : "Check whose path the claim is about, and whether this probe is the real request made from that place. When both match, the result carries the claim.";
+    return { state: "wrong", html: '<p class="verdict">Not yet.</p><p>A claim can be written only as strongly as its probe and its place allow. ' + first + '</p>' };
+  }
+
+  document.getElementById("check").addEventListener("click", function () {
+    var right = 0, near = 0;
+    CLAIMS.forEach(function (c, i) {
+      var r = grade(i);
+      var box = document.getElementById("ifb-" + i);
+      box.className = "ifb " + r.state;
+      box.innerHTML = r.html;
+      void box.offsetWidth; box.classList.add("show");
+      box.parentNode.className = "claim s-" + r.state;
+      if (r.state === "correct") right++;
+      if (r.state === "near") near++;
+    });
+    var s = document.getElementById("summary");
+    if (right === 4) {
+      s.className = "summary all";
+      s.innerHTML = pass === 1
+        ? '<p class="verdict">All four weighed correctly.</p><p>Two results fell short because of their probe and one because of its place. One carried its claim, because its probe and its place both match what the claim is about.</p>'
+        : '<p class="verdict">All four weighed correctly, from the new place.</p><p>Moving the place changed two answers and left two alone. Place decides which path\u2019s claims a result can carry. It cannot rescue a probe a filter refuses, or a lookup that asked a source with no answer.</p>';
+      document.getElementById(pass === 1 ? "pass2-offer" : "restart-row").hidden = false;
+    } else {
+      s.className = "summary " + (right + near === 4 ? "near" : "wrong");
+      s.innerHTML = '<p class="verdict">' + right + ' of 4 weighed correctly.</p><p>' +
+        (right + near === 4
+          ? "Every result you marked as falling short does fall short. Check the reason on the ones marked close: probe or place."
+          : "Each claim's note names what decides it. Change your choices and check again.") + '</p>';
+    }
+    void s.offsetWidth; s.classList.add("show");
+    s.focus();
+  });
+
+  claimsEl.addEventListener("change", function (e) {
+    var m = e.target.name && e.target.name.match(/^c(\d)$/);
+    if (!m) return;
+    var box = document.getElementById("ifb-" + m[1]);
+    box.className = "ifb"; box.innerHTML = "";
+    box.parentNode.className = "claim";
+  });
+
+  document.getElementById("go-pass2").addEventListener("click", function () {
+    pass = 2;
+    render();
+    document.getElementById("pass2-offer").hidden = true;
+    var s = document.getElementById("summary"); s.className = "summary"; s.innerHTML = "";
+    document.getElementById("task-text").textContent = "Every probe is the same. Every place has moved to the regional office, and each place tag is marked. Choose again how strongly each result carries its claim.";
+    var t = document.getElementById("task-title"); t.setAttribute("tabindex", "-1"); t.focus();
+  });
+
+  document.getElementById("restart").addEventListener("click", function () {
+    pass = 1;
+    render();
+    document.getElementById("restart-row").hidden = true;
+    var s = document.getElementById("summary"); s.className = "summary"; s.innerHTML = "";
+    document.getElementById("task-text").textContent = "Read the probe and the place on each result, then choose how strongly the result carries its claim.";
+    var first = claimsEl.querySelector("input"); if (first) first.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
