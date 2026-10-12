@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which of These Hold the Account?</title>
+<style>
+  :root {
+    --color-bg: #f7f6f3;
+    --color-surface: #ffffff;
+    --color-border: #d8d4cb;
+    --color-text: #2b2a27;
+    --color-text-muted: #5a5750;
+    --color-accent: #1f5b4f;
+    --color-accent-contrast: #ffffff;
+    --color-correct-bg: #e8f3ec;
+    --color-correct-border: #2f7a4f;
+    --color-correct-text: #205c3a;
+    --color-incorrect-bg: #faeceb;
+    --color-incorrect-border: #b4473a;
+    --color-incorrect-text: #7c2e24;
+    --color-banner-near-bg: #fbf3df;
+    --color-banner-near-border: #b07d1f;
+    --color-focus-ring: #0b5fff;
+    --space-1: 0.5rem;
+    --space-2: 1rem;
+    --space-3: 1.5rem;
+    --space-4: 2.25rem;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    padding: var(--space-4) var(--space-2);
+  }
+
+  main { max-width: 680px; margin: 0 auto; }
+
+  h1 { font-size: 1.5rem; line-height: 1.3; margin: 0 0 var(--space-2) 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 var(--space-1) 0; }
+
+  p { margin: 0 0 var(--space-2) 0; }
+
+  .intro {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .instructions {
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+  }
+
+  .item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .item p.action-text {
+    margin-bottom: var(--space-2);
+  }
+
+  .button-pair {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  button.sort-btn {
+    font: inherit;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    color: var(--color-text);
+    flex: 1 1 auto;
+    min-width: 10rem;
+  }
+
+  button.sort-btn[aria-pressed="true"] {
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    border-color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  button.sort-btn:disabled { cursor: default; }
+
+  button:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .feedback-line {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius);
+    display: none;
+  }
+
+  .feedback-line.show { display: block; }
+
+  .feedback-line.correct {
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+  }
+
+  .feedback-line.incorrect {
+    background: var(--color-incorrect-bg);
+    border: 1px solid var(--color-incorrect-border);
+    color: var(--color-incorrect-text);
+  }
+
+  .mark { font-weight: 700; margin-right: 0.4rem; }
+
+  .controls {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin: var(--space-3) 0;
+  }
+
+  button.primary {
+    font: inherit;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+  }
+
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+
+  button.secondary {
+    font: inherit;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+  }
+
+  #overall-banner {
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+    display: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #overall-banner.show { display: block; }
+  #overall-banner.visible { opacity: 1; transform: translateY(0); }
+
+  #overall-banner.correct {
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+  }
+
+  #overall-banner.near {
+    background: var(--color-banner-near-bg);
+    border: 1px solid var(--color-banner-near-border);
+    color: #6b4b10;
+  }
+
+  #overall-banner.wrong {
+    background: var(--color-incorrect-bg);
+    border: 1px solid var(--color-incorrect-border);
+    color: var(--color-incorrect-text);
+  }
+
+  #second-pass {
+    border: 1px solid var(--color-accent);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+    display: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #second-pass.show { display: block; }
+  #second-pass.visible { opacity: 1; transform: translateY(0); }
+
+  #second-pass-explanation {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius);
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+    display: none;
+  }
+
+  #second-pass-explanation.show { display: block; }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #overall-banner, #second-pass { transition: none; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: var(--space-3) var(--space-1); }
+    .intro, .item, #second-pass { padding: var(--space-2); }
+    .button-pair { flex-direction: column; }
+    button.sort-btn { min-width: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Which of These Hold the Account?</h1>
+
+  <div class="intro">
+    <p>A contractor works across two of Sample Enterprise Manufacturing's systems: a build server and a project-tracking server. Several other systems and lists also mention the contractor somewhere. Only some of these actually hold an independent account record — a place where a removal would need to happen on its own.</p>
+  </div>
+
+  <p class="instructions" id="sort-instructions">Sort each item: does it hold its own independent account record for the contractor, or not?</p>
+
+  <div id="items" aria-labelledby="sort-instructions"></div>
+
+  <div class="controls">
+    <button type="button" class="primary" id="check-btn" disabled>Check my sorting</button>
+    <button type="button" class="secondary" id="reset-btn" hidden>Reset and try again</button>
+  </div>
+
+  <div id="overall-banner" role="status"></div>
+
+  <section id="second-pass" aria-labelledby="second-pass-heading">
+    <h2 id="second-pass-heading">One assumption, moved</h2>
+    <p>Suppose instead the build server and the project-tracking server no longer keep their own local accounts. Suppose both are joined to a single directory service, and both trust it for sign-in.</p>
+    <p>Under that setup, does clearing the contractor's one account in the directory end their access to both servers?</p>
+    <div class="button-pair" role="group" aria-label="Re-sort: clearing the directory account under the shared-directory assumption">
+      <button type="button" class="sort-btn" id="sp-ends" aria-pressed="false">Yes, clearing it reaches both</button>
+      <button type="button" class="sort-btn" id="sp-not-ends" aria-pressed="false">No, each server still needs its own removal</button>
+    </div>
+    <div id="second-pass-explanation" role="status"></div>
+  </section>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var items = [
+      {
+        id: "s1",
+        text: "The Linux-based build server, where the contractor holds a local account to run and monitor jobs.",
+        correct: "store",
+        rationale: "This system keeps its own independent account record for the contractor. Clearing access anywhere else leaves this one untouched."
+      },
+      {
+        id: "s2",
+        text: "The Windows-based project-tracking server, where the contractor holds a separate local account to log hours and update tickets.",
+        correct: "store",
+        rationale: "Same reasoning on a different platform: this server's local account is its own record, independent of the build server's."
+      },
+      {
+        id: "n1",
+        text: "The IT support ticketing system, where past requests from the contractor are logged.",
+        correct: "not-store",
+        rationale: "A ticketing system records that work happened. It doesn't hold an account that lets the contractor sign in anywhere."
+      },
+      {
+        id: "n2",
+        text: "The procurement system's vendor record, listing the contractor's company as an approved supplier.",
+        correct: "not-store",
+        rationale: "A vendor record describes a business relationship. It isn't an account a sign-in check reads."
+      },
+      {
+        id: "n3",
+        text: "A single sign-on portal that forwards the contractor's credentials to whichever of their two work systems they're trying to reach.",
+        correct: "not-store",
+        rationale: "This portal keeps no independent copy of the account \u2014 it reads from the two servers above. Clearing those two closes this path too; there's no separate record here to remove."
+      },
+      {
+        id: "n4",
+        text: "An internal wiki page listing the contractor's name under \u201ccurrent contractors.\u201d",
+        correct: "not-store",
+        rationale: "A wiki listing is a reference page for people to read. It has no bearing on whether a login still works."
+      },
+      {
+        id: "n5",
+        text: "A shared email distribution list the contractor was added to for project updates.",
+        correct: "not-store",
+        rationale: "Distribution-list membership controls which emails arrive. It grants no sign-in of its own."
+      }
+    ];
+
+    var state = {};
+    items.forEach(function (item) { state[item.id] = null; });
+    var checked = false;
+
+    var itemsContainer = document.getElementById("items");
+    var checkBtn = document.getElementById("check-btn");
+    var resetBtn = document.getElementById("reset-btn");
+    var banner = document.getElementById("overall-banner");
+    var secondPass = document.getElementById("second-pass");
+
+    function allAssigned() {
+      return items.every(function (item) { return state[item.id] !== null; });
+    }
+
+    function renderItems() {
+      itemsContainer.innerHTML = "";
+      items.forEach(function (item) {
+        var card = document.createElement("div");
+        card.className = "item";
+
+        var text = document.createElement("p");
+        text.className = "action-text";
+        text.textContent = item.text;
+        card.appendChild(text);
+
+        var pair = document.createElement("div");
+        pair.className = "button-pair";
+        pair.setAttribute("role", "group");
+        pair.setAttribute("aria-label", "Sort: " + item.text);
+
+        var storeBtn = document.createElement("button");
+        storeBtn.type = "button";
+        storeBtn.className = "sort-btn";
+        storeBtn.textContent = "Holds its own account record";
+        storeBtn.setAttribute("aria-pressed", "false");
+
+        var notStoreBtn = document.createElement("button");
+        notStoreBtn.type = "button";
+        notStoreBtn.className = "sort-btn";
+        notStoreBtn.textContent = "Doesn't hold its own record";
+        notStoreBtn.setAttribute("aria-pressed", "false");
+
+        storeBtn.addEventListener("click", function () {
+          if (checked) { return; }
+          state[item.id] = "store";
+          storeBtn.setAttribute("aria-pressed", "true");
+          notStoreBtn.setAttribute("aria-pressed", "false");
+          checkBtn.disabled = !allAssigned();
+        });
+
+        notStoreBtn.addEventListener("click", function () {
+          if (checked) { return; }
+          state[item.id] = "not-store";
+          notStoreBtn.setAttribute("aria-pressed", "true");
+          storeBtn.setAttribute("aria-pressed", "false");
+          checkBtn.disabled = !allAssigned();
+        });
+
+        pair.appendChild(storeBtn);
+        pair.appendChild(notStoreBtn);
+        card.appendChild(pair);
+
+        var feedback = document.createElement("div");
+        feedback.className = "feedback-line";
+        feedback.id = "feedback-" + item.id;
+        feedback.setAttribute("role", "status");
+        card.appendChild(feedback);
+
+        itemsContainer.appendChild(card);
+      });
+    }
+
+    function runCheck() {
+      checked = true;
+      var wrongCount = 0;
+
+      items.forEach(function (item) {
+        var feedback = document.getElementById("feedback-" + item.id);
+        var isCorrect = state[item.id] === item.correct;
+        if (!isCorrect) { wrongCount += 1; }
+
+        feedback.classList.add("show");
+        feedback.classList.add(isCorrect ? "correct" : "incorrect");
+        var mark = document.createElement("span");
+        mark.className = "mark";
+        mark.textContent = isCorrect ? "\u2713" : "\u2717";
+        feedback.textContent = "";
+        feedback.appendChild(mark);
+        feedback.appendChild(document.createTextNode(item.rationale));
+      });
+
+      var allSortBtns = itemsContainer.querySelectorAll("button.sort-btn");
+      allSortBtns.forEach(function (btn) { btn.disabled = true; });
+
+      checkBtn.disabled = true;
+      resetBtn.hidden = false;
+
+      banner.classList.add("show");
+      var bannerState, bannerText;
+      if (wrongCount === 0) {
+        bannerState = "correct";
+        bannerText = "Every item is sorted by the one question that matters: does this keep its own independent copy of the account? Everything else was a list, a log, or a lookup \u2014 not a store.";
+      } else if (wrongCount <= 2) {
+        bannerState = "near";
+        bannerText = "The structure is right \u2014 you're sorting by whether each system keeps its own record. " + wrongCount + " item" + (wrongCount === 1 ? "" : "s") + " landed in the wrong bucket; check the one" + (wrongCount === 1 ? "" : "s") + " marked below.";
+      } else {
+        bannerState = "wrong";
+        bannerText = "Before resorting, ask one question of every item: does it keep an independent copy of the account, or does it only mention, log, or forward something that lives elsewhere? Start there.";
+      }
+      banner.classList.add(bannerState);
+      banner.textContent = bannerText;
+      window.requestAnimationFrame(function () { banner.classList.add("visible"); });
+
+      secondPass.classList.add("show");
+      window.requestAnimationFrame(function () { secondPass.classList.add("visible"); });
+    }
+
+    function resetAll() {
+      checked = false;
+      items.forEach(function (item) { state[item.id] = null; });
+      banner.classList.remove("show", "visible", "correct", "near", "wrong");
+      banner.textContent = "";
+      secondPass.classList.remove("show", "visible");
+      spEndsBtn.setAttribute("aria-pressed", "false");
+      spNotEndsBtn.setAttribute("aria-pressed", "false");
+      spEndsBtn.disabled = false;
+      spNotEndsBtn.disabled = false;
+      spExplanation.classList.remove("show");
+      spExplanation.textContent = "";
+      resetBtn.hidden = true;
+      checkBtn.disabled = true;
+      renderItems();
+    }
+
+    checkBtn.addEventListener("click", runCheck);
+    resetBtn.addEventListener("click", resetAll);
+
+    var spEndsBtn = document.getElementById("sp-ends");
+    var spNotEndsBtn = document.getElementById("sp-not-ends");
+    var spExplanation = document.getElementById("second-pass-explanation");
+
+    function showSecondPassExplanation(choseReachesBoth) {
+      spEndsBtn.disabled = true;
+      spNotEndsBtn.disabled = true;
+      spExplanation.classList.add("show");
+      if (choseReachesBoth) {
+        spExplanation.textContent = "Right under this assumption. The criterion never changed \u2014 does a removal need to happen at the place the record actually lives? What changed is how many independent records exist. Once both servers trust one directory instead of keeping local accounts, there's only one record left, so clearing it reaches both.";
+      } else {
+        spExplanation.textContent = "Look again at what the assumption changed. The question is still where the record actually lives. The problem now says neither server keeps its own local account anymore \u2014 both trust the one directory. With only one record left to hold the binding, clearing it does reach both systems.";
+      }
+    }
+
+    spEndsBtn.addEventListener("click", function () {
+      spEndsBtn.setAttribute("aria-pressed", "true");
+      spNotEndsBtn.setAttribute("aria-pressed", "false");
+      showSecondPassExplanation(true);
+    });
+
+    spNotEndsBtn.addEventListener("click", function () {
+      spNotEndsBtn.setAttribute("aria-pressed", "true");
+      spEndsBtn.setAttribute("aria-pressed", "false");
+      showSecondPassExplanation(false);
+    });
+
+    renderItems();
+  })();
+</script>
+</body>
+</html>

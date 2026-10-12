@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Put the Lifecycle in Order</title>
+<style>
+  :root {
+    --color-bg: #f7f6f3;
+    --color-surface: #ffffff;
+    --color-border: #d8d4cb;
+    --color-text: #2b2a27;
+    --color-text-muted: #5a5750;
+    --color-accent: #1f5b4f;
+    --color-accent-contrast: #ffffff;
+    --color-correct-bg: #e8f3ec;
+    --color-correct-border: #2f7a4f;
+    --color-correct-text: #205c3a;
+    --color-incorrect-bg: #faeceb;
+    --color-incorrect-border: #b4473a;
+    --color-incorrect-text: #7c2e24;
+    --color-banner-near-bg: #fbf3df;
+    --color-banner-near-border: #b07d1f;
+    --color-warn-border: #b07d1f;
+    --color-focus-ring: #0b5fff;
+    --space-1: 0.5rem;
+    --space-2: 1rem;
+    --space-3: 1.5rem;
+    --space-4: 2.25rem;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    padding: var(--space-4) var(--space-2);
+  }
+
+  main { max-width: 680px; margin: 0 auto; }
+
+  h1 { font-size: 1.5rem; line-height: 1.3; margin: 0 0 var(--space-2) 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 var(--space-1) 0; }
+
+  p { margin: 0 0 var(--space-2) 0; }
+
+  .intro {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .instructions { font-weight: 600; margin-bottom: var(--space-2); }
+
+  ol#step-list {
+    list-style: none;
+    margin: 0 0 var(--space-3) 0;
+    padding: 0;
+    counter-reset: step-counter;
+  }
+
+  li.step {
+    counter-increment: step-counter;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  li.step.flagged {
+    border-color: var(--color-warn-border);
+    border-width: 2px;
+  }
+
+  .step-number {
+    font-weight: 700;
+    color: var(--color-accent);
+    min-width: 1.6rem;
+  }
+
+  .step-text { flex: 1 1 auto; }
+
+  .step-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  button.move-btn {
+    font: inherit;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    width: 2.25rem;
+    height: 2.25rem;
+    cursor: pointer;
+    color: var(--color-text);
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  button.move-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .controls {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+  }
+
+  button.primary {
+    font: inherit;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+  }
+
+  button.primary:disabled { opacity: 0.5; cursor: default; }
+
+  button.secondary {
+    font: inherit;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+  }
+
+  #overall-banner {
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+    display: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #overall-banner.show { display: block; }
+  #overall-banner.visible { opacity: 1; transform: translateY(0); }
+
+  #overall-banner.correct {
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+  }
+
+  #overall-banner.near {
+    background: var(--color-banner-near-bg);
+    border: 1px solid var(--color-banner-near-border);
+    color: #6b4b10;
+  }
+
+  #overall-banner.wrong {
+    background: var(--color-incorrect-bg);
+    border: 1px solid var(--color-incorrect-border);
+    color: var(--color-incorrect-text);
+  }
+
+  #overall-banner ul {
+    margin: var(--space-2) 0 0 0;
+    padding-left: 1.25rem;
+  }
+
+  #second-pass {
+    border: 1px solid var(--color-accent);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+    display: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #second-pass.show { display: block; }
+  #second-pass.visible { opacity: 1; transform: translateY(0); }
+
+  #second-pass-explanation {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius);
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+    display: none;
+  }
+
+  #second-pass-explanation.show { display: block; }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #overall-banner, #second-pass { transition: none; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: var(--space-3) var(--space-1); }
+    .intro, #second-pass { padding: var(--space-2); }
+    li.step { padding: var(--space-2); flex-wrap: wrap; }
+    .step-controls { flex-direction: row; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Put the Lifecycle in Order</h1>
+
+  <div class="intro">
+    <p>An operator leaves Sample Enterprise Manufacturing partway through a seasonal cycle. Their account exists in two places: a Linux-based plant-floor system, and a separate Windows-based office network. Nothing connects the two.</p>
+    <p>Below are the steps that close this account's access and show that it's actually closed. They're out of order.</p>
+  </div>
+
+  <p class="instructions" id="order-instructions">Use the arrows to put the steps in an order that could actually work.</p>
+
+  <ol id="step-list" aria-labelledby="order-instructions"></ol>
+
+  <div class="controls">
+    <button type="button" class="primary" id="check-btn">Check my order</button>
+    <button type="button" class="secondary" id="reset-btn" hidden>Reset and try again</button>
+  </div>
+
+  <div id="overall-banner" role="status"></div>
+
+  <section id="second-pass" aria-labelledby="second-pass-heading">
+    <h2 id="second-pass-heading">One assumption, moved</h2>
+    <p>Suppose this operator also held an account in a third store \u2014 say, a cloud-based identity service used for a separate project tool.</p>
+    <button type="button" class="secondary" id="reveal-third-store-btn">Show where it would fit</button>
+    <div id="second-pass-explanation" role="status"></div>
+  </section>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    // Each step: a stable id, display text, and the constraints it participates in.
+    // Constraints are expressed as ordered pairs [beforeId, afterId]: beforeId must
+    // appear at an earlier position than afterId in a valid order.
+    var steps = [
+      { id: "E",  text: "List every system that might hold a record for this account." },
+      { id: "RA", text: "Remove the account's record in the Linux-based plant-floor system." },
+      { id: "VA", text: "Query the plant-floor system directly to confirm the record is gone." },
+      { id: "RB", text: "Remove the account's record in the Windows-based office network." },
+      { id: "VB", text: "Query the Windows office network directly to confirm the record is gone." },
+      { id: "D",  text: "Treat the account as fully closed, now that every system has been checked." }
+    ];
+
+    var constraints = [
+      { before: "E",  after: "RA", message: "Listing every system has to come before removing anything in the plant-floor system \u2014 you can't clear a record you haven't located yet." },
+      { before: "E",  after: "RB", message: "Listing every system has to come before removing anything in the office network \u2014 you can't clear a record you haven't located yet." },
+      { before: "RA", after: "VA", message: "Confirming the plant-floor system is clear has to come after removing the record there \u2014 verification checks a removal, it doesn't precede one." },
+      { before: "RB", after: "VB", message: "Confirming the office network is clear has to come after removing the record there \u2014 verification checks a removal, it doesn't precede one." },
+      { before: "VA", after: "D",  message: "Treating the account as closed has to wait until the plant-floor system is confirmed clear, not just acted on." },
+      { before: "VB", after: "D",  message: "Treating the account as closed has to wait until the office network is confirmed clear, not just acted on." }
+    ];
+
+    // Intentionally scrambled starting order (not a valid sequence).
+    var order = ["D", "VA", "E", "RB", "VB", "RA"];
+    var checked = false;
+
+    var stepList = document.getElementById("step-list");
+    var checkBtn = document.getElementById("check-btn");
+    var resetBtn = document.getElementById("reset-btn");
+    var banner = document.getElementById("overall-banner");
+    var secondPass = document.getElementById("second-pass");
+
+    function stepById(id) {
+      return steps.filter(function (s) { return s.id === id; })[0];
+    }
+
+    function moveStep(index, direction) {
+      var newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= order.length) { return; }
+      var tmp = order[index];
+      order[index] = order[newIndex];
+      order[newIndex] = tmp;
+      render();
+    }
+
+    function render() {
+      stepList.innerHTML = "";
+      order.forEach(function (id, index) {
+        var step = stepById(id);
+        var li = document.createElement("li");
+        li.className = "step";
+        li.id = "step-" + id;
+
+        var num = document.createElement("span");
+        num.className = "step-number";
+        num.textContent = (index + 1) + ".";
+        li.appendChild(num);
+
+        var text = document.createElement("span");
+        text.className = "step-text";
+        text.textContent = step.text;
+        li.appendChild(text);
+
+        var controls = document.createElement("div");
+        controls.className = "step-controls";
+
+        var upBtn = document.createElement("button");
+        upBtn.type = "button";
+        upBtn.className = "move-btn";
+        upBtn.setAttribute("aria-label", "Move \u201c" + step.text + "\u201d earlier");
+        upBtn.textContent = "\u2191";
+        upBtn.disabled = checked || index === 0;
+        upBtn.addEventListener("click", function () { moveStep(index, -1); });
+
+        var downBtn = document.createElement("button");
+        downBtn.type = "button";
+        downBtn.className = "move-btn";
+        downBtn.setAttribute("aria-label", "Move \u201c" + step.text + "\u201d later");
+        downBtn.textContent = "\u2193";
+        downBtn.disabled = checked || index === order.length - 1;
+        downBtn.addEventListener("click", function () { moveStep(index, 1); });
+
+        controls.appendChild(upBtn);
+        controls.appendChild(downBtn);
+        li.appendChild(controls);
+
+        stepList.appendChild(li);
+      });
+    }
+
+    function evaluate() {
+      var position = {};
+      order.forEach(function (id, index) { position[id] = index; });
+
+      var violated = constraints.filter(function (c) {
+        return position[c.before] > position[c.after];
+      });
+
+      return violated;
+    }
+
+    function runCheck() {
+      checked = true;
+      var violated = evaluate();
+      var violatedIds = {};
+      violated.forEach(function (c) {
+        violatedIds[c.before] = true;
+        violatedIds[c.after] = true;
+      });
+
+      order.forEach(function (id) {
+        var li = document.getElementById("step-" + id);
+        if (violatedIds[id]) {
+          li.classList.add("flagged");
+        }
+      });
+
+      var allMoveBtns = stepList.querySelectorAll("button.move-btn");
+      allMoveBtns.forEach(function (btn) { btn.disabled = true; });
+
+      checkBtn.disabled = true;
+      resetBtn.hidden = false;
+
+      banner.classList.add("show");
+      var bannerState, bannerText, extraList;
+
+      if (violated.length === 0) {
+        bannerState = "correct";
+        bannerText = "This order could actually work. Every store is listed before anything is removed from it, every verification follows its own store's removal, and the account isn't treated as closed until both checks are in.";
+      } else if (violated.length <= 2) {
+        bannerState = "near";
+        bannerText = "Close. The overall shape holds, but one step is out of place relative to what it depends on:";
+        extraList = violated.map(function (c) { return c.message; });
+      } else {
+        bannerState = "wrong";
+        bannerText = "Before reordering, check three things: did you list every system before removing anything from it? does each verification come right after its own store's removal, not before? and does \u201cclosed\u201d come only after both systems check out? Start there, and move the flagged steps.";
+      }
+
+      banner.classList.add(bannerState);
+      banner.textContent = "";
+      var p1 = document.createElement("p");
+      p1.style.margin = "0";
+      p1.textContent = bannerText;
+      banner.appendChild(p1);
+
+      if (extraList && extraList.length) {
+        var ul = document.createElement("ul");
+        extraList.forEach(function (msg) {
+          var li = document.createElement("li");
+          li.textContent = msg;
+          ul.appendChild(li);
+        });
+        banner.appendChild(ul);
+      }
+
+      window.requestAnimationFrame(function () { banner.classList.add("visible"); });
+
+      secondPass.classList.add("show");
+      window.requestAnimationFrame(function () { secondPass.classList.add("visible"); });
+    }
+
+    function resetAll() {
+      checked = false;
+      order = ["D", "VA", "E", "RB", "VB", "RA"];
+      banner.classList.remove("show", "visible", "correct", "near", "wrong");
+      banner.textContent = "";
+      secondPass.classList.remove("show", "visible");
+      revealBtn.disabled = false;
+      spExplanation.classList.remove("show");
+      spExplanation.textContent = "";
+      resetBtn.hidden = true;
+      checkBtn.disabled = false;
+      render();
+    }
+
+    checkBtn.addEventListener("click", runCheck);
+    resetBtn.addEventListener("click", resetAll);
+
+    var revealBtn = document.getElementById("reveal-third-store-btn");
+    var spExplanation = document.getElementById("second-pass-explanation");
+
+    revealBtn.addEventListener("click", function () {
+      revealBtn.disabled = true;
+      spExplanation.classList.add("show");
+      spExplanation.textContent = "Its removal and its verification could slot in almost anywhere relative to the plant-floor and office steps \u2014 before them, after them, or interleaved \u2014 because nothing ties the three stores' order to one another. The only two rules that still apply: it has to be listed during enumeration before anything is removed from it, and the account can't be treated as closed until its own verification is in, alongside the other two. Add a store, and the same two constraints just apply one more time.";
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>

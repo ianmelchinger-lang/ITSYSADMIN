@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Actions Actually End Access?</title>
+<style>
+  :root {
+    --color-bg: #f7f6f3;
+    --color-surface: #ffffff;
+    --color-border: #d8d4cb;
+    --color-text: #2b2a27;
+    --color-text-muted: #5a5750;
+    --color-accent: #1f5b4f;
+    --color-accent-contrast: #ffffff;
+    --color-correct-bg: #e8f3ec;
+    --color-correct-border: #2f7a4f;
+    --color-correct-text: #205c3a;
+    --color-incorrect-bg: #faeceb;
+    --color-incorrect-border: #b4473a;
+    --color-incorrect-text: #7c2e24;
+    --color-banner-near-bg: #fbf3df;
+    --color-banner-near-border: #b07d1f;
+    --color-focus-ring: #0b5fff;
+    --space-1: 0.5rem;
+    --space-2: 1rem;
+    --space-3: 1.5rem;
+    --space-4: 2.25rem;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    padding: var(--space-4) var(--space-2);
+  }
+
+  main { max-width: 680px; margin: 0 auto; }
+
+  h1 { font-size: 1.5rem; line-height: 1.3; margin: 0 0 var(--space-2) 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 var(--space-1) 0; }
+
+  p { margin: 0 0 var(--space-2) 0; }
+
+  .intro {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .instructions {
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+  }
+
+  .item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .item p.action-text {
+    margin-bottom: var(--space-2);
+  }
+
+  .button-pair {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  button.sort-btn {
+    font: inherit;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    color: var(--color-text);
+    flex: 1 1 auto;
+    min-width: 10rem;
+  }
+
+  button.sort-btn[aria-pressed="true"] {
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    border-color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  button.sort-btn:disabled {
+    cursor: default;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .feedback-line {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius);
+    display: none;
+  }
+
+  .feedback-line.show { display: block; }
+
+  .feedback-line.correct {
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+  }
+
+  .feedback-line.incorrect {
+    background: var(--color-incorrect-bg);
+    border: 1px solid var(--color-incorrect-border);
+    color: var(--color-incorrect-text);
+  }
+
+  .mark {
+    font-weight: 700;
+    margin-right: 0.4rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin: var(--space-3) 0;
+  }
+
+  button.primary {
+    font: inherit;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+  }
+
+  button.primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  button.secondary {
+    font: inherit;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+  }
+
+  #overall-banner {
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+    display: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #overall-banner.show { display: block; }
+  #overall-banner.visible { opacity: 1; transform: translateY(0); }
+
+  #overall-banner.correct {
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+  }
+
+  #overall-banner.near {
+    background: var(--color-banner-near-bg);
+    border: 1px solid var(--color-banner-near-border);
+    color: #6b4b10;
+  }
+
+  #overall-banner.wrong {
+    background: var(--color-incorrect-bg);
+    border: 1px solid var(--color-incorrect-border);
+    color: var(--color-incorrect-text);
+  }
+
+  #second-pass {
+    border: 1px solid var(--color-accent);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+    display: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #second-pass.show { display: block; }
+  #second-pass.visible { opacity: 1; transform: translateY(0); }
+
+  #second-pass-explanation {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    border-radius: var(--radius);
+    background: var(--color-correct-bg);
+    border: 1px solid var(--color-correct-border);
+    color: var(--color-correct-text);
+    display: none;
+  }
+
+  #second-pass-explanation.show { display: block; }
+
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #overall-banner, #second-pass {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: var(--space-3) var(--space-1); }
+    .intro, .item, #second-pass { padding: var(--space-2); }
+    .button-pair { flex-direction: column; }
+    button.sort-btn { min-width: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Which Actions Actually End Access?</h1>
+
+  <div class="intro">
+    <p>An operator has left Sample Enterprise Manufacturing. A set of actions is being taken to remove their access. Each action below either changes the account record that actually grants access, or it doesn't.</p>
+  </div>
+
+  <p class="instructions" id="sort-instructions">Sort each action: does it end the operator's access, or not?</p>
+
+  <div id="items" aria-labelledby="sort-instructions"></div>
+
+  <div class="controls">
+    <button type="button" class="primary" id="check-btn" disabled>Check my sorting</button>
+    <button type="button" class="secondary" id="reset-btn" hidden>Reset and try again</button>
+  </div>
+
+  <div id="overall-banner" role="status"></div>
+
+  <section id="second-pass" aria-labelledby="second-pass-heading">
+    <h2 id="second-pass-heading">One assumption, moved</h2>
+    <p>Suppose this operator's account isn't separate from their HR record at all. Suppose HR's status field and the login record are the same underlying entry, in a single shared directory.</p>
+    <p>Under that assumption, does marking the operator terminated in HR end their access now?</p>
+    <div class="button-pair" role="group" aria-label="Re-sort: mark the employee terminated in HR, under the shared-directory assumption">
+      <button type="button" class="sort-btn" id="sp-ends" aria-pressed="false">Yes, this ends it</button>
+      <button type="button" class="sort-btn" id="sp-not-ends" aria-pressed="false">No, it still doesn't</button>
+    </div>
+    <div id="second-pass-explanation" role="status"></div>
+  </section>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var items = [
+      {
+        id: "a",
+        text: "Disable the account directly in the system that holds its record.",
+        correct: "ends",
+        rationale: "This changes the account's own record — the thing that grants access — so it ends the binding."
+      },
+      {
+        id: "b",
+        text: "Delete the account's entry from the system that holds it.",
+        correct: "ends",
+        rationale: "Deleting the entry is as direct a change to the record as it gets, so it ends the binding."
+      },
+      {
+        id: "c",
+        text: "Lock the account's status flag within the record that actually grants access.",
+        correct: "ends",
+        rationale: "The status flag lives inside the same record that grants access, so changing it ends the binding."
+      },
+      {
+        id: "d",
+        text: "Mark the employee as terminated in the HR system.",
+        correct: "not-ends",
+        rationale: "This updates a separate HR record. Nothing automatically connects it to the account's own record, so the binding is untouched."
+      },
+      {
+        id: "e",
+        text: "Deactivate the employee's building badge.",
+        correct: "not-ends",
+        rationale: "A badge controls a door, not the account's record. The binding doesn't notice."
+      },
+      {
+        id: "f",
+        text: "Set up an email forward from the employee's mailbox to their manager.",
+        correct: "not-ends",
+        rationale: "Forwarding mail changes where messages go. It doesn't touch the record that grants sign-in access."
+      },
+      {
+        id: "g",
+        text: "Close the IT support ticket logged for this request.",
+        correct: "not-ends",
+        rationale: "A closed ticket records that someone meant to act. It isn't itself a change to the account's record."
+      },
+      {
+        id: "h",
+        text: "Remove the employee's entry from the internal staff directory listing.",
+        correct: "not-ends",
+        rationale: "A staff directory is a reference list for people, not the record a login check reads."
+      }
+    ];
+
+    var state = {};
+    items.forEach(function (item) {
+      state[item.id] = null;
+    });
+    var checked = false;
+
+    var itemsContainer = document.getElementById("items");
+    var checkBtn = document.getElementById("check-btn");
+    var resetBtn = document.getElementById("reset-btn");
+    var banner = document.getElementById("overall-banner");
+    var secondPass = document.getElementById("second-pass");
+
+    function allAssigned() {
+      return items.every(function (item) {
+        return state[item.id] !== null;
+      });
+    }
+
+    function renderItems() {
+      itemsContainer.innerHTML = "";
+      items.forEach(function (item) {
+        var card = document.createElement("div");
+        card.className = "item";
+
+        var text = document.createElement("p");
+        text.className = "action-text";
+        text.textContent = item.text;
+        card.appendChild(text);
+
+        var pair = document.createElement("div");
+        pair.className = "button-pair";
+        pair.setAttribute("role", "group");
+        pair.setAttribute("aria-label", "Sort: " + item.text);
+
+        var endsBtn = document.createElement("button");
+        endsBtn.type = "button";
+        endsBtn.className = "sort-btn";
+        endsBtn.textContent = "Ends access";
+        endsBtn.setAttribute("aria-pressed", "false");
+
+        var notEndsBtn = document.createElement("button");
+        notEndsBtn.type = "button";
+        notEndsBtn.className = "sort-btn";
+        notEndsBtn.textContent = "Doesn't end access";
+        notEndsBtn.setAttribute("aria-pressed", "false");
+
+        endsBtn.addEventListener("click", function () {
+          if (checked) { return; }
+          state[item.id] = "ends";
+          endsBtn.setAttribute("aria-pressed", "true");
+          notEndsBtn.setAttribute("aria-pressed", "false");
+          checkBtn.disabled = !allAssigned();
+        });
+
+        notEndsBtn.addEventListener("click", function () {
+          if (checked) { return; }
+          state[item.id] = "not-ends";
+          notEndsBtn.setAttribute("aria-pressed", "true");
+          endsBtn.setAttribute("aria-pressed", "false");
+          checkBtn.disabled = !allAssigned();
+        });
+
+        pair.appendChild(endsBtn);
+        pair.appendChild(notEndsBtn);
+        card.appendChild(pair);
+
+        var feedback = document.createElement("div");
+        feedback.className = "feedback-line";
+        feedback.id = "feedback-" + item.id;
+        feedback.setAttribute("role", "status");
+        card.appendChild(feedback);
+
+        itemsContainer.appendChild(card);
+      });
+    }
+
+    function runCheck() {
+      checked = true;
+      var wrongCount = 0;
+
+      items.forEach(function (item) {
+        var feedback = document.getElementById("feedback-" + item.id);
+        var isCorrect = state[item.id] === item.correct;
+        if (!isCorrect) { wrongCount += 1; }
+
+        feedback.classList.add("show");
+        feedback.classList.add(isCorrect ? "correct" : "incorrect");
+        var mark = document.createElement("span");
+        mark.className = "mark";
+        mark.textContent = isCorrect ? "\u2713" : "\u2717";
+        feedback.textContent = "";
+        feedback.appendChild(mark);
+        feedback.appendChild(document.createTextNode(item.rationale));
+      });
+
+      // Disable all sort buttons so the sorting is locked once checked.
+      var allSortBtns = itemsContainer.querySelectorAll("button.sort-btn");
+      allSortBtns.forEach(function (btn) {
+        btn.disabled = true;
+      });
+
+      checkBtn.disabled = true;
+      resetBtn.hidden = false;
+
+      banner.classList.add("show");
+      var bannerState, bannerText;
+      if (wrongCount === 0) {
+        bannerState = "correct";
+        bannerText = "Every action is sorted by the one criterion that decides this: does it change the account's own record? The rest only look like progress.";
+      } else if (wrongCount <= 2) {
+        bannerState = "near";
+        bannerText = "The structure is right — you're sorting by whether the record itself changed. " + wrongCount + " action" + (wrongCount === 1 ? "" : "s") + " landed in the wrong bucket; check the one" + (wrongCount === 1 ? "" : "s") + " marked below.";
+      } else {
+        bannerState = "wrong";
+        bannerText = "Before resorting, ask one question of every action: does this directly change the record that grants access, or does it change something else that merely sits near it? Start there.";
+      }
+      banner.classList.add(bannerState);
+      banner.textContent = bannerText;
+      window.requestAnimationFrame(function () {
+        banner.classList.add("visible");
+      });
+
+      secondPass.classList.add("show");
+      window.requestAnimationFrame(function () {
+        secondPass.classList.add("visible");
+      });
+    }
+
+    function resetAll() {
+      checked = false;
+      items.forEach(function (item) {
+        state[item.id] = null;
+      });
+      banner.classList.remove("show", "visible", "correct", "near", "wrong");
+      banner.textContent = "";
+      secondPass.classList.remove("show", "visible");
+      spEndsBtn.setAttribute("aria-pressed", "false");
+      spNotEndsBtn.setAttribute("aria-pressed", "false");
+      spEndsBtn.disabled = false;
+      spNotEndsBtn.disabled = false;
+      spExplanation.classList.remove("show");
+      spExplanation.textContent = "";
+      resetBtn.hidden = true;
+      checkBtn.disabled = true;
+      renderItems();
+    }
+
+    checkBtn.addEventListener("click", runCheck);
+    resetBtn.addEventListener("click", resetAll);
+
+    var spEndsBtn = document.getElementById("sp-ends");
+    var spNotEndsBtn = document.getElementById("sp-not-ends");
+    var spExplanation = document.getElementById("second-pass-explanation");
+
+    function showSecondPassExplanation(choseEnds) {
+      spEndsBtn.disabled = true;
+      spNotEndsBtn.disabled = true;
+      spExplanation.classList.add("show");
+      if (choseEnds) {
+        spExplanation.textContent = "Right under this assumption. The criterion never changed — does this action touch the record that grants access? What changed is what counts as that record. When HR's status field and the login record are the same entry, marking the employee terminated edits it directly.";
+      } else {
+        spExplanation.textContent = "Look again at what the assumption changed. The criterion is still whether the action touches the record that grants access — but this time, the problem says HR's field and the login record are the same entry. If that's true, marking terminated does reach the record that grants access.";
+      }
+    }
+
+    spEndsBtn.addEventListener("click", function () {
+      spEndsBtn.setAttribute("aria-pressed", "true");
+      spNotEndsBtn.setAttribute("aria-pressed", "false");
+      showSecondPassExplanation(true);
+    });
+
+    spNotEndsBtn.addEventListener("click", function () {
+      spNotEndsBtn.setAttribute("aria-pressed", "true");
+      spEndsBtn.setAttribute("aria-pressed", "false");
+      showSecondPassExplanation(false);
+    });
+
+    renderItems();
+  })();
+</script>
+</body>
+</html>
