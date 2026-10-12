@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assemble the Path From Routine to Record</title>
+<style>
+  :root {
+    --bg: #17212b;
+    --surface: #1f2c38;
+    --surface-raised: #263646;
+    --line: #36495b;
+    --text: #e4e9ee;
+    --muted: #9fb0bf;
+    --amber: #e9b24c;
+    --amber-soft: #3a3324;
+    --amber-ink: #1c1608;
+    --ok: #82c9a6;
+    --ok-soft: #1f3a31;
+    --miss: #ec9580;
+    --miss-soft: #3d2622;
+    --focus: #8fd0e6;
+    --focus-soft: #1d3440;
+    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 1rem; line-height: 1.55; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.2; margin: 0; }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+  h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+  p { margin: 0 0 0.9rem; max-width: 38rem; }
+  .lede { color: var(--muted); margin-top: 0.5rem; }
+
+  .part { margin-top: 2rem; }
+  .part-label { font-family: var(--display); color: var(--amber); font-size: 0.9rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.25rem; }
+
+  /* Single-choice parts */
+  fieldset.pick { border: 0; margin: 0; padding: 0; min-width: 0; }
+  fieldset.pick legend { padding: 0; margin-bottom: 0.6rem; font-family: var(--display); font-size: 1.3rem; font-weight: 600; }
+  .choice { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.75rem 0.9rem; margin-bottom: 0.45rem; background: var(--surface); border: 1px solid var(--line); cursor: pointer; }
+  .choice:hover { border-color: var(--muted); }
+  .choice input { margin: 0.25rem 0 0; width: 1.1rem; height: 1.1rem; accent-color: var(--amber); flex: none; }
+  .choice:has(input:checked) { border-color: var(--amber); background: var(--amber-soft); }
+  .choice:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .choice.flag { border-color: var(--miss); }
+
+  /* The path: the bold element, a rail joining the moves */
+  .path { list-style: none; margin: 0.75rem 0 0; padding: 0 0 0 1.6rem; position: relative; counter-reset: mv; }
+  .path::before { content: ""; position: absolute; left: 0.55rem; top: 0.6rem; bottom: 0.6rem; width: 2px; background: var(--amber); }
+  .path > li { counter-increment: mv; position: relative; margin-bottom: 0.5rem; }
+  .path > li::before {
+    content: counter(mv);
+    position: absolute; left: -1.6rem; top: 0.7rem;
+    width: 1.15rem; height: 1.15rem; line-height: 1.15rem; text-align: center;
+    background: var(--bg); color: var(--amber); font-family: var(--display); font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .card { padding: 0.7rem 0.8rem 0.75rem; background: var(--surface); border: 1px solid var(--line); }
+  .card.flag { border-color: var(--miss); background: var(--miss-soft); }
+  .card-text { margin: 0 0 0.5rem; }
+  .card-tools { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+  .flag-note { margin: 0.5rem 0 0; font-size: 0.93rem; color: var(--miss); }
+  .flag-note[hidden] { display: none; }
+
+  .bin-zone { margin-top: 1.25rem; padding: 0.9rem 1rem; border: 1px dashed var(--line); }
+  .bin-zone h3 { color: var(--muted); }
+  .bin-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+  .bin-list > li { margin-bottom: 0.45rem; }
+  .bin-empty { color: var(--muted); font-size: 0.95rem; margin: 0.25rem 0 0; }
+
+  button { font: inherit; font-family: var(--display); cursor: pointer; }
+  .tool {
+    font-size: 0.88rem; padding: 0.25rem 0.6rem;
+    background: transparent; color: var(--text); border: 1px solid var(--line);
+  }
+  .tool:hover:not(:disabled) { border-color: var(--muted); }
+  .tool:disabled { color: var(--line); cursor: not-allowed; }
+  .primary { padding: 0.65rem 1.2rem; border: 2px solid var(--amber); background: var(--amber); color: var(--amber-ink); }
+  .primary:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+  .quiet { padding: 0.65rem 1.2rem; background: transparent; color: var(--text); border: 2px solid var(--line); }
+  .quiet:hover { border-color: var(--muted); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .count { color: var(--muted); font-size: 0.95rem; margin-top: 0.75rem; }
+
+  .feedback { margin-top: 1.25rem; padding: 1rem 1.1rem; border-left: 4px solid var(--line); background: var(--surface-raised); }
+  .feedback[hidden] { display: none; }
+  .feedback:focus { outline: none; }
+  .feedback p:last-child, .feedback ul:last-child { margin-bottom: 0; }
+  .feedback ul { margin: 0 0 0.9rem; padding-left: 1.2rem; }
+  .feedback.correct { border-left-color: var(--ok); background: var(--ok-soft); }
+  .feedback.correct h3 { color: var(--ok); }
+  .feedback.near { border-left-color: var(--amber); background: var(--amber-soft); }
+  .feedback.near h3 { color: var(--amber); }
+  .feedback.wrong { border-left-color: var(--miss); background: var(--miss-soft); }
+  .feedback.wrong h3 { color: var(--miss); }
+
+  .rules { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--muted); font-size: 0.95rem; }
+  details { margin-top: 0.75rem; }
+  summary { cursor: pointer; font-family: var(--display); color: var(--muted); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (max-width: 480px) {
+    main { padding: 1.5rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .card-tools .tool { flex: 1 1 auto; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .feedback.just-shown { animation: settle 260ms ease-out; }
+    @keyframes settle { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Assemble the Path From Routine to Record</h1>
+    <p class="lede">Put the whole method together: the problem, the moves in a workable order, and the sign it worked.</p>
+  </header>
+  <p>A retailer's back office runs a daily service and storage check by hand on its Windows server. Build the path from that routine to a saved script a colleague can run. Then check the whole assembly at once.</p>
+
+  <section class="part" aria-labelledby="problem-legend">
+    <div class="part-label">The problem</div>
+    <fieldset class="pick" id="problem-set">
+      <legend id="problem-legend">Which statement names the problem in operational terms?</legend>
+      <div id="problem-choices"></div>
+    </fieldset>
+  </section>
+
+  <section class="part" aria-labelledby="moves-heading">
+    <div class="part-label">The moves</div>
+    <h2 id="moves-heading">Put the moves in a workable order</h2>
+    <p>More than one order works. What must hold is that no move comes before something it depends on. Two cards belong to later work, not this move. Set those aside.</p>
+    <ol class="path" id="path" aria-label="Moves, in your order"></ol>
+    <div class="bin-zone">
+      <h3 id="bin-heading">Not part of this move</h3>
+      <ul class="bin-list" id="bin" aria-labelledby="bin-heading"></ul>
+      <p class="bin-empty" id="bin-empty">Nothing set aside yet.</p>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="signal-legend">
+    <div class="part-label">The signal</div>
+    <fieldset class="pick" id="signal-set">
+      <legend id="signal-legend">Which result shows the method worked?</legend>
+      <div id="signal-choices"></div>
+    </fieldset>
+  </section>
+
+  <p class="count" id="count" aria-live="polite"></p>
+  <div class="actions">
+    <button type="button" class="primary" id="check" disabled>Check the assembly</button>
+    <button type="button" class="quiet" id="reset">Start over</button>
+  </div>
+  <p class="sr-only" id="announce" aria-live="polite"></p>
+  <div class="feedback" id="fb" hidden tabindex="-1" role="status"></div>
+</main>
+
+<script>
+(function () {
+  var PROBLEMS = [
+    { id: "slow", text: "The morning check takes too long." },
+    { id: "ops", text: "A forty-minute daily check is done by hand, only one of three people can do it, and nothing records that it ran." },
+    { id: "skill", text: "The team needs to learn a scripting language." }
+  ];
+  var PROBLEM_KEY = "ops";
+  var PROBLEM_WHY = {
+    slow: "Length is one symptom. It leaves out that only one person can do the check and that nothing records it ran.",
+    skill: "That names a possible fix, not the problem. Stated this way, it can't tell you when the problem is solved."
+  };
+
+  var SIGNALS = [
+    { id: "noerror", text: "The script ran without an error message." },
+    { id: "scope", text: "The same unedited action applied to a different set when only the filter changed, and a colleague ran the file from its description alone." },
+    { id: "fast", text: "The check now takes under a minute." }
+  ];
+  var SIGNAL_KEY = "scope";
+  var SIGNAL_WHY = {
+    noerror: "A clean run shows the script ran. It doesn't show which objects the action touched, or that anyone else can run it.",
+    fast: "Speed is a welcome side effect. It doesn't show the action touched the right set, or that anyone else can run the file."
+  };
+
+  var CARDS = [
+    { id: "target", text: "State the target state and how you'll check it, before typing anything.", inScope: true },
+    { id: "read", text: "Run the listing and the filter on their own, and read the set they return.", inScope: true },
+    { id: "attach", text: "Attach the action to the end of the sequence.", inScope: true },
+    { id: "policy", text: "Confirm the machine's policy will run a script written on it.", inScope: true },
+    { id: "save", text: "Save the sequence to a file, with a description block at the top.", inScope: true },
+    { id: "run", text: "Run the saved file once, deliberately, and check the result against the target state.", inScope: true },
+    { id: "keep", text: "Keep the file and its description as the record of what the check does.", inScope: true },
+    { id: "schedule", text: "Schedule the script to run every night.", inScope: false },
+    { id: "fleet", text: "Run the script on every server in the back office.", inScope: false }
+  ];
+  var START = ["attach", "schedule", "save", "read", "keep", "target", "fleet", "run", "policy"];
+
+  var DEPS = [
+    { before: "target", after: "read",   text: "The target state comes before anything is typed." },
+    { before: "target", after: "attach", text: "The target state comes before anything is typed." },
+    { before: "target", after: "policy", text: "The target state comes before anything is typed." },
+    { before: "target", after: "save",   text: "The target state comes before anything is typed." },
+    { before: "target", after: "run",    text: "The target state comes before anything is typed." },
+    { before: "target", after: "keep",   text: "The target state comes before anything is typed." },
+    { before: "read",   after: "attach", text: "Read the set before you attach an action to it." },
+    { before: "attach", after: "run",    text: "The action has to exist before a run can check it." },
+    { before: "save",   after: "run",    text: "You can only run a saved file once it's saved." },
+    { before: "policy", after: "run",    text: "Confirm the policy before you run the saved file." },
+    { before: "save",   after: "keep",   text: "The record is the saved file and its description." }
+  ];
+  var RULE_TEXTS = [];
+  DEPS.forEach(function (d) { if (RULE_TEXTS.indexOf(d.text) === -1) RULE_TEXTS.push(d.text); });
+
+  var state = { order: START.slice(), binned: [], problem: null, signal: null };
+
+  function byId(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; }
+  function fmt(n) { return n.toLocaleString("en-US"); }
+  function para(t) { var p = document.createElement("p"); p.textContent = t; return p; }
+
+  // Pure grading, exposed for verification.
+  function grade(order, binned, problem, signal) {
+    var pos = {}; order.forEach(function (id, i) { pos[id] = i; });
+    var violations = [];
+    DEPS.forEach(function (d) {
+      if (pos[d.before] === undefined || pos[d.after] === undefined) return;
+      if (pos[d.before] > pos[d.after]) violations.push(d);
+    });
+    var wronglyBinned = binned.filter(function (id) { return byId(CARDS, id).inScope; });
+    var wronglyKept = order.filter(function (id) { return !byId(CARDS, id).inScope; });
+    // One misfiled card is one error; violations are counted by distinct rule.
+    var ruleSet = {}; violations.forEach(function (v) { ruleSet[v.text] = true; });
+    var problemWrong = problem !== PROBLEM_KEY, signalWrong = signal !== SIGNAL_KEY;
+    var errors = Object.keys(ruleSet).length + wronglyBinned.length + wronglyKept.length + (problemWrong ? 1 : 0) + (signalWrong ? 1 : 0);
+    return {
+      state: errors === 0 ? "correct" : errors === 1 ? "near" : "wrong",
+      errors: errors, violations: violations, wronglyBinned: wronglyBinned, wronglyKept: wronglyKept,
+      problemWrong: problemWrong, signalWrong: signalWrong
+    };
+  }
+  window.__grade = grade;
+  window.__deps = DEPS;
+
+  function renderPick(containerId, name, list, key) {
+    var c = document.getElementById(containerId); c.textContent = "";
+    list.forEach(function (o) {
+      var lab = document.createElement("label"); lab.className = "choice"; lab.htmlFor = name + "-" + o.id;
+      var r = document.createElement("input"); r.type = "radio"; r.name = name; r.id = name + "-" + o.id; r.value = o.id;
+      r.addEventListener("change", function () { state[key] = o.id; clearFlags(); updateCount(); });
+      var sp = document.createElement("span"); sp.textContent = o.text;
+      lab.appendChild(r); lab.appendChild(sp); c.appendChild(lab);
+    });
+  }
+
+  function tool(label, aria, onClick, disabled) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "tool";
+    b.textContent = label; b.setAttribute("aria-label", aria); b.disabled = !!disabled;
+    b.addEventListener("click", onClick); return b;
+  }
+
+  function renderPath(focusId, focusAction) {
+    var ol = document.getElementById("path"); ol.textContent = "";
+    state.order.forEach(function (id, i) {
+      var c = byId(CARDS, id);
+      var li = document.createElement("li");
+      var card = document.createElement("div"); card.className = "card"; card.id = "card-" + id;
+      card.appendChild(Object.assign(document.createElement("p"), { className: "card-text", textContent: c.text }));
+      var tools = document.createElement("div"); tools.className = "card-tools";
+      tools.appendChild(tool("Up", "Move up: " + c.text, function () { move(id, -1); }, i === 0));
+      tools.appendChild(tool("Down", "Move down: " + c.text, function () { move(id, 1); }, i === state.order.length - 1));
+      tools.appendChild(tool("Set aside", "Set aside: " + c.text, function () { setAside(id); }));
+      card.appendChild(tools);
+      var note = document.createElement("p"); note.className = "flag-note"; note.id = "note-" + id; note.hidden = true;
+      card.appendChild(note);
+      li.appendChild(card); ol.appendChild(li);
+    });
+    var bin = document.getElementById("bin"); bin.textContent = "";
+    state.binned.forEach(function (id) {
+      var c = byId(CARDS, id);
+      var li = document.createElement("li");
+      var card = document.createElement("div"); card.className = "card"; card.id = "card-" + id;
+      card.appendChild(Object.assign(document.createElement("p"), { className: "card-text", textContent: c.text }));
+      var tools = document.createElement("div"); tools.className = "card-tools";
+      tools.appendChild(tool("Bring back", "Bring back into the path: " + c.text, function () { bringBack(id); }));
+      card.appendChild(tools);
+      var note = document.createElement("p"); note.className = "flag-note"; note.id = "note-" + id; note.hidden = true;
+      card.appendChild(note);
+      li.appendChild(card); bin.appendChild(li);
+    });
+    document.getElementById("bin-empty").hidden = state.binned.length > 0;
+    if (focusId) {
+      var target = document.querySelector('#card-' + focusId + ' .tool[aria-label^="' + focusAction + '"]:not(:disabled)')
+        || document.querySelector('#card-' + focusId + ' .tool:not(:disabled)');
+      if (target) target.focus();
+    }
+    updateCount();
+  }
+
+  function announce(t) { document.getElementById("announce").textContent = t; }
+
+  function move(id, delta) {
+    var i = state.order.indexOf(id), j = i + delta;
+    if (j < 0 || j >= state.order.length) return;
+    state.order.splice(i, 1); state.order.splice(j, 0, id);
+    clearFlags();
+    renderPath(id, delta < 0 ? "Move up" : "Move down");
+    announce("Moved to position " + fmt(j + 1) + " of " + fmt(state.order.length) + ".");
+  }
+  function setAside(id) {
+    var i = state.order.indexOf(id);
+    state.order.splice(i, 1); state.binned.push(id);
+    clearFlags(); renderPath(id, "Bring back");
+    announce("Set aside. " + fmt(state.order.length) + " moves left in the path.");
+  }
+  function bringBack(id) {
+    state.binned.splice(state.binned.indexOf(id), 1); state.order.push(id);
+    clearFlags(); renderPath(id, "Move up");
+    announce("Brought back to the end of the path.");
+  }
+
+  function updateCount() {
+    var ready = state.problem && state.signal;
+    document.getElementById("count").textContent = ready
+      ? fmt(state.order.length) + " moves in the path, " + fmt(state.binned.length) + " set aside."
+      : "Choose a problem statement and a signal to check the assembly.";
+    document.getElementById("check").disabled = !ready;
+  }
+
+  function clearFlags() {
+    document.querySelectorAll(".card.flag, .choice.flag").forEach(function (e) { e.classList.remove("flag"); });
+    document.querySelectorAll(".flag-note").forEach(function (n) { n.hidden = true; n.textContent = ""; });
+    document.getElementById("fb").hidden = true;
+  }
+
+  function flagCard(id, text) {
+    var card = document.getElementById("card-" + id); if (!card) return;
+    card.classList.add("flag");
+    var n = document.getElementById("note-" + id);
+    n.textContent = n.textContent ? n.textContent + " " + text : text; n.hidden = false;
+  }
+
+  document.getElementById("check").addEventListener("click", function () {
+    clearFlags();
+    var r = grade(state.order, state.binned, state.problem, state.signal);
+    var fb = document.getElementById("fb"); fb.textContent = "";
+    var h = document.createElement("h3");
+
+    // The instrument always flags objective dependency breaks in place.
+    var seen = {};
+    r.violations.forEach(function (v) {
+      if (seen[v.after + v.text]) return; seen[v.after + v.text] = true;
+      flagCard(v.after, "Placed too early: " + v.text);
+    });
+
+    if (r.state === "correct") {
+      h.textContent = "Right.";
+      fb.appendChild(h);
+      fb.appendChild(para("Every dependency holds, and the path stops where this move stops. Scheduling and running across servers both depend on a single script that already works and can be read. They come after this move, not inside it."));
+      fb.appendChild(para("The problem is stated so you can tell when it's solved, and the signal tests the two things the path was built for: the action reached the set you meant, and someone else can run it."));
+      fb.appendChild(para("Your order is one of several that work. The policy check, for example, can sit anywhere before the saved file runs."));
+    } else if (r.state === "near") {
+      h.textContent = "Close.";
+      fb.appendChild(h);
+      if (r.violations.length) {
+        fb.appendChild(para("The assembly is right except for one dependency, flagged in the path: " + r.violations[0].text));
+      } else if (r.wronglyKept.length) {
+        var k = byId(CARDS, r.wronglyKept[0]); flagCard(k.id, "This belongs to later work.");
+        fb.appendChild(para("One card is still in the path: \u201c" + k.text + "\u201d It needs a working, readable script first, so it belongs to later work."));
+      } else if (r.wronglyBinned.length) {
+        var b = byId(CARDS, r.wronglyBinned[0]); flagCard(b.id, "This is part of the move.");
+        fb.appendChild(para("One card was set aside that belongs in the path: \u201c" + b.text + "\u201d"));
+      } else if (r.problemWrong) {
+        document.getElementById("problem-" + state.problem).closest(".choice").classList.add("flag");
+        fb.appendChild(para("The path is right. The problem statement isn't. " + PROBLEM_WHY[state.problem]));
+      } else {
+        document.getElementById("signal-" + state.signal).closest(".choice").classList.add("flag");
+        fb.appendChild(para("The path is right. The signal isn't. " + SIGNAL_WHY[state.signal]));
+      }
+    } else {
+      h.textContent = "Not yet.";
+      fb.appendChild(h);
+      fb.appendChild(para(fmt(r.errors) + " things need another look. The order is decided by dependencies: no move can come before something it relies on. Start with the move everything else relies on, then place each card after what it needs."));
+      var parts = [];
+      if (r.violations.length) parts.push("Dependencies broken in the path are flagged on the cards.");
+      if (r.wronglyKept.length) parts.push("At least one card in the path belongs to later work.");
+      if (r.wronglyBinned.length) parts.push("At least one card set aside is part of this move.");
+      if (r.problemWrong) parts.push("Ask whether the problem statement would tell you when the problem is solved.");
+      if (r.signalWrong) parts.push("Ask whether the signal shows which objects the action touched, and whether someone else can run the file.");
+      var ul = document.createElement("ul");
+      parts.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+      fb.appendChild(ul);
+      var det = document.createElement("details");
+      var sum = document.createElement("summary"); sum.textContent = "See the dependencies the path must keep";
+      det.appendChild(sum);
+      var rl = document.createElement("ul"); rl.className = "rules";
+      RULE_TEXTS.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; rl.appendChild(li); });
+      det.appendChild(rl);
+      fb.appendChild(det);
+    }
+    fb.className = "feedback " + r.state; fb.hidden = false;
+    fb.classList.remove("just-shown"); void fb.offsetWidth; fb.classList.add("just-shown");
+    fb.focus();
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    state = { order: START.slice(), binned: [], problem: null, signal: null };
+    renderPick("problem-choices", "problem", PROBLEMS, "problem");
+    renderPick("signal-choices", "signal", SIGNALS, "signal");
+    clearFlags(); renderPath();
+    document.getElementById("problem-ops").closest("fieldset").querySelector("input").focus();
+  });
+
+  renderPick("problem-choices", "problem", PROBLEMS, "problem");
+  renderPick("signal-choices", "signal", SIGNALS, "signal");
+  renderPath();
+})();
+</script>
+</body>
+</html>

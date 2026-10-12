@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Check That Left No Record</title>
+<style>
+  :root {
+    --bg: #17212b;
+    --surface: #1f2c38;
+    --surface-raised: #263646;
+    --line: #36495b;
+    --text: #e4e9ee;
+    --muted: #9fb0bf;
+    --amber: #e9b24c;
+    --amber-soft: #3a3324;
+    --amber-ink: #1c1608;
+    --focus: #8fd0e6;
+    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+  h1, h2, h3 {
+    font-family: var(--display);
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0;
+  }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-bottom: 0.75rem; }
+  h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+  p { margin: 0 0 0.9rem; max-width: 38rem; }
+  .lede { color: var(--muted); margin-top: 0.5rem; }
+
+  /* The week ledger: the one bold element */
+  .ledger {
+    margin: 1.75rem 0 2rem;
+    padding: 1.1rem 1.1rem 1.25rem;
+    background: var(--surface);
+    border-left: 4px solid var(--amber);
+  }
+  .ledger-caption {
+    font-family: var(--display);
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-bottom: 0.8rem;
+  }
+  .days {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .day {
+    border: 1px dashed var(--line);
+    padding: 0.6rem 0.5rem 0.7rem;
+    min-height: 5.2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .day-name {
+    font-family: var(--display);
+    font-size: 1.25rem;
+  }
+  .day-state { font-size: 0.85rem; color: var(--muted); }
+  .day.asked {
+    border: 2px solid var(--amber);
+    background: var(--amber-soft);
+  }
+  .day.asked .day-state { color: var(--amber); }
+
+  .routine {
+    margin: 0 0 1rem;
+    padding-left: 1.2rem;
+  }
+  .routine li { margin-bottom: 0.25rem; }
+
+  /* Commit */
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+  legend {
+    font-family: var(--display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    padding: 0;
+  }
+  .hint { color: var(--muted); margin-bottom: 1rem; }
+  .option {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.85rem 0.9rem;
+    margin-bottom: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .option:hover { border-color: var(--muted); }
+  .option input {
+    margin: 0.25rem 0 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--amber);
+    flex: none;
+  }
+  .option.chosen {
+    border-color: var(--amber);
+    background: var(--amber-soft);
+  }
+  .locked .option { cursor: default; }
+  .locked .option:not(.chosen) { opacity: 0.6; }
+
+  .actions { margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-family: var(--display);
+    font-size: 1rem;
+    padding: 0.65rem 1.2rem;
+    border: 2px solid var(--amber);
+    background: var(--amber);
+    color: var(--amber-ink);
+    cursor: pointer;
+  }
+  button:disabled {
+    background: transparent;
+    color: var(--muted);
+    border-color: var(--line);
+    cursor: not-allowed;
+  }
+  button.quiet {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--line);
+  }
+  button.quiet:hover { border-color: var(--muted); }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .option:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* Reveal */
+  .reveal { margin-top: 2.25rem; }
+  .reveal[hidden] { display: none; }
+  .reveal:focus { outline: none; }
+  .verdict {
+    padding: 1rem 1.1rem;
+    background: var(--surface-raised);
+    border-left: 4px solid var(--amber);
+    margin-bottom: 1.75rem;
+  }
+  .verdict p:last-child { margin-bottom: 0; }
+  .questions {
+    list-style: none;
+    margin: 0 0 1.75rem;
+    padding: 0;
+  }
+  .questions li {
+    padding: 0.8rem 0 0.8rem 1rem;
+    border-left: 2px solid var(--line);
+    margin-bottom: 0.5rem;
+  }
+  details {
+    border-top: 1px solid var(--line);
+    padding-top: 0.9rem;
+    margin-bottom: 1.75rem;
+  }
+  summary {
+    cursor: pointer;
+    font-family: var(--display);
+    font-size: 1.05rem;
+  }
+  .others { margin-top: 1rem; }
+  .others div { margin-bottom: 1rem; }
+  .others div p { color: var(--muted); }
+
+  .capability {
+    padding: 1.25rem 1.1rem;
+    border: 2px solid var(--amber);
+  }
+  .capability h2 { color: var(--amber); margin-bottom: 0.5rem; }
+  .capability p:last-child { margin-bottom: 0; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  @media (max-width: 480px) {
+    main { padding: 1.5rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .days { grid-template-columns: 1fr; }
+    .day {
+      min-height: 0;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+    .day-name { font-size: 1.05rem; min-width: 2.5rem; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal.just-shown { animation: settle 280ms ease-out; }
+    @keyframes settle {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>The Check That Left No Record</h1>
+    <p class="lede">A routine you do every day, and a question you can't answer.</p>
+  </header>
+
+  <section aria-labelledby="situation-heading">
+    <h2 id="situation-heading" class="sr-only">The situation</h2>
+    <p>You've taken over the Windows back office for a mid-market retailer's IT function. Three people work in it. A morning check comes with the job:</p>
+    <ul class="routine">
+      <li>Open a console on the server.</li>
+      <li>Confirm a handful of services are running.</li>
+      <li>Restart any that aren't.</li>
+      <li>Check how much storage is left.</li>
+      <li>Confirm last night's checks completed.</li>
+    </ul>
+    <p>It takes about forty minutes, every day. Of the three of you, only you can do it.</p>
+    <p>On Friday, the operations lead asks whether the check ran on Tuesday. The console keeps no history of what you clicked.</p>
+
+    <div class="ledger" role="group" aria-labelledby="ledger-caption">
+      <div class="ledger-caption" id="ledger-caption">What exists to show the check ran this week</div>
+      <ul class="days">
+        <li class="day"><span class="day-name">Mon</span><span class="day-state">No record</span></li>
+        <li class="day asked"><span class="day-name">Tue</span><span class="day-state">No record. This is the day you're asked about.</span></li>
+        <li class="day"><span class="day-name">Wed</span><span class="day-state">No record</span></li>
+        <li class="day"><span class="day-name">Thu</span><span class="day-state">No record</span></li>
+        <li class="day"><span class="day-name">Fri</span><span class="day-state">No record</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="commit-legend" id="commit">
+    <fieldset id="choices">
+      <legend id="commit-legend">Which fix do you reach for first?</legend>
+      <p class="hint">Pick the one you'd actually start with. You'll lock it in before seeing what it leaves out.</p>
+
+      <label class="option" for="opt-runbook">
+        <input type="radio" name="fix" id="opt-runbook" value="runbook">
+        <span>Write the steps up as a runbook, so anyone on the team can follow them.</span>
+      </label>
+      <label class="option" for="opt-train">
+        <input type="radio" name="fix" id="opt-train" value="train">
+        <span>Train the other two people to do the check.</span>
+      </label>
+      <label class="option" for="opt-tick">
+        <input type="radio" name="fix" id="opt-tick" value="tick">
+        <span>Keep a daily checklist, and tick each step as you finish it.</span>
+      </label>
+      <label class="option" for="opt-file">
+        <input type="radio" name="fix" id="opt-file" value="file">
+        <span>Put the steps into one saved file that runs them.</span>
+      </label>
+    </fieldset>
+    <div class="actions">
+      <button type="button" id="lock" disabled>Lock in my answer</button>
+    </div>
+    <p id="status" class="sr-only" aria-live="polite"></p>
+  </section>
+
+  <section class="reveal" id="reveal" hidden aria-labelledby="reveal-heading" tabindex="-1">
+    <h2 id="reveal-heading">What your answer leaves out</h2>
+    <div class="verdict" id="verdict"></div>
+
+    <h2 id="questions-heading">Three questions a console never asked you</h2>
+    <p id="questions-intro"></p>
+    <ul class="questions" aria-labelledby="questions-heading">
+      <li>When a step says "restart," which services will it restart? Can you tell before it runs?</li>
+      <li>Will this server agree to run the file at all? If it refuses, what is the refusal telling you?</li>
+      <li>Could a colleague run the file tomorrow without asking you what it's for?</li>
+    </ul>
+
+    <details>
+      <summary>See what the other answers leave out</summary>
+      <div class="others" id="others"></div>
+    </details>
+
+    <div class="capability">
+      <h2>Narrow the set before you act on it</h2>
+      <p>The capability behind all three questions is deciding exactly what a step applies to before deciding what the step does. It has to be in place before a check can be handed over, scheduled, or run on more than one server.</p>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="quiet" id="reset">Start over</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var READINGS = {
+    runbook: {
+      label: "Write the steps up as a runbook",
+      text: [
+        "A runbook records the steps. It doesn't perform them, so every morning still costs forty minutes of someone's clicking.",
+        "On Friday, the runbook shows that a procedure was meant to happen. It can't show that Tuesday's check ran."
+      ]
+    },
+    train: {
+      label: "Train the other two people",
+      text: [
+        "Training removes the single point of failure, because now three people can do the check. The check itself is the same size: forty minutes a day, done by hand, a little differently by each person.",
+        "Whoever did it on Tuesday, nothing records that it ran."
+      ]
+    },
+    tick: {
+      label: "Keep a daily checklist",
+      text: [
+        "A tick records that someone believes they did a step, written by the same person who did it. It's a claim, and nobody else can check it.",
+        "The check still takes forty minutes, and only you can do it."
+      ]
+    },
+    file: {
+      label: "Put the steps into one saved file",
+      text: [
+        "That's where this work is heading. A saved file can run the same steps the same way each time, and anyone can start it.",
+        "It's also where a careful first attempt goes wrong. The file has to get three things right that clicking through a console never asked of you."
+      ]
+    }
+  };
+
+  var choices = document.getElementById("choices");
+  var radios = Array.prototype.slice.call(document.querySelectorAll('input[name="fix"]'));
+  var lockBtn = document.getElementById("lock");
+  var reveal = document.getElementById("reveal");
+  var verdict = document.getElementById("verdict");
+  var others = document.getElementById("others");
+  var intro = document.getElementById("questions-intro");
+  var status = document.getElementById("status");
+  var resetBtn = document.getElementById("reset");
+
+  var state = { selected: null, committed: null };
+
+  function paragraphs(lines) {
+    var frag = document.createDocumentFragment();
+    lines.forEach(function (t) {
+      var p = document.createElement("p");
+      p.textContent = t;
+      frag.appendChild(p);
+    });
+    return frag;
+  }
+
+  function markChosen() {
+    radios.forEach(function (r) {
+      r.closest(".option").classList.toggle("chosen", r.checked);
+    });
+  }
+
+  radios.forEach(function (r) {
+    r.addEventListener("change", function () {
+      if (state.committed) return;
+      state.selected = r.value;
+      lockBtn.disabled = false;
+      markChosen();
+    });
+  });
+
+  lockBtn.addEventListener("click", function () {
+    if (!state.selected || state.committed) return;
+    state.committed = state.selected;
+
+    radios.forEach(function (r) { r.disabled = true; });
+    choices.classList.add("locked");
+    lockBtn.disabled = true;
+    lockBtn.textContent = "Answer locked";
+
+    var chosen = READINGS[state.committed];
+    verdict.textContent = "";
+    var h = document.createElement("h3");
+    h.textContent = "You chose: " + chosen.label;
+    verdict.appendChild(h);
+    verdict.appendChild(paragraphs(chosen.text));
+
+    intro.textContent = state.committed === "file"
+      ? "Here are the three. You don't need answers yet."
+      : "The fix that actually removes the forty minutes is a saved file that runs the steps. Getting it right depends on three questions. You don't need answers yet.";
+
+    others.textContent = "";
+    Object.keys(READINGS).forEach(function (key) {
+      if (key === state.committed) return;
+      var d = document.createElement("div");
+      var h3 = document.createElement("h3");
+      h3.textContent = READINGS[key].label;
+      d.appendChild(h3);
+      d.appendChild(paragraphs(READINGS[key].text));
+      others.appendChild(d);
+    });
+
+    reveal.hidden = false;
+    reveal.classList.remove("just-shown");
+    void reveal.offsetWidth;
+    reveal.classList.add("just-shown");
+    status.textContent = "Answer locked. What it leaves out is shown below.";
+    reveal.focus();
+  });
+
+  resetBtn.addEventListener("click", function () {
+    state.selected = null;
+    state.committed = null;
+    radios.forEach(function (r) { r.checked = false; r.disabled = false; });
+    choices.classList.remove("locked");
+    markChosen();
+    lockBtn.textContent = "Lock in my answer";
+    lockBtn.disabled = true;
+    reveal.hidden = true;
+    reveal.classList.remove("just-shown");
+    status.textContent = "Cleared. Pick an answer to start again.";
+    radios[0].focus();
+  });
+})();
+</script>
+</body>
+</html>

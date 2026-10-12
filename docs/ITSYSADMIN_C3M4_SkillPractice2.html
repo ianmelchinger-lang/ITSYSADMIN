@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predict Which Scripts the Server Will Run</title>
+<style>
+  :root {
+    --bg: #17212b;
+    --surface: #1f2c38;
+    --surface-raised: #263646;
+    --line: #36495b;
+    --text: #e4e9ee;
+    --muted: #9fb0bf;
+    --amber: #e9b24c;
+    --amber-soft: #3a3324;
+    --amber-ink: #1c1608;
+    --ok: #82c9a6;
+    --ok-soft: #1f3a31;
+    --miss: #ec9580;
+    --miss-soft: #3d2622;
+    --focus: #8fd0e6;
+    --focus-soft: #1d3440;
+    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 1rem; line-height: 1.55; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.2; margin: 0; }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-bottom: 0.6rem; }
+  h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+  p { margin: 0 0 0.9rem; max-width: 38rem; }
+  .lede { color: var(--muted); margin-top: 0.5rem; }
+
+  /* The machine's rule: the bold element */
+  .rule {
+    margin: 1.5rem 0 1.75rem;
+    padding: 1rem 1.1rem 1.1rem;
+    background: var(--surface);
+    border-left: 4px solid var(--amber);
+  }
+  .rule.second { border-left-color: var(--focus); background: var(--focus-soft); }
+  .rule-host { font-family: var(--display); font-size: 0.95rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .rule-text { font-family: var(--display); font-size: 1.2rem; line-height: 1.35; margin: 0 0 0.6rem; max-width: none; }
+  .rule-note { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+  /* Cards */
+  .cards { list-style: none; margin: 0; padding: 0; }
+  .card { margin-bottom: 0.6rem; padding: 0.85rem 0.9rem 0.9rem; background: var(--surface); border: 1px solid var(--line); }
+  .card fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .card legend { padding: 0; margin-bottom: 0.6rem; font-size: 1rem; }
+  .card-short { display: block; font-family: var(--display); font-size: 1.02rem; margin-bottom: 0.15rem; }
+  .card-detail { display: block; color: var(--muted); }
+  .bins { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .bin { position: relative; }
+  .bin input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .bin span {
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .bin span:hover { border-color: var(--muted); color: var(--text); }
+  .bin input:checked + span { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+  .bin input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .card .why { margin: 0.65rem 0 0; padding-top: 0.6rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; }
+  .card .why[hidden] { display: none; }
+  .card.moved { border-color: var(--focus); }
+  .moved-tag { display: inline-block; margin-left: 0.4rem; font-size: 0.8rem; color: var(--focus); border: 1px solid var(--focus); padding: 0 0.4rem; vertical-align: 0.1em; }
+
+  .count { color: var(--muted); font-size: 0.95rem; margin-top: 0.6rem; }
+  .actions { margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  button { font: inherit; font-family: var(--display); padding: 0.65rem 1.2rem; border: 2px solid var(--amber); background: var(--amber); color: var(--amber-ink); cursor: pointer; }
+  button:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+  button.quiet { background: transparent; color: var(--text); border-color: var(--line); }
+  button.quiet:hover { border-color: var(--muted); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  .feedback { margin-top: 1.25rem; padding: 1rem 1.1rem; border-left: 4px solid var(--line); background: var(--surface-raised); }
+  .feedback[hidden] { display: none; }
+  .feedback:focus { outline: none; }
+  .feedback p:last-child { margin-bottom: 0; }
+  .feedback.correct { border-left-color: var(--ok); background: var(--ok-soft); }
+  .feedback.correct h3 { color: var(--ok); }
+  .feedback.near { border-left-color: var(--amber); background: var(--amber-soft); }
+  .feedback.near h3 { color: var(--amber); }
+  .feedback.wrong { border-left-color: var(--miss); background: var(--miss-soft); }
+  .feedback.wrong h3 { color: var(--miss); }
+
+  section.pass[hidden] { display: none; }
+  section.pass + section.pass { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+  section.pass:focus { outline: none; }
+
+  .takeaway { margin-top: 1.5rem; padding: 1.1rem; border: 2px solid var(--amber); }
+  .takeaway[hidden] { display: none; }
+  .takeaway p:last-child { margin-bottom: 0; }
+
+  @media (max-width: 480px) {
+    main { padding: 1.5rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .rule-text { font-size: 1.08rem; }
+    .bins { flex-direction: column; }
+    .bin span { display: block; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .feedback.just-shown, .takeaway.just-shown { animation: settle 260ms ease-out; }
+    @keyframes settle { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Predict Which Scripts the Server Will Run</h1>
+    <p class="lede">A refusal tells you where a file came from, not what is wrong with it.</p>
+  </header>
+
+  <p>Every Windows machine carries an execution policy: a setting that decides which saved scripts the shell will run. The policy judges a file by where it came from and whether it carries a valid digital signature. A signature identifies who published the file and shows that nobody has changed it since.</p>
+  <p>Below are six things an administrator might try to run on the retailer's back-office server. Sort each one by what the server will do.</p>
+
+  <section class="pass" id="pass1" aria-labelledby="pass1-heading" tabindex="-1">
+    <h2 id="pass1-heading">The back-office server</h2>
+    <div class="rule" role="note" aria-label="This server's execution policy">
+      <div class="rule-host">This server's policy</div>
+      <p class="rule-text">Scripts written on this server run. Scripts from anywhere else run only if they carry a valid signature.</p>
+      <p class="rule-note">Anything that arrived by download or as an email attachment counts as from anywhere else.</p>
+    </div>
+    <ul class="cards" id="cards1"></ul>
+    <p class="count" id="count1" aria-live="polite"></p>
+    <div class="actions"><button type="button" id="check1" disabled>Check my sort</button></div>
+    <div class="feedback" id="fb1" hidden tabindex="-1" role="status"></div>
+  </section>
+
+  <section class="pass" id="pass2" aria-labelledby="pass2-heading" hidden tabindex="-1">
+    <h2 id="pass2-heading">The same six, on a different server</h2>
+    <p>Now each of these is tried on a second server. The files are identical. Only the machine's rule is different.</p>
+    <div class="rule second" role="note" aria-label="The second server's execution policy">
+      <div class="rule-host">The second server's policy</div>
+      <p class="rule-text">Scripts run only if they carry a valid signature, wherever they were written.</p>
+      <p class="rule-note">Nothing in any file has been edited.</p>
+    </div>
+    <ul class="cards" id="cards2"></ul>
+    <p class="count" id="count2" aria-live="polite"></p>
+    <div class="actions"><button type="button" id="check2" disabled>Check my sort</button></div>
+    <div class="feedback" id="fb2" hidden tabindex="-1" role="status"></div>
+
+    <div class="takeaway" id="takeaway" hidden>
+      <p id="moved-line"></p>
+      <p>The policy belongs to the machine, not to the script. When a script is refused, read the message and name the control behind it. Then find out where the file came from and which policy is in force. Those two facts tell you whether you need a signed copy, a different machine, or a word with whoever owns the policy.</p>
+      <div class="actions"><button type="button" class="quiet" id="reset">Start over</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var BINS = [
+    { id: "runs", label: "Runs" },
+    { id: "refused", label: "Refused by the policy" },
+    { id: "outside", label: "Outside the policy" }
+  ];
+  var BIN_LABEL = { runs: "Runs", refused: "Refused by the policy", outside: "Outside the policy" };
+
+  // origin: "here" (written on the machine), "elsewhere" (download or email), "typed" (not a saved file)
+  var CARDS = [
+    { id: "a", ref: "the cleanup written here", short: "Cleanup script written here", detail: "The folder cleanup, written and saved on this server. No signature.", origin: "here", signed: false },
+    { id: "b", short: "The same cleanup, emailed and saved back", detail: "You emailed the cleanup file to yourself and saved the attachment back onto the server. Same contents, no signature.", origin: "elsewhere", signed: false },
+    { id: "c", short: "Vendor's disk report, signed", detail: "A storage-report script downloaded from a vendor's website. It carries the vendor's valid signature.", origin: "elsewhere", signed: true },
+    { id: "d", short: "Forum service check, unsigned", detail: "A popular service-check script downloaded from an administrators' forum. Thousands of people use it. No signature.", origin: "elsewhere", signed: false },
+    { id: "e", ref: "the script with a typo", short: "Script with a typo, written here", detail: "A script you wrote on this server this morning. Line 4 contains a typo. No signature.", origin: "here", signed: false },
+    { id: "f", short: "A command typed at the prompt", detail: "You type one command at the prompt to list the server's services, and press Enter. Nothing is saved to a file.", origin: "typed", signed: false }
+  ];
+
+  var RULES = {
+    1: function (c) {
+      if (c.origin === "typed") return "outside";
+      if (c.origin === "here") return "runs";
+      return c.signed ? "runs" : "refused";
+    },
+    2: function (c) {
+      if (c.origin === "typed") return "outside";
+      return c.signed ? "runs" : "refused";
+    }
+  };
+
+  function why(pass, c) {
+    var b = RULES[pass](c);
+    if (c.origin === "typed") return "The policy governs saved scripts. A command you type at the prompt isn't a saved file, so the policy doesn't decide it.";
+    var originText = c.origin === "here" ? "It was written on this server" : "It came from elsewhere";
+    var sigText = c.signed ? "it carries a valid signature" : "it has no signature";
+    var s;
+    if (pass === 1) {
+      s = originText + ", and " + sigText + ". " + (b === "runs" ? "The rule lets it run." : "The rule refuses it.");
+      if (c.id === "e") s += " It runs, and then fails at line 4. That failure comes from the file's contents, and editing the text fixes it. A refusal comes from the file's origin.";
+      if (c.id === "b") s += " Its contents match the cleanup that runs. Only its route onto the server differs.";
+      if (c.id === "d") s += " The rule never weighs how popular or well written a script is.";
+    } else {
+      s = "This rule asks only whether the file is signed, and " + sigText + ". " + (b === "runs" ? "It runs." : "It's refused.");
+      if (c.id === "a" || c.id === "e") s += " It ran on the first server. The file didn't change; the machine did.";
+    }
+    return s;
+  }
+
+  var sorts = { 1: {}, 2: {} };
+  function fmt(n) { return n.toLocaleString("en-US"); }
+  function byId(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i]; }
+  function key(pass) { var k = {}; CARDS.forEach(function (c) { k[c.id] = RULES[pass](c); }); return k; }
+
+  function grade(pass, sort) {
+    var k = key(pass);
+    var wrong = CARDS.filter(function (c) { return sort[c.id] !== k[c.id]; }).map(function (c) { return c.id; });
+    var state = wrong.length === 0 ? "correct" : wrong.length === 1 ? "near" : "wrong";
+    var clue = null;
+    if (state === "wrong") {
+      if (pass === 2 && (sort.a === "runs" || sort.e === "runs")) clue = "carried";
+      else if (sort.d === "runs") clue = "reputation";
+      else if (pass === 1 && sort.e === "refused") clue = "contents";
+      else if (sort.f !== "outside") clue = "typed";
+      else if (pass === 1 && sort.b === "runs") clue = "samecontents";
+    }
+    return { state: state, wrong: wrong, clue: clue, key: k };
+  }
+  window.__grade = grade;
+  window.__key = key;
+
+  function render(pass) {
+    var ul = document.getElementById("cards" + pass);
+    ul.textContent = "";
+    CARDS.forEach(function (c) {
+      var li = document.createElement("li");
+      li.className = "card"; li.id = "card" + pass + "-" + c.id;
+      var fs = document.createElement("fieldset");
+      var lg = document.createElement("legend");
+      var s1 = document.createElement("span"); s1.className = "card-short"; s1.textContent = c.short;
+      var s2 = document.createElement("span"); s2.className = "card-detail"; s2.textContent = c.detail;
+      lg.appendChild(s1); lg.appendChild(s2);
+      fs.appendChild(lg);
+      var bins = document.createElement("div"); bins.className = "bins";
+      BINS.forEach(function (b) {
+        var lab = document.createElement("label"); lab.className = "bin";
+        var r = document.createElement("input");
+        r.type = "radio"; r.name = "p" + pass + "-" + c.id; r.value = b.id; r.id = "p" + pass + "-" + c.id + "-" + b.id;
+        r.addEventListener("change", function () { sorts[pass][c.id] = b.id; updateCount(pass); });
+        var sp = document.createElement("span"); sp.textContent = b.label;
+        lab.appendChild(r); lab.appendChild(sp);
+        bins.appendChild(lab);
+      });
+      fs.appendChild(bins);
+      var w = document.createElement("p"); w.className = "why"; w.hidden = true; w.id = "why" + pass + "-" + c.id;
+      fs.appendChild(w);
+      li.appendChild(fs);
+      ul.appendChild(li);
+    });
+    updateCount(pass);
+  }
+
+  function updateCount(pass) {
+    var n = Object.keys(sorts[pass]).length;
+    document.getElementById("count" + pass).textContent = fmt(n) + " of " + fmt(CARDS.length) + " sorted.";
+    document.getElementById("check" + pass).disabled = n < CARDS.length;
+  }
+
+  function para(t) { var p = document.createElement("p"); p.textContent = t; return p; }
+
+  var CLUES = {
+    reputation: "One clue: you placed the forum script in Runs. How many people use a script, or how good it is, never enters the rule.",
+    contents: "One clue: you placed the script with a typo in Refused. The rule reads origin and signature. A typo lives in the file's contents.",
+    typed: "One clue: look again at the typed command. The policy governs saved scripts.",
+    samecontents: "One clue: the emailed cleanup has the same contents as the one written here. Contents aren't what the rule reads.",
+    carried: "One clue: this server's rule doesn't care where a file was written. It asks only whether the file is signed."
+  };
+
+  function showFeedback(pass) {
+    var r = grade(pass, sorts[pass]);
+    var fb = document.getElementById("fb" + pass);
+    fb.className = "feedback " + r.state;
+    fb.textContent = "";
+    var h = document.createElement("h3");
+    if (r.state === "correct") {
+      h.textContent = "Right.";
+      fb.appendChild(h);
+      fb.appendChild(para(pass === 1
+        ? "Origin and signature decided every card. Each card now shows why."
+        : "Same files, a different machine, and two of them changed bins. Each card now shows why."));
+      CARDS.forEach(function (c) {
+        var w = document.getElementById("why" + pass + "-" + c.id);
+        w.textContent = why(pass, c); w.hidden = false;
+      });
+    } else if (r.state === "near") {
+      var c = byId(r.wrong[0]);
+      h.textContent = "Close.";
+      fb.appendChild(h);
+      fb.appendChild(para("Five cards are in the right place. One isn't: " + c.short.toLowerCase() + ". " + why(pass, c)));
+    } else {
+      h.textContent = "Not yet.";
+      fb.appendChild(h);
+      fb.appendChild(para("The rule decides by two facts about a saved file: where it came from, and whether it carries a valid signature. Start there. For each card, answer those two questions, then read the rule."));
+      if (r.clue) fb.appendChild(para(CLUES[r.clue]));
+    }
+    fb.hidden = false;
+    fb.classList.remove("just-shown"); void fb.offsetWidth; fb.classList.add("just-shown");
+    fb.focus();
+    return r;
+  }
+
+  document.getElementById("check1").addEventListener("click", function () {
+    var r = showFeedback(1);
+    if (r.state === "correct") {
+      var p2 = document.getElementById("pass2");
+      if (p2.hidden) {
+        p2.hidden = false;
+        document.getElementById("fb1").appendChild(para("Now try the same six on a different server."));
+      }
+    }
+  });
+
+  document.getElementById("check2").addEventListener("click", function () {
+    var r = showFeedback(2);
+    if (r.state === "correct") {
+      var k1 = key(1), k2 = key(2);
+      var moved = CARDS.filter(function (c) { return k1[c.id] !== k2[c.id]; });
+      moved.forEach(function (c) {
+        var li = document.getElementById("card2-" + c.id);
+        li.classList.add("moved");
+        var lg = li.querySelector(".card-short");
+        if (!lg.querySelector(".moved-tag")) {
+          var t = document.createElement("span"); t.className = "moved-tag"; t.textContent = "Moved";
+          lg.appendChild(t);
+        }
+      });
+      document.getElementById("moved-line").textContent =
+        fmt(moved.length) + " cards moved from Runs to Refused: " +
+        moved.map(function (c) { return c.ref || c.short.toLowerCase(); }).join(" and ") +
+        ". Nobody edited either file.";
+      var t = document.getElementById("takeaway");
+      t.hidden = false;
+      t.classList.remove("just-shown"); void t.offsetWidth; t.classList.add("just-shown");
+    }
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    sorts = { 1: {}, 2: {} };
+    render(1); render(2);
+    ["fb1", "fb2"].forEach(function (id) { document.getElementById(id).hidden = true; });
+    document.getElementById("takeaway").hidden = true;
+    document.getElementById("pass2").hidden = true;
+    document.getElementById("pass1").focus();
+  });
+
+  render(1); render(2);
+})();
+</script>
+</body>
+</html>

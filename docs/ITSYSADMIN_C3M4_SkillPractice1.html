@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trace the Files Before Deletion</title>
+<style>
+  :root {
+    --bg: #17212b;
+    --surface: #1f2c38;
+    --surface-raised: #263646;
+    --line: #36495b;
+    --text: #e4e9ee;
+    --muted: #9fb0bf;
+    --amber: #e9b24c;
+    --amber-soft: #3a3324;
+    --amber-ink: #1c1608;
+    --ok: #82c9a6;
+    --ok-soft: #1f3a31;
+    --miss: #ec9580;
+    --miss-soft: #3d2622;
+    --focus: #8fd0e6;
+    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.2; margin: 0; }
+  h1 { font-size: 2rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin-bottom: 0.6rem; }
+  h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+  p { margin: 0 0 0.9rem; max-width: 38rem; }
+  .lede { color: var(--muted); margin-top: 0.5rem; }
+
+  /* The sequence */
+  .sequence {
+    list-style: none;
+    margin: 1.5rem 0 1.75rem;
+    padding: 0;
+    counter-reset: step;
+  }
+  .sequence li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr auto;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface);
+    border-left: 4px solid var(--line);
+    margin-bottom: 0.35rem;
+  }
+  .sequence li::before {
+    content: counter(step);
+    font-family: var(--display);
+    font-size: 1.4rem;
+    color: var(--muted);
+  }
+  .sequence li.action { border-left-color: var(--amber); }
+  .sequence li.changed { border-left-color: var(--focus); }
+  .tag {
+    font-size: 0.8rem;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 0.05rem 0.45rem;
+    white-space: nowrap;
+  }
+  .sequence li.changed .tag { color: var(--focus); border-color: var(--focus); }
+
+  /* The object set */
+  .table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  caption {
+    text-align: left;
+    font-family: var(--display);
+    font-size: 1.05rem;
+    padding-bottom: 0.5rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.55rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  th { font-family: var(--display); font-weight: 600; color: var(--muted); font-size: 0.95rem; }
+  th.num, td.num { text-align: right; }
+  td.mark { width: 3rem; }
+  td.name { overflow-wrap: anywhere; }
+  tr.marked td { background: var(--amber-soft); }
+  tr.marked td.name { color: var(--amber); }
+  input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: var(--amber);
+    margin: 0;
+    cursor: pointer;
+  }
+  label.name-label { cursor: pointer; display: block; }
+  .count { color: var(--muted); font-size: 0.95rem; }
+
+  .actions { margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-family: var(--display);
+    padding: 0.65rem 1.2rem;
+    border: 2px solid var(--amber);
+    background: var(--amber);
+    color: var(--amber-ink);
+    cursor: pointer;
+  }
+  button.quiet { background: transparent; color: var(--text); border-color: var(--line); }
+  button.quiet:hover { border-color: var(--muted); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  /* Feedback */
+  .feedback { margin-top: 1.25rem; padding: 1rem 1.1rem; border-left: 4px solid var(--line); background: var(--surface-raised); }
+  .feedback[hidden] { display: none; }
+  .feedback:focus { outline: none; }
+  .feedback p:last-child { margin-bottom: 0; }
+  .feedback.correct { border-left-color: var(--ok); background: var(--ok-soft); }
+  .feedback.correct h3 { color: var(--ok); }
+  .feedback.near { border-left-color: var(--amber); background: var(--amber-soft); }
+  .feedback.near h3 { color: var(--amber); }
+  .feedback.wrong { border-left-color: var(--miss); background: var(--miss-soft); }
+  .feedback.wrong h3 { color: var(--miss); }
+
+  section.pass[hidden] { display: none; }
+  section.pass + section.pass { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+  section.pass:focus { outline: none; }
+
+  /* Comparison */
+  .compare[hidden] { display: none; }
+  .compare { margin-top: 2rem; }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
+  .compare-col { padding: 0.9rem 1rem; background: var(--surface); }
+  .compare-col h3 { font-size: 0.98rem; color: var(--muted); }
+  .compare-col ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+  .compare-col li { overflow-wrap: anywhere; }
+  .compare-col li.both { color: var(--amber); }
+  .key-line { color: var(--muted); font-size: 0.95rem; }
+  .takeaway { padding: 1.1rem; border: 2px solid var(--amber); }
+  .takeaway p:last-child { margin-bottom: 0; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  @media (max-width: 480px) {
+    main { padding: 1.5rem 1rem 2.5rem; }
+    h1 { font-size: 1.6rem; }
+    .sequence li { grid-template-columns: 1.75rem 1fr; }
+    .sequence li .tag { grid-column: 2; justify-self: start; }
+    .compare-grid { grid-template-columns: 1fr; }
+    th, td { padding: 0.5rem 0.4rem; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .feedback.just-shown, .compare.just-shown { animation: settle 260ms ease-out; }
+    @keyframes settle { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Trace the Files Before Deletion</h1>
+    <p class="lede">Decide what a step applies to before you trust what it does.</p>
+  </header>
+
+  <p>A retailer's back office keeps a report-export folder on its Windows server. Someone has written a three-step cleanup for it. Each step hands the next one a set of objects. Here, each object is a file, and each file carries named properties: a name, an age in days, and a size in MB.</p>
+  <p>Before anyone runs the cleanup, work out which files step 3 will delete.</p>
+
+  <section class="pass" id="pass1" aria-labelledby="pass1-heading" tabindex="-1">
+    <h2 id="pass1-heading">The cleanup as written</h2>
+    <ol class="sequence" aria-label="Cleanup steps, as written">
+      <li><span>List every file in the report-export folder.</span></li>
+      <li><span>Keep only the files older than 30 days.</span></li>
+      <li class="action"><span>Delete each file it receives.</span></li>
+    </ol>
+    <div class="table-wrap" id="table1"></div>
+    <p class="count" id="count1" aria-live="polite"></p>
+    <div class="actions"><button type="button" id="check1">Check my marks</button></div>
+    <div class="feedback" id="fb1" hidden tabindex="-1" role="status"></div>
+  </section>
+
+  <section class="pass" id="pass2" aria-labelledby="pass2-heading" hidden tabindex="-1">
+    <h2 id="pass2-heading">Someone edits step 2</h2>
+    <p>Step 2 now selects by a different property. Step 3 stays exactly as it was.</p>
+    <ol class="sequence" aria-label="Cleanup steps, after the edit">
+      <li><span>List every file in the report-export folder.</span></li>
+      <li class="changed"><span>Keep only the files larger than 100 MB.</span><span class="tag">Edited</span></li>
+      <li class="action"><span>Delete each file it receives.</span><span class="tag">Not edited</span></li>
+    </ol>
+    <div class="table-wrap" id="table2"></div>
+    <p class="count" id="count2" aria-live="polite"></p>
+    <div class="actions"><button type="button" id="check2">Check my marks</button></div>
+    <div class="feedback" id="fb2" hidden tabindex="-1" role="status"></div>
+
+    <div class="compare" id="compare" hidden>
+      <h2>Same step 3, two different sets</h2>
+      <div class="compare-grid">
+        <div class="compare-col"><h3>When step 2 read age</h3><ul id="list1"></ul></div>
+        <div class="compare-col"><h3>When step 2 read size</h3><ul id="list2"></ul></div>
+      </div>
+      <p class="key-line" id="overlap"></p>
+      <div class="takeaway">
+        <p>Reading step 3 tells you what will happen. Reading what feeds it tells you what it will happen to.</p>
+        <p>On a real server, you can run steps 1 and 2 on their own, read the set they return, and only then add step 3.</p>
+      </div>
+      <div class="actions"><button type="button" class="quiet" id="reset">Start over</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var FILES = [
+    { id: "a", name: "dispatch_summary_old.csv", age: 12, size: 8 },
+    { id: "b", name: "archive_2023.zip",         age: 3,  size: 240 },
+    { id: "c", name: "stock_counts_q2.csv",      age: 47, size: 15 },
+    { id: "d", name: "returns_ledger.xlsx",      age: 31, size: 6 },
+    { id: "e", name: "price_changes.csv",        age: 29, size: 4 },
+    { id: "f", name: "inventory_snapshot.csv",   age: 64, size: 180 },
+    { id: "g", name: "till_export_backup.zip",   age: 38, size: 120 },
+    { id: "h", name: "daily_sales.csv",          age: 1,  size: 2 }
+  ];
+  // Files whose names suggest age while their Age property says otherwise.
+  var NAME_CUES = { a: true, b: true };
+
+  var PASSES = {
+    1: {
+      prop: "age", threshold: 30, unitWord: "days", propLabel: "Age",
+      keeps: function (f) { return f.age > 30; },
+      describe: function (f) { return "Its Age is " + fmt(f.age) + " days"; }
+    },
+    2: {
+      prop: "size", threshold: 100, unitWord: "MB", propLabel: "Size",
+      keeps: function (f) { return f.size > 100; },
+      describe: function (f) { return "Its Size is " + fmt(f.size) + " MB"; }
+    }
+  };
+
+  var marks = { 1: {}, 2: {} };
+
+  function fmt(n) { return n.toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+  function keyFor(pass) { return FILES.filter(PASSES[pass].keeps).map(function (f) { return f.id; }); }
+  function byId(id) { for (var i = 0; i < FILES.length; i++) if (FILES[i].id === id) return FILES[i]; }
+
+  function buildTable(pass) {
+    var wrap = document.getElementById("table" + pass);
+    var t = document.createElement("table");
+    var cap = document.createElement("caption");
+    cap.textContent = "Mark every file step 3 will delete";
+    t.appendChild(cap);
+    var thead = document.createElement("thead");
+    thead.innerHTML = '<tr><th scope="col"><span class="sr-only">Will be deleted</span></th><th scope="col">Name</th><th scope="col" class="num">Age (days)</th><th scope="col" class="num">Size (MB)</th></tr>';
+    t.appendChild(thead);
+    var tb = document.createElement("tbody");
+    FILES.forEach(function (f) {
+      var tr = document.createElement("tr");
+      var cid = "p" + pass + "-" + f.id;
+      var tdM = document.createElement("td"); tdM.className = "mark";
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = cid; cb.value = f.id;
+      cb.addEventListener("change", function () {
+        if (cb.checked) marks[pass][f.id] = true; else delete marks[pass][f.id];
+        tr.classList.toggle("marked", cb.checked);
+        updateCount(pass);
+      });
+      tdM.appendChild(cb);
+      var tdN = document.createElement("td"); tdN.className = "name";
+      var lab = document.createElement("label"); lab.className = "name-label"; lab.htmlFor = cid; lab.textContent = f.name;
+      tdN.appendChild(lab);
+      var tdA = document.createElement("td"); tdA.className = "num"; tdA.textContent = fmt(f.age);
+      var tdS = document.createElement("td"); tdS.className = "num"; tdS.textContent = fmt(f.size);
+      tr.appendChild(tdM); tr.appendChild(tdN); tr.appendChild(tdA); tr.appendChild(tdS);
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    wrap.textContent = "";
+    wrap.appendChild(t);
+    updateCount(pass);
+  }
+
+  function updateCount(pass) {
+    var n = Object.keys(marks[pass]).length;
+    document.getElementById("count" + pass).textContent =
+      n === 1 ? "1 file marked." : fmt(n) + " files marked.";
+  }
+
+  // Pure grading function, exposed for verification.
+  function grade(pass, selectedIds) {
+    var key = keyFor(pass);
+    var sel = {}; selectedIds.forEach(function (id) { sel[id] = true; });
+    var missed = key.filter(function (id) { return !sel[id]; });
+    var extra = selectedIds.filter(function (id) { return key.indexOf(id) === -1; });
+    var diff = missed.concat(extra);
+    var state = diff.length === 0 ? "correct" : diff.length === 1 ? "near" : "wrong";
+    return {
+      state: state, missed: missed, extra: extra, key: key,
+      allMarked: selectedIds.length === FILES.length,
+      nameCued: pass === 1 ? extra.filter(function (id) { return NAME_CUES[id]; }) : []
+    };
+  }
+  window.__grade = grade;
+  window.__key = keyFor;
+
+  function para(text) { var p = document.createElement("p"); p.textContent = text; return p; }
+
+  function showFeedback(pass) {
+    var fb = document.getElementById("fb" + pass);
+    var cfg = PASSES[pass];
+    var r = grade(pass, Object.keys(marks[pass]));
+    fb.className = "feedback " + r.state;
+    fb.textContent = "";
+    var h = document.createElement("h3");
+
+    if (r.state === "correct") {
+      h.textContent = "Right.";
+      fb.appendChild(h);
+      if (pass === 1) {
+        fb.appendChild(para("Step 3 deletes " + fmt(r.key.length) + " files, the ones whose Age is above 30. Step 2 read one property and passed on only the files that matched. Step 3 deleted exactly what arrived."));
+        fb.appendChild(para("The file names played no part. The filter never reads them."));
+      } else {
+        fb.appendChild(para("This time step 3 deletes " + fmt(r.key.length) + " files, the ones larger than 100 MB. Step 2 now reads Size, so a different set reached step 3."));
+      }
+    } else if (r.state === "near") {
+      var odd = byId(r.missed[0] || r.extra[0]);
+      var inSet = cfg.keeps(odd);
+      h.textContent = "Close.";
+      fb.appendChild(h);
+      fb.appendChild(para("Your set is right except for one file: " + odd.name + ". " + cfg.describe(odd) + ", so step 2 " + (inSet ? "passes it on, and step 3 deletes it." : "drops it, and it never reaches step 3.")));
+    } else {
+      h.textContent = "Not yet.";
+      fb.appendChild(h);
+      fb.appendChild(para("Step 3 deletes whatever step 2 passes to it, and step 2 decides by one named property. Start there. Find the property step 2 reads, then compare each file's value with step 2's threshold."));
+      if (r.allMarked) {
+        fb.appendChild(para("You marked every file. That is what step 3 would delete if step 2 weren't there."));
+      } else if (r.nameCued.length) {
+        var f = byId(r.nameCued[0]);
+        fb.appendChild(para("One clue: you marked " + f.name + ". Its name suggests an old file. " + cfg.describe(f) + "."));
+      }
+    }
+    fb.hidden = false;
+    fb.classList.remove("just-shown"); void fb.offsetWidth; fb.classList.add("just-shown");
+    fb.focus();
+    return r;
+  }
+
+  function fill(listId, ids, other) {
+    var ul = document.getElementById(listId); ul.textContent = "";
+    ids.forEach(function (id) {
+      var li = document.createElement("li");
+      li.textContent = byId(id).name;
+      if (other.indexOf(id) !== -1) { li.className = "both"; li.textContent += " (in both)"; }
+      ul.appendChild(li);
+    });
+  }
+
+  document.getElementById("check1").addEventListener("click", function () {
+    var r = showFeedback(1);
+    if (r.state === "correct") {
+      var p2 = document.getElementById("pass2");
+      if (p2.hidden) {
+        p2.hidden = false;
+        var cont = document.createElement("p");
+        cont.textContent = "Now see what happens when only step 2 changes.";
+        document.getElementById("fb1").appendChild(cont);
+      }
+    }
+  });
+
+  document.getElementById("check2").addEventListener("click", function () {
+    var r = showFeedback(2);
+    if (r.state === "correct") {
+      var k1 = keyFor(1), k2 = keyFor(2);
+      var both = k1.filter(function (id) { return k2.indexOf(id) !== -1; });
+      fill("list1", k1, k2);
+      fill("list2", k2, k1);
+      document.getElementById("overlap").textContent =
+        "Step 3 deleted " + fmt(k1.length) + " files, then " + fmt(k2.length) + ". Only " + fmt(both.length) + " files are in both sets. Not one word of step 3 changed.";
+      var c = document.getElementById("compare");
+      c.hidden = false;
+      c.classList.remove("just-shown"); void c.offsetWidth; c.classList.add("just-shown");
+    }
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    marks = { 1: {}, 2: {} };
+    buildTable(1); buildTable(2);
+    ["fb1", "fb2"].forEach(function (id) { document.getElementById(id).hidden = true; });
+    document.getElementById("compare").hidden = true;
+    document.getElementById("pass2").hidden = true;
+    var p1 = document.getElementById("pass1");
+    p1.focus();
+  });
+
+  buildTable(1);
+  buildTable(2);
+})();
+</script>
+</body>
+</html>
