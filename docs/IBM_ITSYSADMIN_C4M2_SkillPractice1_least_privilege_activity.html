@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which access does the task actually need?</title>
+<style>
+  :root {
+    --paper: #ECE8DE;
+    --paper-raised: #F6F3EA;
+    --ink: #241F1A;
+    --ink-muted: #5C564C;
+    --rule: #C7BFA9;
+    --accent: #8B3A2B;
+    --accent-soft: #F0DAD2;
+    --correct: #4B6B4A;
+    --correct-soft: #E2E9D9;
+    --focus: #1E5F74;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    font-size: 17px;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .page {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    font-weight: 400;
+    font-size: 1.6rem;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+  }
+
+  .deck {
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    margin: 0 0 2rem;
+    max-width: 52ch;
+  }
+
+  .section-label {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+  }
+
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2rem 0;
+  }
+
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+  }
+
+  .card.state-correct { border-color: var(--correct); background: var(--correct-soft); }
+  .card.state-wrong { border-color: var(--accent); background: var(--accent-soft); }
+
+  .role-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    margin: 0 0 0.3rem;
+  }
+
+  .task-text {
+    margin: 0 0 0.7rem;
+    font-size: 0.98rem;
+  }
+
+  .task-text strong {
+    font-weight: 600;
+  }
+
+  .grant-text {
+    margin: 0 0 0.9rem;
+    font-size: 1.03rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--paper);
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+  }
+
+  .toggle-group {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .toggle-btn {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .toggle-btn:hover:not(:disabled) {
+    border-color: var(--ink-muted);
+  }
+
+  .toggle-btn[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .toggle-btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .toggle-btn:disabled {
+    cursor: default;
+  }
+
+  .explain {
+    margin-top: 0.8rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.95rem;
+    display: none;
+  }
+
+  .card.checked .explain {
+    display: block;
+  }
+
+  .explain .verdict {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+
+  .state-correct .verdict { color: var(--correct); }
+  .state-wrong .verdict { color: var(--accent); }
+
+  .controls {
+    margin-top: 1.5rem;
+  }
+
+  button.primary {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 3px;
+    padding: 0.7rem 1.3rem;
+    cursor: pointer;
+  }
+
+  button.primary:hover:not(:disabled) {
+    background: #39312A;
+  }
+
+  button.primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  button.primary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .summary {
+    margin-top: 1.6rem;
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--rule);
+    background: var(--paper-raised);
+    display: none;
+  }
+
+  .summary.show { display: block; }
+  .summary.level-correct { border-left-color: var(--correct); }
+  .summary.level-near { border-left-color: #8A6A2E; }
+  .summary.level-wrong { border-left-color: var(--accent); }
+
+  .summary p { margin: 0 0 0.5rem; }
+  .summary p:last-child { margin-bottom: 0; }
+
+  .closing {
+    margin-top: 1.6rem;
+    font-size: 1.02rem;
+  }
+
+  .replay {
+    margin-top: 1.6rem;
+  }
+
+  .replay button {
+    font-family: inherit;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-weight: 500;
+    font-size: 0.92rem;
+    padding: 0.55rem 1rem;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .replay button:hover:not(:disabled) {
+    background: var(--paper-raised);
+    border-color: var(--ink-muted);
+  }
+
+  .replay button:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; font-size: 16px; }
+    h1 { font-size: 1.4rem; }
+    .toggle-group { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="section-label">Skill practice — least privilege</p>
+  <h1>Which access does the task actually need?</h1>
+  <p class="deck">Each card below names an account, the task it actually performs, and one specific access grant it currently holds. For each one, decide: does the task name a reason for this access, or not? Where it doesn't, the grant is a candidate to trim.</p>
+
+  <hr class="rule">
+
+  <div id="cardsContainer"></div>
+
+  <div class="controls">
+    <button class="primary" id="checkBtn" disabled>Check my sort</button>
+  </div>
+
+  <div class="summary" id="summaryBox" role="status" aria-live="polite"></div>
+
+  <div class="replay" id="replayWrap" style="display:none;">
+    <button type="button" id="replayBtn">Reset and try again</button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var items = [
+    {
+      id: 1,
+      role: "Vendor forecast sync — service account",
+      task: "Writes the vendor's quarterly sales forecast file into a shared intake folder once a week.",
+      grant: "Write access to the intake folder.",
+      answer: "keep",
+      msgKeep: "Right. The task is exactly this: writing the forecast file into that folder. The access matches the task with nothing left over.",
+      msgTrimWrong: "This one matches the task directly — writing into the intake folder is the job this account does. There's no excess here to trim."
+    },
+    {
+      id: 2,
+      role: "Vendor forecast sync — service account",
+      task: "Writes the vendor's quarterly sales forecast file into a shared intake folder once a week.",
+      grant: "Read access to the entire shared drive, including HR and payroll folders.",
+      answer: "trim",
+      msgTrim: "Right. The task only requires writing one file into one folder. Nothing in the task calls for reading HR or payroll data, or anything else on the drive.",
+      msgKeepWrong: "The task says this account writes one forecast file into one folder. It names no reason to read HR, payroll, or anything else on the drive — so this grant has no task behind it."
+    },
+    {
+      id: 3,
+      role: "Quality audit reviewer",
+      task: "Reviews production-line inspection logs during scheduled audits; never edits them.",
+      grant: "Read-only access to the inspection-log folder.",
+      answer: "keep",
+      msgKeep: "Right. Reviewing the logs during audits is the task, and read-only access is exactly what that requires.",
+      msgTrimWrong: "The task is to review these logs during audits. Read-only access is what that review requires — this one matches, it isn't excess."
+    },
+    {
+      id: 4,
+      role: "Quality audit reviewer",
+      task: "Reviews production-line inspection logs during scheduled audits; never edits them.",
+      grant: "Write access to the inspection-log folder.",
+      answer: "trim",
+      msgTrim: "Right. The task states plainly that this role never edits the logs. Write access has no task behind it at all.",
+      msgKeepWrong: "The task states this role never edits the logs — only reviews them. Nothing names a reason for write access, which makes this one a candidate to trim."
+    },
+    {
+      id: 5,
+      role: "Shift supervisor",
+      task: "Approves shift schedule changes and views the production dashboard export for their own shift.",
+      grant: "Read access to their own shift's dashboard export folder.",
+      answer: "keep",
+      msgKeep: "Right. Viewing their own shift's dashboard export is named directly in the task.",
+      msgTrimWrong: "The task names viewing their own shift's dashboard export directly — this grant is exactly that, not an excess."
+    },
+    {
+      id: 6,
+      role: "Shift supervisor",
+      task: "Approves shift schedule changes and views the production dashboard export for their own shift.",
+      grant: "Read access to every other shift's dashboard export folder, across all plants.",
+      answer: "trim",
+      msgTrim: "Right. The task says \"their own shift.\" Nothing in it calls for visibility into other shifts or other plants.",
+      msgKeepWrong: "The task limits this role to their own shift's export. It names no reason to see every other shift across every plant, so this one is a candidate to trim."
+    }
+  ];
+
+  var container = document.getElementById('cardsContainer');
+  var checkBtn = document.getElementById('checkBtn');
+  var summaryBox = document.getElementById('summaryBox');
+  var replayWrap = document.getElementById('replayWrap');
+  var replayBtn = document.getElementById('replayBtn');
+
+  var selections = {};
+
+  function renderCards() {
+    container.innerHTML = '';
+    items.forEach(function(item) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'card-' + item.id;
+
+      card.innerHTML =
+        '<p class="role-label">' + item.role + '</p>' +
+        '<p class="task-text"><strong>Task:</strong> ' + item.task + '</p>' +
+        '<p class="grant-text">Current grant: ' + item.grant + '</p>' +
+        '<div class="toggle-group" role="group" aria-label="Decision for this grant">' +
+          '<button type="button" class="toggle-btn" data-item="' + item.id + '" data-choice="keep" aria-pressed="false">Keep — a task requires this</button>' +
+          '<button type="button" class="toggle-btn" data-item="' + item.id + '" data-choice="trim" aria-pressed="false">Trim — no task requires this</button>' +
+        '</div>' +
+        '<div class="explain" aria-live="polite"></div>';
+
+      container.appendChild(card);
+    });
+
+    container.querySelectorAll('.toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var itemId = btn.getAttribute('data-item');
+        var choice = btn.getAttribute('data-choice');
+        selections[itemId] = choice;
+
+        var card = document.getElementById('card-' + itemId);
+        card.querySelectorAll('.toggle-btn').forEach(function(b) {
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+
+        updateCheckBtn();
+      });
+    });
+  }
+
+  function updateCheckBtn() {
+    checkBtn.disabled = Object.keys(selections).length < items.length;
+  }
+
+  checkBtn.addEventListener('click', function() {
+    var correctCount = 0;
+
+    items.forEach(function(item) {
+      var card = document.getElementById('card-' + item.id);
+      var choice = selections[item.id];
+      var isCorrect = choice === item.answer;
+      if (isCorrect) correctCount++;
+
+      card.classList.add('checked');
+      card.classList.add(isCorrect ? 'state-correct' : 'state-wrong');
+
+      card.querySelectorAll('.toggle-btn').forEach(function(b) {
+        b.disabled = true;
+      });
+
+      var explain = card.querySelector('.explain');
+      var verdict, message;
+      if (isCorrect) {
+        verdict = 'Correct.';
+        message = item.answer === 'keep' ? item.msgKeep : item.msgTrim;
+      } else {
+        verdict = 'Not quite.';
+        message = choice === 'trim' ? item.msgTrimWrong : item.msgKeepWrong;
+      }
+      explain.innerHTML = '<span class="verdict">' + verdict + '</span>' + message;
+    });
+
+    checkBtn.disabled = true;
+
+    var level, heading, body;
+    if (correctCount === items.length) {
+      level = 'correct';
+      heading = 'All six placed on the right side of the test.';
+      body = 'Every grant here either matched a named task or didn\'t. That\'s the whole method: name the task, then check whether the access matches it.';
+    } else if (correctCount >= items.length - 2) {
+      level = 'near';
+      heading = correctCount + ' of ' + items.length + ' placed correctly.';
+      body = 'The structure is right. Look back at the cards marked "Not quite" above — in each one, check what the task actually says before deciding whether the access matches it.';
+    } else {
+      level = 'wrong';
+      heading = correctCount + ' of ' + items.length + ' placed correctly.';
+      body = 'The test is narrower than it might feel: it isn\'t whether the access seems reasonable for the role in general, it\'s whether the specific task named for that account calls for this specific grant. Reread each task above before deciding.';
+    }
+
+    summaryBox.className = 'summary show level-' + level;
+    summaryBox.innerHTML = '<p><strong>' + heading + '</strong></p><p>' + body + '</p>';
+
+    replayWrap.style.display = 'block';
+  });
+
+  replayBtn.addEventListener('click', function() {
+    selections = {};
+    summaryBox.className = 'summary';
+    summaryBox.innerHTML = '';
+    replayWrap.style.display = 'none';
+    renderCards();
+    updateCheckBtn();
+    container.querySelector('.toggle-btn').focus();
+  });
+
+  renderCards();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which layer decides?</title>
+<style>
+  :root {
+    --paper: #ECE8DE;
+    --paper-raised: #F6F3EA;
+    --ink: #241F1A;
+    --ink-muted: #5C564C;
+    --rule: #C7BFA9;
+    --accent: #8B3A2B;
+    --accent-soft: #F0DAD2;
+    --correct: #4B6B4A;
+    --correct-soft: #E2E9D9;
+    --near: #8A6A2E;
+    --near-soft: #F0E6CE;
+    --focus: #1E5F74;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    font-size: 17px;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    font-weight: 400;
+    font-size: 1.6rem;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+  }
+
+  .deck {
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    margin: 0 0 2rem;
+    max-width: 56ch;
+  }
+
+  .section-label {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    margin: 1.6rem 0 0.8rem;
+    font-weight: 600;
+  }
+
+  .section-label:first-of-type { margin-top: 0; }
+
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2rem 0;
+  }
+
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .card.state-correct { border-color: var(--correct); }
+  .card.state-near { border-color: var(--near); }
+  .card.state-wrong { border-color: var(--accent); }
+
+  .scenario-path {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    margin: 0 0 0.6rem;
+  }
+
+  .perm-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 0.7rem;
+    font-size: 0.93rem;
+  }
+
+  .perm-table td {
+    padding: 0.3rem 0.5rem 0.3rem 0;
+    vertical-align: top;
+  }
+
+  .perm-table td:first-child {
+    color: var(--ink-muted);
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  .account-line {
+    margin: 0 0 1rem;
+    font-size: 0.98rem;
+    padding: 0.5rem 0.7rem;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+
+  .field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .field-row:last-of-type { margin-bottom: 0; }
+
+  .field-row label {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  select {
+    font-family: inherit;
+    font-size: 0.98rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 100%;
+  }
+
+  select:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  select:disabled {
+    opacity: 0.75;
+  }
+
+  .explain {
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+    display: none;
+  }
+
+  .card.checked .explain { display: block; }
+
+  .explain-line {
+    font-size: 0.93rem;
+    margin: 0 0 0.6rem;
+  }
+  .explain-line:last-child { margin-bottom: 0; }
+
+  .explain-line .tag {
+    font-weight: 600;
+    display: inline-block;
+    margin-right: 0.3rem;
+  }
+
+  .tag-right { color: var(--correct); }
+  .tag-off { color: var(--accent); }
+
+  .controls {
+    margin-top: 1.6rem;
+  }
+
+  button.primary {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 3px;
+    padding: 0.7rem 1.3rem;
+    cursor: pointer;
+  }
+
+  button.primary:hover:not(:disabled) { background: #39312A; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .summary {
+    margin-top: 1.6rem;
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--rule);
+    background: var(--paper-raised);
+    display: none;
+  }
+
+  .summary.show { display: block; }
+  .summary.level-correct { border-left-color: var(--correct); }
+  .summary.level-near { border-left-color: var(--near); }
+  .summary.level-wrong { border-left-color: var(--accent); }
+  .summary p { margin: 0 0 0.5rem; }
+  .summary p:last-child { margin-bottom: 0; }
+
+  .second-pass {
+    margin-top: 2.4rem;
+    display: none;
+  }
+  .second-pass.show { display: block; }
+
+  .second-pass-note {
+    font-size: 0.96rem;
+    color: var(--ink-muted);
+    margin: 0 0 1rem;
+    max-width: 54ch;
+  }
+
+  .moved-reveal {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--focus);
+    background: var(--paper-raised);
+    font-size: 0.95rem;
+    display: none;
+  }
+  .moved-reveal.show { display: block; }
+  .moved-reveal p { margin: 0 0 0.6rem; }
+  .moved-reveal p:last-child { margin-bottom: 0; }
+
+  .replay {
+    margin-top: 1.6rem;
+  }
+
+  .replay button {
+    font-family: inherit;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-weight: 500;
+    font-size: 0.92rem;
+    padding: 0.55rem 1rem;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .replay button:hover:not(:disabled) { background: var(--paper-raised); border-color: var(--ink-muted); }
+  .replay button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; font-size: 16px; }
+    h1 { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="section-label" style="margin-top:0;">Skill practice — effective access</p>
+  <h1>Which layer decides?</h1>
+  <p class="deck">Each case below names an account and a file or folder it's trying to reach. For each one, say which layer actually governs this account's access, and what access results — before you'd change anything.</p>
+
+  <hr class="rule">
+
+  <p class="section-label">On Linux</p>
+  <div id="linuxCards"></div>
+
+  <p class="section-label">On Windows</p>
+  <div id="windowsCards"></div>
+
+  <div class="controls">
+    <button class="primary" id="checkBtn" disabled>Check all seven</button>
+  </div>
+
+  <div class="summary" id="summaryBox" role="status" aria-live="polite"></div>
+
+  <div class="second-pass" id="secondPass">
+    <hr class="rule">
+    <p class="section-label" style="margin-top:0;">One assumption moves</p>
+    <p class="second-pass-note">Take the plant-schedule case again — same owner, same group, same permission bits. This time, the logistics clerk has been added to the warehouse-ops group. Make the same two calls.</p>
+    <div id="secondPassCard"></div>
+    <div class="moved-reveal" id="movedReveal" aria-live="polite"></div>
+  </div>
+
+  <div class="replay" id="replayWrap" style="display:none;">
+    <button type="button" id="replayBtn">Reset and try again</button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var LINUX_LAYERS = ["— select —", "Owner", "Group", "Other"];
+  var LINUX_ACCESS = ["— select —", "Full access (read, write, and execute)", "Read and write", "Read only", "No access"];
+  var WIN_LAYERS = ["— select —", "Share permission", "NTFS permission"];
+  var WIN_ACCESS = ["— select —", "Full Control", "Modify", "Read", "No access"];
+
+  var linuxItems = [
+    {
+      id: "L1",
+      path: "/srv/batch/intake.dat — owned by \u2018inventory-svc\u2019, group \u2018ops-team\u2019",
+      perms: [
+        ["Owner (inventory-svc)", "read, write, and execute"],
+        ["Group (ops-team)", "read and execute"],
+        ["Other", "no access"]
+      ],
+      account: "Account in question: inventory-svc \u2014 the file\u2019s owner",
+      layerOptions: LINUX_LAYERS,
+      accessOptions: LINUX_ACCESS,
+      correctLayer: "Owner",
+      correctAccess: "Full access (read, write, and execute)",
+      layerExplain: "The account matches the owner class directly, and Linux checks owner first. Nothing else gets consulted.",
+      accessExplain: "The owner\u2019s own bits grant read, write, and execute \u2014 and since owner is the class that governs, that\u2019s the full result."
+    },
+    {
+      id: "L2",
+      path: "/srv/finance/q3_summary.txt — owned by \u2018finance-lead\u2019, group \u2018finance-staff\u2019",
+      perms: [
+        ["Owner (finance-lead)", "read and write"],
+        ["Group (finance-staff)", "read only"],
+        ["Other", "no access"]
+      ],
+      account: "Account in question: a member of finance-staff \u2014 not the file\u2019s owner",
+      layerOptions: LINUX_LAYERS,
+      accessOptions: LINUX_ACCESS,
+      correctLayer: "Group",
+      correctAccess: "Read only",
+      layerExplain: "This account isn\u2019t the owner, so Linux moves to the next class. It is a member of the owning group, so group governs.",
+      accessExplain: "The group\u2019s bits grant read only \u2014 that\u2019s what this account gets, regardless of what the owner can do."
+    },
+    {
+      id: "L3",
+      path: "/srv/shared/plant_schedule.csv — owned by \u2018root\u2019, group \u2018warehouse-ops\u2019",
+      perms: [
+        ["Owner (root)", "read and write"],
+        ["Group (warehouse-ops)", "read and write"],
+        ["Other", "read only"]
+      ],
+      account: "Account in question: a logistics clerk in \u2018shipping-team\u2019 \u2014 not the owner, not in warehouse-ops",
+      layerOptions: LINUX_LAYERS,
+      accessOptions: LINUX_ACCESS,
+      correctLayer: "Other",
+      correctAccess: "Read only",
+      layerExplain: "This account matches neither the owner nor the owning group, so it falls through to the last class: other.",
+      accessExplain: "Other\u2019s bits grant read only \u2014 the wider group setting never gets consulted, because this account was never in that group."
+    },
+    {
+      id: "L4",
+      path: "/srv/procurement/vendor_contracts.pdf — owned by \u2018procurement-lead\u2019, group \u2018procurement-staff\u2019",
+      perms: [
+        ["Owner (procurement-lead)", "read, write, and execute"],
+        ["Group (procurement-staff)", "read and execute"],
+        ["Other", "no access"]
+      ],
+      account: "Account in question: procurement-lead \u2014 the file\u2019s owner, and also a member of procurement-staff",
+      layerOptions: LINUX_LAYERS,
+      accessOptions: LINUX_ACCESS,
+      correctLayer: "Owner",
+      correctAccess: "Full access (read, write, and execute)",
+      layerExplain: "This account matches the owner class, so owner governs \u2014 even though it\u2019s also a member of the group. The group\u2019s narrower setting is never reached.",
+      accessExplain: "Owner\u2019s bits grant full access. Being in a group with less doesn\u2019t cap it; the group class is never consulted once owner matches."
+    }
+  ];
+
+  var windowsItems = [
+    {
+      id: "W1",
+      path: "\\\\sem-fs01\\Engineering — accessed over the network",
+      perms: [
+        ["Share permission (Engineering-team)", "Modify"],
+        ["NTFS permission (Engineering-team)", "Full Control"]
+      ],
+      account: "Account in question: a member of Engineering-team",
+      layerOptions: WIN_LAYERS,
+      accessOptions: WIN_ACCESS,
+      correctLayer: "Share permission",
+      correctAccess: "Modify",
+      layerExplain: "Both layers apply together, and whichever is tighter decides the result. Here the share permission is tighter.",
+      accessExplain: "Modify is the more restrictive of Modify and Full Control, so Modify is what this account actually gets."
+    },
+    {
+      id: "W2",
+      path: "\\\\sem-fs01\\Finance\\Reports — accessed over the network",
+      perms: [
+        ["Share permission (Authenticated Users)", "Full Control"],
+        ["NTFS permission (Finance-staff)", "Read"]
+      ],
+      account: "Account in question: a member of Finance-staff",
+      layerOptions: WIN_LAYERS,
+      accessOptions: WIN_ACCESS,
+      correctLayer: "NTFS permission",
+      correctAccess: "Read",
+      layerExplain: "The share permission is wide open here, so it isn\u2019t restricting anything. The NTFS permission is the tighter layer, and it\u2019s the one deciding the result.",
+      accessExplain: "Read is the more restrictive of Full Control and Read, so Read is what this account actually gets."
+    },
+    {
+      id: "W3",
+      path: "\\\\sem-fs01\\Ops\\PlantFloor — accessed over the network",
+      perms: [
+        ["Share permission (Operations)", "Full Control"],
+        ["NTFS permission", "Only Finance-staff has an entry (Full Control) \u2014 Operations has none"]
+      ],
+      account: "Account in question: a member of Operations \u2014 not Finance-staff",
+      layerOptions: WIN_LAYERS,
+      accessOptions: WIN_ACCESS,
+      correctLayer: "NTFS permission",
+      correctAccess: "No access",
+      layerExplain: "The share permission grants this account Full Control, but the NTFS layer has no entry at all for Operations or any group this account belongs to. No entry means no access at that layer \u2014 and that\u2019s the one deciding the result.",
+      accessExplain: "A generous share setting doesn\u2019t help when the NTFS layer grants nothing. The result is no access."
+    }
+  ];
+
+  var allItems = linuxItems.concat(windowsItems);
+
+  var linuxContainer = document.getElementById('linuxCards');
+  var windowsContainer = document.getElementById('windowsCards');
+  var checkBtn = document.getElementById('checkBtn');
+  var summaryBox = document.getElementById('summaryBox');
+  var secondPass = document.getElementById('secondPass');
+  var secondPassCard = document.getElementById('secondPassCard');
+  var movedReveal = document.getElementById('movedReveal');
+  var replayWrap = document.getElementById('replayWrap');
+  var replayBtn = document.getElementById('replayBtn');
+
+  function buildOptions(select, options) {
+    options.forEach(function(opt, i) {
+      var o = document.createElement('option');
+      o.value = i === 0 ? '' : opt;
+      o.textContent = opt;
+      select.appendChild(o);
+    });
+  }
+
+  function renderCard(item, container) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-' + item.id;
+
+    var permHtml = '<table class="perm-table"><tbody>' + item.perms.map(function(p) {
+      return '<tr><td>' + p[0] + ':</td><td>' + p[1] + '</td></tr>';
+    }).join('') + '</tbody></table>';
+
+    card.innerHTML =
+      '<p class="scenario-path">' + item.path + '</p>' +
+      permHtml +
+      '<p class="account-line">' + item.account + '</p>' +
+      '<div class="field-row">' +
+        '<label for="layer-' + item.id + '">Which layer governs this account\u2019s access?</label>' +
+        '<select id="layer-' + item.id + '" data-item="' + item.id + '" data-field="layer"></select>' +
+      '</div>' +
+      '<div class="field-row">' +
+        '<label for="access-' + item.id + '">What access results?</label>' +
+        '<select id="access-' + item.id + '" data-item="' + item.id + '" data-field="access"></select>' +
+      '</div>' +
+      '<div class="explain"></div>';
+
+    container.appendChild(card);
+
+    var layerSelect = card.querySelector('#layer-' + item.id);
+    var accessSelect = card.querySelector('#access-' + item.id);
+    buildOptions(layerSelect, item.layerOptions);
+    buildOptions(accessSelect, item.accessOptions);
+
+    return card;
+  }
+
+  function attachChangeHandlers() {
+    document.querySelectorAll('select[data-item]').forEach(function(sel) {
+      sel.addEventListener('change', updateCheckBtn);
+    });
+  }
+
+  function updateCheckBtn() {
+    var allAnswered = allItems.every(function(item) {
+      var l = document.getElementById('layer-' + item.id).value;
+      var a = document.getElementById('access-' + item.id).value;
+      return l !== '' && a !== '';
+    });
+    checkBtn.disabled = !allAnswered;
+  }
+
+  function renderAll() {
+    linuxContainer.innerHTML = '';
+    windowsContainer.innerHTML = '';
+    linuxItems.forEach(function(item) { renderCard(item, linuxContainer); });
+    windowsItems.forEach(function(item) { renderCard(item, windowsContainer); });
+    attachChangeHandlers();
+    updateCheckBtn();
+  }
+
+  checkBtn.addEventListener('click', function() {
+    var fullyCorrect = 0;
+    var partial = 0;
+
+    allItems.forEach(function(item) {
+      var card = document.getElementById('card-' + item.id);
+      var layerSelect = document.getElementById('layer-' + item.id);
+      var accessSelect = document.getElementById('access-' + item.id);
+      var layerVal = layerSelect.value;
+      var accessVal = accessSelect.value;
+
+      var layerRight = layerVal === item.correctLayer;
+      var accessRight = accessVal === item.correctAccess;
+      var rightCount = (layerRight ? 1 : 0) + (accessRight ? 1 : 0);
+
+      var state;
+      if (rightCount === 2) { state = 'correct'; fullyCorrect++; }
+      else if (rightCount === 1) { state = 'near'; partial++; }
+      else { state = 'wrong'; }
+
+      card.classList.add('checked', 'state-' + state);
+      layerSelect.disabled = true;
+      accessSelect.disabled = true;
+
+      var explain = card.querySelector('.explain');
+      explain.innerHTML =
+        '<p class="explain-line"><span class="tag ' + (layerRight ? 'tag-right' : 'tag-off') + '">' + (layerRight ? 'Right —' : 'Not quite —') + '</span>' + item.layerExplain + (layerRight ? '' : ' Correct layer: ' + item.correctLayer + '.') + '</p>' +
+        '<p class="explain-line"><span class="tag ' + (accessRight ? 'tag-right' : 'tag-off') + '">' + (accessRight ? 'Right —' : 'Not quite —') + '</span>' + item.accessExplain + (accessRight ? '' : ' Correct result: ' + item.correctAccess + '.') + '</p>';
+    });
+
+    checkBtn.disabled = true;
+
+    var level, heading, body;
+    if (fullyCorrect === allItems.length) {
+      level = 'correct';
+      heading = 'All seven cases traced correctly.';
+      body = 'On Linux, the first class an account matches is the only one that counts. On Windows, whichever layer is tighter decides the result. Every grant traces to exactly one of those.';
+    } else if (fullyCorrect + partial >= allItems.length - 2) {
+      level = 'near';
+      heading = fullyCorrect + ' of ' + allItems.length + ' fully right, ' + partial + ' partly there.';
+      body = 'The structure is holding. Look at the cases marked \u201cNot quite\u201d above and re-check which class or layer actually applies before you decide what results.';
+    } else {
+      level = 'wrong';
+      heading = fullyCorrect + ' of ' + allItems.length + ' fully right.';
+      body = 'Slow down on two separate questions: first, which single layer governs \u2014 Linux\u2019s first match, or Windows\u2019s tighter layer \u2014 and only then, what that layer actually grants. Guessing the result without naming the layer first is where this tends to go wrong.';
+    }
+
+    summaryBox.className = 'summary show level-' + level;
+    summaryBox.innerHTML = '<p><strong>' + heading + '</strong></p><p>' + body + '</p>';
+
+    replayWrap.style.display = 'block';
+    renderSecondPass();
+  });
+
+  function renderSecondPass() {
+    secondPassCard.innerHTML = '';
+    movedReveal.classList.remove('show');
+    movedReveal.innerHTML = '';
+
+    var moved = {
+      id: "L3moved",
+      path: "/srv/shared/plant_schedule.csv — owned by \u2018root\u2019, group \u2018warehouse-ops\u2019",
+      perms: [
+        ["Owner (root)", "read and write"],
+        ["Group (warehouse-ops)", "read and write"],
+        ["Other", "read only"]
+      ],
+      account: "Account in question: the same logistics clerk \u2014 now also a member of warehouse-ops",
+      layerOptions: LINUX_LAYERS,
+      accessOptions: LINUX_ACCESS,
+      correctLayer: "Group",
+      correctAccess: "Read and write"
+    };
+
+    var card = renderCard(moved, secondPassCard);
+    var layerSelect = card.querySelector('#layer-' + moved.id);
+    var accessSelect = card.querySelector('#access-' + moved.id);
+
+    var movedBtn = document.createElement('button');
+    movedBtn.type = 'button';
+    movedBtn.className = 'primary';
+    movedBtn.textContent = 'See what moved';
+    movedBtn.style.marginTop = '0.4rem';
+    card.appendChild(movedBtn);
+
+    movedBtn.addEventListener('click', function() {
+      layerSelect.disabled = true;
+      accessSelect.disabled = true;
+      movedBtn.disabled = true;
+
+      movedReveal.innerHTML =
+        '<p><strong>Before:</strong> the clerk matched neither owner nor group, so other governed \u2014 read only.</p>' +
+        '<p><strong>Now:</strong> the clerk is in warehouse-ops, the owning group, so group governs instead \u2014 and the group\u2019s bits grant read and write. Nothing about the file changed. One line of group membership moved, and the deciding layer moved with it.</p>';
+      movedReveal.classList.add('show');
+    });
+
+    secondPass.classList.add('show');
+  }
+
+  replayBtn.addEventListener('click', function() {
+    summaryBox.className = 'summary';
+    summaryBox.innerHTML = '';
+    replayWrap.style.display = 'none';
+    secondPass.classList.remove('show');
+    renderAll();
+    document.querySelector('select[data-item]').focus();
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

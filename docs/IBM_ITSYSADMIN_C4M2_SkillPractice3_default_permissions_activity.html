@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A rule, or a decision?</title>
+<style>
+  :root {
+    --paper: #ECE8DE;
+    --paper-raised: #F6F3EA;
+    --ink: #241F1A;
+    --ink-muted: #5C564C;
+    --rule: #C7BFA9;
+    --accent: #8B3A2B;
+    --accent-soft: #F0DAD2;
+    --correct: #4B6B4A;
+    --correct-soft: #E2E9D9;
+    --near: #8A6A2E;
+    --focus: #1E5F74;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    font-size: 17px;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .page {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    font-weight: 400;
+    font-size: 1.6rem;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+  }
+
+  .deck {
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    margin: 0 0 2rem;
+    max-width: 54ch;
+  }
+
+  .section-label {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    margin: 1.6rem 0 0.8rem;
+    font-weight: 600;
+  }
+  .section-label:first-of-type { margin-top: 0; }
+
+  .rule-line {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2rem 0;
+  }
+
+  .card {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .card.state-correct { border-color: var(--correct); background: var(--correct-soft); }
+  .card.state-wrong { border-color: var(--accent); background: var(--accent-soft); }
+
+  .scenario-text {
+    margin: 0 0 0.9rem;
+    font-size: 0.98rem;
+  }
+
+  .toggle-group {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .toggle-btn {
+    font-family: inherit;
+    font-size: 0.93rem;
+    font-weight: 600;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    flex: 1;
+  }
+  .toggle-btn:hover:not(:disabled) { border-color: var(--ink-muted); }
+  .toggle-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .toggle-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .toggle-btn:disabled { cursor: default; }
+
+  .explain {
+    margin-top: 0.8rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.95rem;
+    display: none;
+  }
+  .card.checked .explain { display: block; }
+
+  .explain .verdict { font-weight: 600; display: block; margin-bottom: 0.3rem; }
+  .state-correct .verdict { color: var(--correct); }
+  .state-wrong .verdict { color: var(--accent); }
+
+  .controls { margin-top: 1.5rem; }
+
+  button.primary {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 3px;
+    padding: 0.7rem 1.3rem;
+    cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { background: #39312A; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .summary {
+    margin-top: 1.6rem;
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--rule);
+    background: var(--paper-raised);
+    display: none;
+  }
+  .summary.show { display: block; }
+  .summary.level-correct { border-left-color: var(--correct); }
+  .summary.level-near { border-left-color: var(--near); }
+  .summary.level-wrong { border-left-color: var(--accent); }
+  .summary p { margin: 0 0 0.5rem; }
+  .summary p:last-child { margin-bottom: 0; }
+
+  .second-pass { margin-top: 2.4rem; display: none; }
+  .second-pass.show { display: block; }
+
+  .second-pass-note {
+    font-size: 0.96rem;
+    color: var(--ink-muted);
+    margin: 0 0 1rem;
+    max-width: 54ch;
+  }
+
+  .moved-reveal {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--focus);
+    background: var(--paper-raised);
+    font-size: 0.95rem;
+    display: none;
+  }
+  .moved-reveal.show { display: block; }
+  .moved-reveal p { margin: 0 0 0.6rem; }
+  .moved-reveal p:last-child { margin-bottom: 0; }
+
+  .replay { margin-top: 1.6rem; }
+  .replay button {
+    font-family: inherit;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-weight: 500;
+    font-size: 0.92rem;
+    padding: 0.55rem 1rem;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .replay button:hover:not(:disabled) { background: var(--paper-raised); border-color: var(--ink-muted); }
+  .replay button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; font-size: 16px; }
+    h1 { font-size: 1.4rem; }
+    .toggle-group { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="section-label" style="margin-top:0;">Skill practice — default permissions</p>
+  <h1>A rule, or a decision?</h1>
+  <p class="deck">Each file below has permissions that might look surprising. For each one, decide: is this what a rule set earlier produced — the umask, or inheritance from the parent folder — or did someone change it on purpose, after the fact? Go only on the evidence given.</p>
+
+  <hr class="rule-line">
+
+  <p class="section-label">On Linux</p>
+  <div id="linuxCards"></div>
+
+  <p class="section-label">On Windows</p>
+  <div id="windowsCards"></div>
+
+  <div class="controls">
+    <button class="primary" id="checkBtn" disabled>Check my sort</button>
+  </div>
+
+  <div class="summary" id="summaryBox" role="status" aria-live="polite"></div>
+
+  <div class="second-pass" id="secondPass">
+    <hr class="rule-line">
+    <p class="section-label" style="margin-top:0;">One assumption moves</p>
+    <p class="second-pass-note">Same file as the wide-open legacy dump above, same permissions. This time, one more piece of evidence turns up. Make the same call.</p>
+    <div id="secondPassCard"></div>
+    <div class="moved-reveal" id="movedReveal" aria-live="polite"></div>
+  </div>
+
+  <div class="replay" id="replayWrap" style="display:none;">
+    <button type="button" id="replayBtn">Reset and try again</button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var items = [
+    {
+      id: "LD1",
+      scenario: "A file lands in /srv/intake/daily_feed.csv the moment an automated ingest job creates it. No command history shows any permission change on this file, ever. Its permissions match exactly what the system's configured umask would produce by default.",
+      answer: "rule",
+      correctMsg: "Right. Nothing in the record shows anyone touching this file's permissions after it was created. What it has is exactly what the umask in place at that moment would produce \u2014 that's the rule speaking, not a decision.",
+      wrongMsg: "There's no log entry, no command, no moment where someone changed this file's permissions. What you're looking at is the umask's output at creation \u2014 a rule, not a choice."
+    },
+    {
+      id: "LD2",
+      scenario: "A file in /srv/finance/forecast_model.xlsx shows a permission-change command in the audit log, run two weeks after the file was created, widening its permissions from owner-and-group-only to everyone-can-read-and-write.",
+      answer: "deliberate",
+      correctMsg: "Right. A command ran against this specific file, after it already existed, and the log shows it. That's a choice someone made, not a default this file was born with.",
+      wrongMsg: "This file didn't just inherit a default and sit untouched \u2014 a command ran against it two weeks after creation, widening it. That's a deliberate act on record, not the umask speaking."
+    },
+    {
+      id: "LD3",
+      scenario: "A file in /srv/shared/legacy_dump.tar sits wide open \u2014 everyone can read, write, and execute it. No chmod command appears in any log for this file, going back as far as the records run. The system's umask was set wide open at the time this file was created, years before anyone on the current team started.",
+      answer: "rule",
+      correctMsg: "Right. Nobody touched this file's permissions after it was created \u2014 there's no command naming it. What you're seeing is what a wide-open umask, set long before anyone currently on the team arrived, produces by default. It's alarming, but it's not a decision anyone made about this file specifically.",
+      wrongMsg: "It's tempting to read \u201ceveryone gets full access\u201d as proof someone deliberately opened this file up \u2014 but no command in the record ever touched it. What produced this is the umask that was in place when it was created, not a choice made about this file."
+    },
+    {
+      id: "WD1",
+      scenario: "A file is created inside D:\\Shares\\Engineering\\Drafts\\proposal_v3.docx the moment a user saves it there. Its NTFS permissions match the Drafts folder's permissions exactly, and the file's own permission entries are all marked \u201cinherited.\u201d",
+      answer: "rule",
+      correctMsg: "Right. Every entry on this file is marked inherited \u2014 nothing on the file itself was ever set directly. It took its permissions from the folder it was created in, which is exactly what inheritance does.",
+      wrongMsg: "Every permission entry on this file is marked inherited, not explicit. Nobody set anything on the file directly \u2014 it simply took on what the parent folder already had configured."
+    },
+    {
+      id: "WD2",
+      scenario: "A file in D:\\Shares\\HR\\Policies\\termination_procedure.docx carries one NTFS entry that is not marked inherited: Read access for a contractor group, added by an admin account three months after the file was created. The parent folder grants no such access.",
+      answer: "deliberate",
+      correctMsg: "Right. One entry on this file is explicitly set, not inherited, and it grants access the parent folder doesn't. Someone added that, after the fact, on purpose.",
+      wrongMsg: "This file carries one entry that isn't marked inherited \u2014 it was added directly, three months after creation, and it grants access the parent folder never had. That's a deliberate addition, not a default."
+    },
+    {
+      id: "WD3",
+      scenario: "A file in D:\\Shares\\Ops\\Reports\\q3_output.xlsx carries NTFS permissions that match its parent folder exactly, all marked \u201cinherited.\u201d Separately, the Reports folder itself was reconfigured by an admin account last month, widening it to grant a vendor group access \u2014 and that change propagated down to every file inside it, including this one.",
+      answer: "rule",
+      correctMsg: "Right. Nothing was ever set on this specific file directly \u2014 every entry is still marked inherited. The folder's own permissions were a deliberate change, but that's a decision about the folder, not about this file. This file is still just taking on whatever rule governs its parent.",
+      wrongMsg: "It's easy to call this deliberate because a person did make a choice somewhere \u2014 but the choice was made at the folder level. On the file itself, every entry is still marked inherited; nobody set anything on this file directly. If this is surprising, the next question is why the folder's rule looks like this \u2014 not whether this file was hand-picked."
+    }
+  ];
+
+  var linuxContainer = document.getElementById('linuxCards');
+  var windowsContainer = document.getElementById('windowsCards');
+  var checkBtn = document.getElementById('checkBtn');
+  var summaryBox = document.getElementById('summaryBox');
+  var secondPass = document.getElementById('secondPass');
+  var secondPassCard = document.getElementById('secondPassCard');
+  var movedReveal = document.getElementById('movedReveal');
+  var replayWrap = document.getElementById('replayWrap');
+  var replayBtn = document.getElementById('replayBtn');
+
+  var selections = {};
+
+  function cardMarkup(item) {
+    return (
+      '<p class="scenario-text">' + item.scenario + '</p>' +
+      '<div class="toggle-group" role="group" aria-label="Decision for this file">' +
+        '<button type="button" class="toggle-btn" data-item="' + item.id + '" data-choice="rule" aria-pressed="false">Rule-produced default</button>' +
+        '<button type="button" class="toggle-btn" data-item="' + item.id + '" data-choice="deliberate" aria-pressed="false">Deliberate after-the-fact change</button>' +
+      '</div>' +
+      '<div class="explain" aria-live="polite"></div>'
+    );
+  }
+
+  function renderCards() {
+    linuxContainer.innerHTML = '';
+    windowsContainer.innerHTML = '';
+
+    items.forEach(function(item) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'card-' + item.id;
+      card.innerHTML = cardMarkup(item);
+      (item.id.indexOf('LD') === 0 ? linuxContainer : windowsContainer).appendChild(card);
+    });
+
+    document.querySelectorAll('.toggle-btn[data-item]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var itemId = btn.getAttribute('data-item');
+        var choice = btn.getAttribute('data-choice');
+        selections[itemId] = choice;
+
+        var card = document.getElementById('card-' + itemId);
+        card.querySelectorAll('.toggle-btn').forEach(function(b) {
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+
+        updateCheckBtn();
+      });
+    });
+  }
+
+  function updateCheckBtn() {
+    checkBtn.disabled = Object.keys(selections).length < items.length;
+  }
+
+  checkBtn.addEventListener('click', function() {
+    var correctCount = 0;
+
+    items.forEach(function(item) {
+      var card = document.getElementById('card-' + item.id);
+      var choice = selections[item.id];
+      var isCorrect = choice === item.answer;
+      if (isCorrect) correctCount++;
+
+      card.classList.add('checked');
+      card.classList.add(isCorrect ? 'state-correct' : 'state-wrong');
+
+      card.querySelectorAll('.toggle-btn').forEach(function(b) { b.disabled = true; });
+
+      var explain = card.querySelector('.explain');
+      var verdict = isCorrect ? 'Correct.' : 'Not quite.';
+      var message = isCorrect ? item.correctMsg : item.wrongMsg;
+      explain.innerHTML = '<span class="verdict">' + verdict + '</span>' + message;
+    });
+
+    checkBtn.disabled = true;
+
+    var level, heading, body;
+    if (correctCount === items.length) {
+      level = 'correct';
+      heading = 'All six placed correctly.';
+      body = 'The evidence always settles it: a command on record, naming this file, after it already existed, is a decision. Anything else \u2014 including a permission that looks alarming \u2014 is the rule that was already in place.';
+    } else if (correctCount >= items.length - 2) {
+      level = 'near';
+      heading = correctCount + ' of ' + items.length + ' placed correctly.';
+      body = "The structure is right. On the cards marked \u201cNot quite\u201d above, look again at whether there's an actual command or explicit entry naming this file \u2014 not just whether the result looks surprising.";
+    } else {
+      level = 'wrong';
+      heading = correctCount + ' of ' + items.length + ' placed correctly.';
+      body = "The test is not how the permission looks \u2014 generous or tight, ordinary or alarming. It's whether the evidence shows someone acting on this specific file after it existed, or whether nothing ever touched it past the rule it was created under.";
+    }
+
+    summaryBox.className = 'summary show level-' + level;
+    summaryBox.innerHTML = '<p><strong>' + heading + '</strong></p><p>' + body + '</p>';
+
+    replayWrap.style.display = 'block';
+    renderSecondPass();
+  });
+
+  function renderSecondPass() {
+    secondPassCard.innerHTML = '';
+    movedReveal.classList.remove('show');
+    movedReveal.innerHTML = '';
+
+    var moved = {
+      id: "LD3moved",
+      scenario: "The same /srv/shared/legacy_dump.tar, same wide-open permissions. This time, one line turns up in an older archive of the audit log: a chmod command run against this exact file, three years ago, immediately after it was created, setting it to full access for everyone.",
+    };
+
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-' + moved.id;
+    card.innerHTML =
+      '<p class="scenario-text">' + moved.scenario + '</p>' +
+      '<div class="toggle-group" role="group" aria-label="Decision for this file">' +
+        '<button type="button" class="toggle-btn" data-second="rule" aria-pressed="false">Rule-produced default</button>' +
+        '<button type="button" class="toggle-btn" data-second="deliberate" aria-pressed="false">Deliberate after-the-fact change</button>' +
+      '</div>';
+    secondPassCard.appendChild(card);
+
+    card.querySelectorAll('.toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        card.querySelectorAll('.toggle-btn').forEach(function(b) {
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+          b.disabled = true;
+        });
+
+        movedReveal.innerHTML =
+          '<p><strong>Before:</strong> no command touched this file, so the umask in place at creation was doing the deciding.</p>' +
+          '<p><strong>Now:</strong> one command did \u2014 run right after the file was created, by someone, on purpose. The permissions are identical either way: full access for everyone. What moved is only the evidence of where that came from, and that\u2019s the only thing that was ever going to tell you which one it was.</p>';
+        movedReveal.classList.add('show');
+      });
+    });
+
+    secondPass.classList.add('show');
+  }
+
+  replayBtn.addEventListener('click', function() {
+    selections = {};
+    summaryBox.className = 'summary';
+    summaryBox.innerHTML = '';
+    replayWrap.style.display = 'none';
+    secondPass.classList.remove('show');
+    renderCards();
+    updateCheckBtn();
+    document.querySelector('.toggle-btn').focus();
+  });
+
+  renderCards();
+})();
+</script>
+</body>
+</html>

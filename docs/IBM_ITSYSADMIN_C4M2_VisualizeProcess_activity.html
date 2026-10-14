@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assemble the path</title>
+<style>
+  :root {
+    --paper: #ECE8DE;
+    --paper-raised: #F6F3EA;
+    --ink: #241F1A;
+    --ink-muted: #5C564C;
+    --rule: #C7BFA9;
+    --accent: #8B3A2B;
+    --accent-soft: #F0DAD2;
+    --correct: #4B6B4A;
+    --correct-soft: #E2E9D9;
+    --near: #8A6A2E;
+    --focus: #1E5F74;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    font-size: 17px;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .page {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    font-weight: 400;
+    font-size: 1.6rem;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+  }
+
+  .deck {
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    margin: 0 0 2rem;
+    max-width: 54ch;
+  }
+
+  .section-label {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    margin: 0 0 0.8rem;
+    font-weight: 600;
+  }
+
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2rem 0;
+  }
+
+  ol.steps {
+    list-style: none;
+    margin: 0 0 1.6rem;
+    padding: 0;
+    counter-reset: step;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .step.flagged {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .step-position {
+    font-family: Georgia, serif;
+    font-size: 1.1rem;
+    color: var(--ink-muted);
+    min-width: 1.6rem;
+    text-align: center;
+    padding-top: 0.1rem;
+  }
+
+  .step-text {
+    flex: 1;
+    font-size: 0.98rem;
+  }
+
+  .step-moves {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .move-btn {
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .move-btn:hover:not(:disabled) { border-color: var(--ink-muted); }
+  .move-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .move-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .controls { margin-top: 0.4rem; }
+
+  button.primary {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 3px;
+    padding: 0.7rem 1.3rem;
+    cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { background: #39312A; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .feedback {
+    margin-top: 1.6rem;
+    display: none;
+  }
+  .feedback.show { display: block; }
+
+  .verdict-banner {
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    border-left: 3px solid var(--rule);
+    background: var(--paper-raised);
+    margin-bottom: 1rem;
+  }
+  .verdict-banner.level-correct { border-left-color: var(--correct); }
+  .verdict-banner.level-near { border-left-color: var(--near); }
+  .verdict-banner.level-wrong { border-left-color: var(--accent); }
+  .verdict-banner p { margin: 0 0 0.5rem; }
+  .verdict-banner p:last-child { margin-bottom: 0; }
+
+  .violation {
+    padding: 0.7rem 0.9rem;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 2px;
+    margin-bottom: 0.6rem;
+    font-size: 0.93rem;
+  }
+  .violation:last-child { margin-bottom: 0; }
+
+  .replay { margin-top: 1.6rem; }
+  .replay button {
+    font-family: inherit;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-weight: 500;
+    font-size: 0.92rem;
+    padding: 0.55rem 1rem;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .replay button:hover:not(:disabled) { background: var(--paper-raised); border-color: var(--ink-muted); }
+  .replay button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  @media (max-width: 480px) {
+    body { padding: 1.75rem 1rem 3rem; font-size: 16px; }
+    h1 { font-size: 1.4rem; }
+    .step { gap: 0.6rem; padding: 0.8rem 0.75rem; }
+    .step-text { font-size: 0.93rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="section-label">Visualize the process</p>
+  <h1>Assemble the path</h1>
+  <p class="deck">Below are the moves this module builds, out of order. Use the up and down controls to put them in a sequence that actually works \u2014 one step can't happen before the thing it depends on has happened.</p>
+
+  <hr class="rule">
+
+  <ol class="steps" id="stepsList"></ol>
+
+  <div class="controls">
+    <button class="primary" id="checkBtn">Check my order</button>
+  </div>
+
+  <div class="feedback" id="feedbackBox" aria-live="polite"></div>
+
+  <div class="replay" id="replayWrap" style="display:none;">
+    <button type="button" id="replayBtn">Reset and try again</button>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var steps = {
+    "report": "A report comes in: an account can reach something a role doesn\u2019t need, or can\u2019t reach something it does.",
+    "identify-account": "Identify the specific account and the exact file or folder involved.",
+    "identify-path": "Establish whether the access in question happens locally or over the network.",
+    "trace-layer": "Determine which single layer actually governs this account\u2019s access, given the account, the file, and the path.",
+    "tighten": "Change only that governing layer, to match what the account\u2019s task actually requires.",
+    "verify": "Confirm the new access at the same layer that was governing it."
+  };
+
+  var initialOrder = ["verify", "trace-layer", "identify-path", "report", "tighten", "identify-account"];
+  var order = initialOrder.slice();
+
+  var stepsList = document.getElementById('stepsList');
+  var checkBtn = document.getElementById('checkBtn');
+  var feedbackBox = document.getElementById('feedbackBox');
+  var replayWrap = document.getElementById('replayWrap');
+  var replayBtn = document.getElementById('replayBtn');
+
+  var checked = false;
+
+  function render() {
+    stepsList.innerHTML = '';
+    order.forEach(function(id, i) {
+      var li = document.createElement('li');
+      li.className = 'step';
+      li.id = 'step-' + id;
+
+      var upDisabled = i === 0 || checked;
+      var downDisabled = i === order.length - 1 || checked;
+
+      li.innerHTML =
+        '<span class="step-position">' + (i + 1) + '</span>' +
+        '<span class="step-text">' + steps[id] + '</span>' +
+        '<span class="step-moves">' +
+          '<button type="button" class="move-btn" data-id="' + id + '" data-dir="up"' + (upDisabled ? ' disabled' : '') + ' aria-label="Move up">\u2191</button>' +
+          '<button type="button" class="move-btn" data-id="' + id + '" data-dir="down"' + (downDisabled ? ' disabled' : '') + ' aria-label="Move down">\u2193</button>' +
+        '</span>';
+
+      stepsList.appendChild(li);
+    });
+
+    stepsList.querySelectorAll('.move-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.getAttribute('data-id');
+        var dir = btn.getAttribute('data-dir');
+        var idx = order.indexOf(id);
+        var swapWith = dir === 'up' ? idx - 1 : idx + 1;
+        if (swapWith < 0 || swapWith >= order.length) return;
+        var tmp = order[idx];
+        order[idx] = order[swapWith];
+        order[swapWith] = tmp;
+        render();
+      });
+    });
+  }
+
+  function indexOf(id) { return order.indexOf(id); }
+
+  checkBtn.addEventListener('click', function() {
+    checked = true;
+
+    var violations = [];
+
+    if (order[0] !== 'report') {
+      violations.push({
+        ids: ['report'],
+        message: "Everything else here responds to a specific report. \u201cA report comes in\u2026\u201d has to be the step everything else reacts to \u2014 it belongs first."
+      });
+    }
+
+    if (indexOf('identify-account') > indexOf('trace-layer')) {
+      violations.push({
+        ids: ['identify-account', 'trace-layer'],
+        message: "You can\u2019t determine which layer governs an account\u2019s access before you know which account and which file are involved. \u201cIdentify the specific account\u2026\u201d has to come before \u201cDetermine which single layer\u2026\u201d"
+      });
+    }
+
+    if (indexOf('identify-path') > indexOf('trace-layer')) {
+      violations.push({
+        ids: ['identify-path', 'trace-layer'],
+        message: "Whether access is local or over the network changes which layers even apply \u2014 that has to be settled before you can say which layer governs. \u201cEstablish whether the access\u2026\u201d has to come before \u201cDetermine which single layer\u2026\u201d"
+      });
+    }
+
+    if (indexOf('trace-layer') > indexOf('tighten')) {
+      violations.push({
+        ids: ['trace-layer', 'tighten'],
+        message: "Changing a layer before you know it\u2019s the one deciding access risks changing the wrong thing, or changing something that was never the cause. \u201cDetermine which single layer\u2026\u201d has to come before \u201cChange only that governing layer\u2026\u201d"
+      });
+    }
+
+    if (indexOf('tighten') > indexOf('verify')) {
+      violations.push({
+        ids: ['tighten', 'verify'],
+        message: "You can\u2019t confirm a change before you\u2019ve made it. \u201cChange only that governing layer\u2026\u201d has to come before \u201cConfirm the new access\u2026\u201d"
+      });
+    }
+
+    var flaggedIds = {};
+    violations.forEach(function(v) {
+      v.ids.forEach(function(id) { flaggedIds[id] = true; });
+    });
+
+    render();
+    Object.keys(flaggedIds).forEach(function(id) {
+      var el = document.getElementById('step-' + id);
+      if (el) el.classList.add('flagged');
+    });
+
+    var level, heading, body;
+    if (violations.length === 0) {
+      level = 'correct';
+      heading = "This sequence holds together.";
+      body = "Notice that \u201cIdentify the specific account\u2026\u201d and \u201cEstablish whether the access\u2026\u201d can go in either order relative to each other \u2014 nothing depends on which one you settle first. What's fixed is that both come before you trace the governing layer, tracing comes before changing anything, and changing comes before confirming it worked.";
+    } else if (violations.length <= 2) {
+      level = 'near';
+      heading = violations.length + " step" + (violations.length === 1 ? '' : 's') + " out of place.";
+      body = "The shape is mostly right. The flagged steps below name exactly what each one depends on.";
+    } else {
+      level = 'wrong';
+      heading = "Several steps are out of place.";
+      body = "Work from the top: what has to be true before the next step can happen at all? The flagged steps below name each dependency directly.";
+    }
+
+    var html = '<div class="verdict-banner level-' + level + '"><p><strong>' + heading + '</strong></p><p>' + body + '</p></div>';
+    violations.forEach(function(v) {
+      html += '<div class="violation">' + v.message + '</div>';
+    });
+
+    feedbackBox.innerHTML = html;
+    feedbackBox.classList.add('show');
+    checkBtn.disabled = true;
+    replayWrap.style.display = 'block';
+  });
+
+  replayBtn.addEventListener('click', function() {
+    order = initialOrder.slice();
+    checked = false;
+    feedbackBox.classList.remove('show');
+    feedbackBox.innerHTML = '';
+    checkBtn.disabled = false;
+    replayWrap.style.display = 'none';
+    render();
+    document.querySelector('.move-btn').focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
