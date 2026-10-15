@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Judge Each Reading Against Its Normal</title>
+<style>
+:root {
+  --night: #172030;
+  --panel: #1f2a3d;
+  --panel-raised: #26334a;
+  --line: #34435c;
+  --text: #e4e8ef;
+  --muted: #a6b1c2;
+  --dawn: #e9b872;
+  --dawn-soft: #3a3326;
+  --gap: #e8a090;
+  --gap-soft: #3b2a2c;
+  --sound: #8fcbb9;
+  --sound-soft: #233a37;
+  --focus: #f4d79e;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body { margin: 0; background: var(--night); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55; }
+main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+h1 { font-size: 2rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+p { margin: 0 0 0.9rem; }
+.lede { color: var(--muted); font-size: 1.08rem; margin-top: 0.75rem; max-width: 40rem; }
+.host { font-family: var(--mono); font-size: 0.92em; color: var(--dawn); }
+
+.baseline {
+  margin: 2rem 0 1.75rem;
+  padding: 1.25rem 1.4rem 1.35rem;
+  background: var(--panel);
+  border-left: 3px solid var(--dawn);
+  border-radius: 0 6px 6px 0;
+}
+.baseline h2 { font-size: 1.1rem; margin-bottom: 0.35rem; }
+.baseline .note { color: var(--muted); font-size: 0.93rem; }
+.mode-label { display: inline-block; margin: 0 0 0.75rem; padding: 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--dawn); color: var(--dawn); font-size: 0.85rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+td.range { font-variant-numeric: tabular-nums; white-space: nowrap; font-family: var(--serif); font-size: 1.02rem; }
+tr.moved td { background: var(--dawn-soft); }
+.logs { margin: 1.1rem 0 0; }
+.logs h3 { font-family: var(--sans); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
+.logs ul { margin: 0; padding-left: 1.1rem; font-size: 0.93rem; }
+.logs li { margin-bottom: 0.25rem; }
+.entry { font-family: var(--mono); font-size: 0.88em; color: var(--dawn); }
+
+.task { margin-bottom: 1.25rem; }
+.task h2 { margin-bottom: 0.4rem; }
+.task p { color: var(--muted); margin: 0; }
+
+.cards { display: grid; gap: 0.75rem; }
+fieldset.card { margin: 0; padding: 1rem 1.1rem 1.05rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+fieldset.card legend { float: left; width: 100%; padding: 0; margin-bottom: 0.7rem; font-family: var(--serif); font-size: 1.1rem; line-height: 1.4; }
+.kind { display: block; font-family: var(--sans); font-size: 0.8rem; color: var(--muted); margin-bottom: 0.15rem; }
+.choices { clear: both; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.choice { position: relative; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice label { display: inline-block; padding: 0.4rem 0.85rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); cursor: pointer; font-size: 0.93rem; user-select: none; }
+.choice label:hover { border-color: var(--muted); color: var(--text); }
+.choice input:checked + label { background: var(--dawn-soft); border-color: var(--dawn); color: var(--text); }
+.choice input:checked + label::before { content: "\2713\00a0"; color: var(--dawn); }
+.choice input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.feedback { display: none; margin-top: 0.8rem; padding: 0.75rem 0.9rem; border-radius: 4px; font-size: 0.95rem; }
+.feedback.show { display: block; }
+.feedback strong { display: block; margin-bottom: 0.2rem; }
+.feedback p { margin: 0; }
+.feedback.correct { background: var(--sound-soft); border-left: 3px solid var(--sound); }
+.feedback.correct strong { color: var(--sound); }
+.feedback.wrong { background: var(--gap-soft); border-left: 3px solid var(--gap); }
+.feedback.wrong strong { color: var(--gap); }
+
+.actions { margin-top: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+button { font: inherit; font-weight: 600; padding: 0.65rem 1.15rem; border-radius: 6px; border: 1px solid var(--dawn); background: var(--dawn); color: #1b1712; cursor: pointer; }
+button:hover:not(:disabled) { background: #f1c887; }
+button:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+button.quiet { background: transparent; color: var(--text); border-color: var(--line); font-weight: 500; }
+button.quiet:hover { border-color: var(--muted); background: transparent; }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.status { color: var(--muted); font-size: 0.93rem; margin: 0; font-variant-numeric: tabular-nums; }
+
+.second { display: none; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.second.shown { display: block; }
+.second h2 { margin-bottom: 0.4rem; }
+.second h2:focus { outline: none; }
+.second h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.second > p { color: var(--muted); }
+fieldset.mover { margin: 1rem 0 1.25rem; padding: 0; border: none; }
+fieldset.mover legend { font-weight: 600; margin-bottom: 0.5rem; padding: 0; }
+.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.results li { padding: 0.7rem 0.9rem; background: var(--panel); border-radius: 6px; border-left: 3px solid var(--line); }
+.results li.changed { border-left-color: var(--dawn); background: var(--panel-raised); }
+.results .q { font-family: var(--serif); display: block; }
+.results .b { font-size: 0.92rem; color: var(--muted); display: block; margin-top: 0.15rem; }
+.results li.changed .b { color: var(--text); }
+.results .tag { color: var(--dawn); font-weight: 600; }
+.summary { margin: 1.1rem 0 0; }
+.restart { margin-top: 1.75rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .feedback.show, .results li.changed { animation: appear 240ms ease-out both; }
+}
+@keyframes appear { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.6rem; }
+  .choices { flex-direction: column; }
+  .choice label { display: block; }
+  .actions { flex-direction: column; align-items: stretch; }
+  th, td { padding: 0.45rem 0.4rem; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Judge Each Reading Against Its Normal</h1>
+    <p class="lede">A percentage describes only the present moment. Whether it signals trouble depends on what this same server usually shows at a comparable moment, so judge every reading against that record, not against how big the number sounds.</p>
+  </header>
+
+  <section class="baseline" aria-labelledby="baseline-title">
+    <h2 id="baseline-title">The baseline for the storefront server</h2>
+    <p class="note">A baseline is a server's own recorded normal for a comparable moment. Suppose four weeks of readings were kept for <span class="host">cld-lnx-01</span>. These ranges summarize them. All figures are made up for this exercise.</p>
+    <p class="mode-label" id="mode-label">Comparable moment: same hour, same weekday</p>
+    <div class="table-wrap">
+      <table>
+        <caption class="note" style="text-align:left; caption-side: bottom; padding-top: 0.5rem;">Disk busy is the share of each minute the disk spends working.</caption>
+        <thead><tr><th scope="col">Measure</th><th scope="col">Moment</th><th scope="col">Usual range</th></tr></thead>
+        <tbody id="baseline-rows"></tbody>
+      </table>
+    </div>
+    <div class="logs">
+      <h3>What the application log usually contains</h3>
+      <ul>
+        <li>One <span class="entry">nightly export complete</span> line each night, between 02:55 and 03:10.</li>
+        <li>No <span class="entry">checkout timeout</span> lines at any hour.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="task" aria-labelledby="task-title">
+    <h2 id="task-title">Sort the new week's observations</h2>
+    <p>These come from the week after the four recorded weeks. Find each one's comparable moment on the baseline, then decide.</p>
+  </section>
+
+  <form id="cards" class="cards" novalidate></form>
+
+  <div class="actions">
+    <button type="button" id="check-btn" disabled>Check my sort</button>
+    <p class="status" id="status" aria-live="polite"></p>
+  </div>
+
+  <section class="second" id="second" aria-labelledby="second-title">
+    <h2 id="second-title" tabindex="-1">Change what counts as a comparable moment</h2>
+    <p>Nothing here is checked. The same eight observations are judged again with a different definition of the comparable moment.</p>
+    <fieldset class="mover">
+      <legend>Compare each reading with</legend>
+      <div class="choices" id="mover-choices"></div>
+    </fieldset>
+    <ul class="results" id="results" aria-live="polite"></ul>
+    <p class="summary" id="summary"></p>
+    <div class="restart"><button type="button" class="quiet" id="restart-btn">Start over</button></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var LABEL = { ordinary: "Ordinary for this moment", departs: "Departs from normal" };
+
+  /* Baseline rows. anyDay is the range most days show at that hour. */
+  var ROWS = [
+    { id: "cpu02", measure: "Processor", moment: "02:00, every night", say: "02:00 on any night", lo: 82, hi: 88,
+      anyMoment: "02:00, most days", anyLo: 82, anyHi: 88 },
+    { id: "cpuOther", measure: "Processor", moment: "Every other hour, every day", say: "this server's other hours", lo: 16, hi: 24,
+      anyMoment: "Every other hour, most days", anyLo: 16, anyHi: 24 },
+    { id: "diskSun", measure: "Disk busy", moment: "01:00 Sunday", say: "01:00 on a Sunday", lo: 70, hi: 78,
+      anyMoment: "01:00, most days", anyLo: 4, anyHi: 8 },
+    { id: "diskOther", measure: "Disk busy", moment: "01:00 Monday to Saturday", say: "01:00 from Monday to Saturday", lo: 4, hi: 8,
+      anyMoment: "01:00, most days", anyLo: 4, anyHi: 8 },
+    { id: "memMon", measure: "Memory", moment: "08:00 Monday", say: "08:00 on a Monday", lo: 70, hi: 76,
+      anyMoment: "08:00, most days", anyLo: 38, anyHi: 44 },
+    { id: "memOther", measure: "Memory", moment: "08:00 Tuesday to Sunday", say: "08:00 from Tuesday to Sunday", lo: 38, hi: 44,
+      anyMoment: "08:00, most days", anyLo: 38, anyHi: 44 }
+  ];
+  var ROW = {};
+  ROWS.forEach(function (r) { ROW[r.id] = r; });
+
+  var OBS = [
+    { id: "o1", kind: "metric", text: "Processor at 86% at 02:00 on Wednesday.", row: "cpu02", value: 86 },
+    { id: "o2", kind: "log", text: "Fourteen checkout timeout lines between 21:00 and 21:40 on Thursday.", logRule: "unexpected" },
+    { id: "o3", kind: "metric", text: "Disk busy at 74% at 01:00 on Sunday.", row: "diskSun", value: 74 },
+    { id: "o4", kind: "metric", text: "Processor at 41% at 15:00 on Thursday.", row: "cpuOther", value: 41 },
+    { id: "o5", kind: "log", text: "Nightly export complete logged at 03:04 on Saturday.", logRule: "expectedPresent" },
+    { id: "o6", kind: "metric", text: "Disk busy at 31% at 01:00 on Wednesday.", row: "diskOther", value: 31 },
+    { id: "o7", kind: "metric", text: "Memory at 73% at 08:00 on Monday.", row: "memMon", value: 73 },
+    { id: "o8", kind: "log", text: "No nightly export complete line by 03:30 on Friday.", logRule: "expectedMissing" }
+  ];
+
+  function pct(n) { return n.toLocaleString("en-US") + "%"; }
+
+  function judge(o, mode) {
+    if (o.kind === "log") {
+      return o.logRule === "expectedPresent" ? "ordinary" : "departs";
+    }
+    var r = ROW[o.row];
+    var lo = mode === "any" ? r.anyLo : r.lo;
+    var hi = mode === "any" ? r.anyHi : r.hi;
+    return (o.value >= lo && o.value <= hi) ? "ordinary" : "departs";
+  }
+
+  function reason(o, mode) {
+    if (o.kind === "log") {
+      if (o.logRule === "unexpected") { return "The log usually holds no checkout timeout lines at all, so any of them is an unexpected entry."; }
+      if (o.logRule === "expectedMissing") { return "The export line usually lands by 03:10. Its absence is the signal: an expected entry that is missing."; }
+      return "The export line usually lands between 02:55 and 03:10, and it did. This is what the log should say.";
+    }
+    var r = ROW[o.row];
+    var lo = mode === "any" ? r.anyLo : r.lo;
+    var hi = mode === "any" ? r.anyHi : r.hi;
+    var say = mode === "any" ? r.anyMoment.replace(", most days", " on most days") : r.say;
+    if (mode === "any" && r.id === "cpuOther") { say = "this server's other hours"; }
+    var inside = o.value >= lo && o.value <= hi;
+    var base = pct(o.value) + " sits " + (inside ? "inside" : "outside") + " the usual range at " + say + ", which runs from " + pct(lo) + " to " + pct(hi) + ".";
+    if (inside && o.value >= 60) { return base + " The number is high, and it is ordinary here."; }
+    if (!inside && o.value < 60) { return base + " The number sounds modest, and it is news here."; }
+    return base;
+  }
+
+  function feedbackFor(o, chosen) {
+    var key = judge(o, "weekday");
+    if (chosen === key) {
+      return { cls: "correct", head: "That's what the baseline says.", body: reason(o, "weekday") };
+    }
+    if (o.kind === "log") {
+      return { cls: "wrong", head: "The log expectations decide this one differently.",
+        body: "Check the two expectations on the baseline card. Ask whether this is an entry that should not appear, an expected entry that is missing, or an expected entry that arrived on time." };
+    }
+    return { cls: "wrong", head: "The baseline decides this one differently.",
+      body: "Find the row for this measure at the same hour on the same weekday. Then check whether the reading falls inside that row's usual range, whatever the size of the number." };
+  }
+
+  var answers = {};
+  var checked = false;
+  var cardsEl = document.getElementById("cards");
+  var checkBtn = document.getElementById("check-btn");
+  var statusEl = document.getElementById("status");
+  var secondEl = document.getElementById("second");
+
+  function renderBaseline(mode) {
+    var tb = document.getElementById("baseline-rows");
+    tb.innerHTML = "";
+    var seen = {};
+    ROWS.forEach(function (r) {
+      var moment = mode === "any" ? r.anyMoment : r.moment;
+      var lo = mode === "any" ? r.anyLo : r.lo;
+      var hi = mode === "any" ? r.anyHi : r.hi;
+      var k = r.measure + moment;
+      if (seen[k]) { return; }
+      seen[k] = true;
+      var tr = document.createElement("tr");
+      if (mode === "any" && (r.anyLo !== r.lo || r.anyHi !== r.hi || r.id === "diskOther" || r.id === "memOther")) {
+        if (r.measure !== "Processor") { tr.className = "moved"; }
+      }
+      [r.measure, moment, pct(lo).replace("%", "") + "\u2013" + pct(hi)].forEach(function (t, i) {
+        var td = document.createElement("td");
+        if (i === 2) { td.className = "range"; }
+        td.textContent = t;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    document.getElementById("mode-label").textContent = mode === "any"
+      ? "Comparable moment: same hour, any day"
+      : "Comparable moment: same hour, same weekday";
+  }
+
+  function buildCards() {
+    cardsEl.innerHTML = "";
+    OBS.forEach(function (o) {
+      var fs = document.createElement("fieldset");
+      fs.className = "card";
+      var lg = document.createElement("legend");
+      var k = document.createElement("span");
+      k.className = "kind";
+      k.textContent = o.kind === "log" ? "Application log" : "Reading";
+      lg.appendChild(k);
+      lg.appendChild(document.createTextNode(o.text));
+      fs.appendChild(lg);
+      var choices = document.createElement("div");
+      choices.className = "choices";
+      ["ordinary", "departs"].forEach(function (b) {
+        var wrap = document.createElement("div");
+        wrap.className = "choice";
+        var input = document.createElement("input");
+        input.type = "radio";
+        input.name = o.id;
+        input.value = b;
+        input.id = o.id + "-" + b;
+        input.addEventListener("change", function () {
+          answers[o.id] = b;
+          var fb = document.getElementById("fb-" + o.id);
+          fb.className = "feedback";
+          fb.innerHTML = "";
+          updateStatus();
+        });
+        var label = document.createElement("label");
+        label.setAttribute("for", input.id);
+        label.textContent = LABEL[b];
+        wrap.appendChild(input);
+        wrap.appendChild(label);
+        choices.appendChild(wrap);
+      });
+      fs.appendChild(choices);
+      var fb = document.createElement("div");
+      fb.className = "feedback";
+      fb.id = "fb-" + o.id;
+      fb.setAttribute("aria-live", "polite");
+      fs.appendChild(fb);
+      cardsEl.appendChild(fs);
+    });
+  }
+
+  function remaining() { return OBS.filter(function (o) { return !answers[o.id]; }).length; }
+
+  function updateStatus() {
+    var left = remaining();
+    checkBtn.disabled = left > 0;
+    statusEl.textContent = left > 0
+      ? "Sort all eight to check. " + left.toLocaleString("en-US") + " left."
+      : (checked ? "Change any placement and check again." : "All eight sorted.");
+  }
+
+  function check() {
+    if (remaining() > 0) { return; }
+    checked = true;
+    var allCorrect = true;
+    OBS.forEach(function (o) {
+      var f = feedbackFor(o, answers[o.id]);
+      if (f.cls !== "correct") { allCorrect = false; }
+      var fb = document.getElementById("fb-" + o.id);
+      fb.className = "feedback show " + f.cls;
+      fb.innerHTML = "";
+      var st = document.createElement("strong");
+      st.textContent = f.head;
+      var p = document.createElement("p");
+      p.textContent = f.body;
+      fb.appendChild(st);
+      fb.appendChild(p);
+    });
+    if (allCorrect) {
+      statusEl.textContent = "Every placement matches the baseline.";
+      if (!secondEl.classList.contains("shown")) {
+        secondEl.classList.add("shown");
+        buildMover();
+        renderSecond("weekday");
+        document.getElementById("second-title").focus();
+      }
+    } else {
+      statusEl.textContent = "Some placements need another look. Change them and check again.";
+    }
+  }
+
+  function buildMover() {
+    var el = document.getElementById("mover-choices");
+    el.innerHTML = "";
+    [["weekday", "The same hour on the same weekday"], ["any", "The same hour on any day"]].forEach(function (m, i) {
+      var wrap = document.createElement("div");
+      wrap.className = "choice";
+      var input = document.createElement("input");
+      input.type = "radio";
+      input.name = "mover";
+      input.value = m[0];
+      input.id = "move-" + m[0];
+      if (i === 0) { input.checked = true; }
+      input.addEventListener("change", function () { renderSecond(m[0]); });
+      var label = document.createElement("label");
+      label.setAttribute("for", input.id);
+      label.textContent = m[1];
+      wrap.appendChild(input);
+      wrap.appendChild(label);
+      el.appendChild(wrap);
+    });
+  }
+
+  function renderSecond(mode) {
+    renderBaseline(mode);
+    var ul = document.getElementById("results");
+    ul.innerHTML = "";
+    var changed = 0;
+    OBS.forEach(function (o) {
+      var before = judge(o, "weekday");
+      var now = judge(o, mode);
+      var li = document.createElement("li");
+      var q = document.createElement("span");
+      q.className = "q";
+      q.textContent = o.text;
+      var b = document.createElement("span");
+      b.className = "b";
+      if (before !== now) {
+        changed++;
+        li.className = "changed";
+        var tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = "Moved. ";
+        b.appendChild(tag);
+        b.appendChild(document.createTextNode("From \u201C" + LABEL[before] + "\u201D to \u201C" + LABEL[now] + ".\u201D " + reason(o, mode)));
+      } else {
+        b.appendChild(document.createTextNode(LABEL[now] + "."));
+      }
+      li.appendChild(q);
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    document.getElementById("summary").textContent = mode === "weekday"
+      ? "These are the placements from your sort. Switch the comparable moment to see what moves."
+      : changed.toLocaleString("en-US") + (changed === 1 ? " observation changed" : " observations changed") + ". The readings stayed the same. Only the definition of a comparable moment moved, and two patterns that recur every week now look like incidents.";
+  }
+
+  function restart() {
+    answers = {};
+    checked = false;
+    secondEl.classList.remove("shown");
+    renderBaseline("weekday");
+    buildCards();
+    updateStatus();
+    var first = cardsEl.querySelector("input");
+    if (first) { first.focus(); }
+  }
+
+  checkBtn.addEventListener("click", check);
+  document.getElementById("restart-btn").addEventListener("click", restart);
+  renderBaseline("weekday");
+  buildCards();
+  updateStatus();
+})();
+</script>
+</body>
+</html>

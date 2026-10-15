@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluate the Log Review Process</title>
+<style>
+:root {
+  --night: #172030;
+  --panel: #1f2a3d;
+  --panel-raised: #26334a;
+  --paper: #222d40;
+  --line: #34435c;
+  --text: #e4e8ef;
+  --muted: #a6b1c2;
+  --dawn: #e9b872;
+  --dawn-soft: #3a3326;
+  --gap: #e8a090;
+  --gap-soft: #3b2a2c;
+  --sound: #8fcbb9;
+  --sound-soft: #233a37;
+  --focus: #f4d79e;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body { margin: 0; background: var(--night); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55; }
+main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+h1 { font-size: 2rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+p { margin: 0 0 0.9rem; }
+.lede { color: var(--muted); font-size: 1.08rem; margin-top: 0.75rem; max-width: 40rem; }
+
+.rule {
+  margin: 2rem 0 1.75rem;
+  padding: 1.25rem 1.4rem;
+  background: var(--panel);
+  border-left: 3px solid var(--dawn);
+  border-radius: 0 6px 6px 0;
+}
+.rule h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+.rule p { color: var(--muted); font-size: 0.95rem; }
+.rule ul { margin: 0 0 0.75rem; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.rule li { background: var(--panel-raised); border-radius: 6px; padding: 0.6rem 0.75rem; font-size: 0.93rem; }
+.rule li b { display: block; font-family: var(--serif); font-size: 1.05rem; font-weight: 600; color: var(--dawn); }
+.rule p:last-child { margin: 0; }
+
+.task h2 { margin-bottom: 0.4rem; }
+.task p { color: var(--muted); }
+
+.draft {
+  margin: 1rem 0 0;
+  padding: 1.5rem 1.6rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: var(--serif);
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+.draft .doc-title { font-family: var(--sans); font-size: 0.82rem; color: var(--muted); margin-bottom: 0.9rem; letter-spacing: 0.02em; }
+.draft p { margin: 0 0 0.9rem; }
+.draft p:last-child { margin: 0; }
+.sent {
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0.05rem 0.1rem;
+  margin: 0;
+  text-align: left;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline;
+  line-height: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.sent:not([aria-disabled="true"]):not([aria-pressed="true"]):hover { background: rgba(233,184,114,0.12); }
+.sent[aria-pressed="true"] { background: var(--dawn-soft); box-shadow: inset 0 -2px 0 var(--dawn); }
+.sent:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.sent[aria-disabled="true"] { cursor: default; }
+.sent.mark-flaw { background: var(--gap-soft); box-shadow: inset 0 -2px 0 var(--gap); }
+.sent.mark-sound { background: var(--sound-soft); box-shadow: inset 0 -2px 0 var(--sound); }
+.path { font-family: var(--mono); font-size: 0.86em; color: var(--dawn); }
+
+.actions { margin-top: 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+button.primary, button.quiet { font: inherit; font-weight: 600; padding: 0.65rem 1.15rem; border-radius: 6px; cursor: pointer; }
+button.primary { border: 1px solid var(--dawn); background: var(--dawn); color: #1b1712; }
+button.primary:hover:not(:disabled) { background: #f1c887; }
+button.primary:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+button.quiet { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+button.quiet:hover { border-color: var(--muted); }
+button.primary:focus-visible, button.quiet:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.status { color: var(--muted); font-size: 0.93rem; margin: 0; font-variant-numeric: tabular-nums; }
+
+.feedback { display: none; margin-top: 1.25rem; padding: 0.85rem 1rem; border-radius: 4px; }
+.feedback.show { display: block; }
+.feedback strong { display: block; margin-bottom: 0.25rem; }
+.feedback p { margin: 0 0 0.5rem; }
+.feedback p:last-child { margin: 0; }
+.feedback.correct { background: var(--sound-soft); border-left: 3px solid var(--sound); }
+.feedback.correct strong { color: var(--sound); }
+.feedback.near { background: var(--dawn-soft); border-left: 3px solid var(--dawn); }
+.feedback.near strong { color: var(--dawn); }
+.feedback.wrong { background: var(--gap-soft); border-left: 3px solid var(--gap); }
+.feedback.wrong strong { color: var(--gap); }
+
+.notes { display: none; list-style: none; margin: 1.25rem 0 0; padding: 0; gap: 0.5rem; }
+.notes.show { display: grid; }
+.notes li { padding: 0.65rem 0.9rem; border-radius: 6px; background: var(--panel); border-left: 3px solid var(--line); font-size: 0.95rem; }
+.notes li.flaw { border-left-color: var(--gap); }
+.notes li.sound { border-left-color: var(--sound); }
+.notes .s { font-family: var(--serif); display: block; }
+.notes .why { display: block; color: var(--muted); margin-top: 0.15rem; }
+.notes .tag { font-weight: 600; }
+.notes li.flaw .tag { color: var(--gap); }
+.notes li.sound .tag { color: var(--sound); }
+
+.second { display: none; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.second.shown { display: block; }
+.second h2 { margin-bottom: 0.4rem; }
+.second h2:focus { outline: none; }
+.second h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.second > p { color: var(--muted); }
+.banner { margin: 1rem 0 0; padding: 0.85rem 1rem; border: 1px solid var(--dawn); background: var(--dawn-soft); border-radius: 6px; }
+.banner p { margin: 0; }
+.restart { margin-top: 1.75rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .feedback.show, .notes.show li { animation: appear 240ms ease-out both; }
+}
+@keyframes appear { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.6rem; }
+  .rule ul { grid-template-columns: 1fr; }
+  .draft { padding: 1.1rem 1rem; font-size: 1.02rem; }
+  .actions { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Evaluate the Log Review Process</h1>
+    <p class="lede">A log informs someone only when a person reads it against an expectation and passes on what they find. Switching logging on is a setting. A review is an act that recurs, so a written procedure has to say enough for someone to check that the act happened.</p>
+  </header>
+
+  <section class="rule" aria-labelledby="rule-title">
+    <h2 id="rule-title">What a review needs</h2>
+    <p>NIST's security control on reviewing audit records, AU-6, asks for review at a defined frequency, for signs of unusual activity, with findings reported to named people or roles. In plain terms, a review has three parts.</p>
+    <ul>
+      <li><b>A frequency</b>How often someone reads the log.</li>
+      <li><b>An expectation</b>What the log should contain.</li>
+      <li><b>A recipient</b>The named person who hears what was found.</li>
+    </ul>
+    <p>A sentence fails the test if it leaves one of these vague, or if it describes something other than review, such as a setting or a response.</p>
+  </section>
+
+  <section class="task" aria-labelledby="task-title">
+    <h2 id="task-title">Mark the sentences that would fail</h2>
+    <p>Select every sentence in this draft that leaves a part vague or describes something other than a review. Select a sentence again to clear it.</p>
+  </section>
+
+  <div class="draft" id="draft" role="group" aria-label="Draft log review procedure"></div>
+
+  <div class="actions">
+    <button type="button" class="primary" id="check-btn" disabled>Check my marks</button>
+    <p class="status" id="status" aria-live="polite"></p>
+  </div>
+
+  <div class="feedback" id="feedback" aria-live="polite"></div>
+  <ul class="notes" id="notes"></ul>
+
+  <section class="second" id="second" aria-labelledby="second-title">
+    <h2 id="second-title" tabindex="-1">Raise the risk</h2>
+    <p>Nothing here is scored. This is the same procedure with the five failing sentences fixed or removed. One condition changes.</p>
+    <div class="banner"><p>Peak season starts tomorrow, and the team rates the risk to the storefront as raised. The same control expects review to tighten when risk rises.</p></div>
+    <p style="margin-top:1rem; color: var(--muted);">Select the one sentence that now has to change.</p>
+    <div class="draft" id="draft2" role="group" aria-label="Revised log review procedure"></div>
+    <div class="feedback" id="feedback2" aria-live="polite"></div>
+    <div class="restart"><button type="button" class="quiet" id="restart-btn">Start over</button></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var PART = {
+    frequency: "No frequency",
+    expectation: "No expectation",
+    recipient: "No named recipient",
+    setting: "A setting, not a review",
+    response: "A response, not a review"
+  };
+
+  var DRAFT = [
+    [
+      { id: "s1", html: 'This procedure covers the application log on the storefront server, <span class="path">/var/log/storefront</span>, and the System log on <span class="path">hq-win-01</span>.', flaw: null,
+        why: "Names what is in scope, taken from the team's list of systems worth watching." },
+      { id: "s2", html: "Logging is enabled on both hosts, so their activity is reviewed.", flaw: "setting",
+        why: "Logging being on is a setting made once. It says nothing about anyone reading." }
+    ],
+    [
+      { id: "s3", html: "Each weekday morning, the on-call administrator reads everything both logs recorded since the last review.", flaw: null,
+        why: "Supplies the frequency, and a Monday review covers the weekend." },
+      { id: "s4", html: "Other logs are checked as needed.", flaw: "frequency",
+        why: "\u201CAs needed\u201D cannot be checked. No one can show the review was due or done." },
+      { id: "s5", html: "The storefront log should hold one nightly export complete line between 02:55 and 03:10, and no checkout timeout lines.", flaw: null,
+        why: "Supplies the expectation, so both an unexpected line and a missing one can be spotted." },
+      { id: "s6", html: "On <span class=\'path\'>hq-win-01</span>, the reviewer looks for anything unusual.", flaw: "expectation",
+        why: "\u201CUnusual\u201D needs a stated normal to mean anything. Without one, the reviewer cannot tell a signal from routine." }
+    ],
+    [
+      { id: "s7", html: "Findings go by email to the operations lead by 11:00.", flaw: null,
+        why: "Supplies the recipient: a named role and a deadline." },
+      { id: "s8", html: "Serious issues are escalated.", flaw: "recipient",
+        why: "Escalated to whom? Without a named person, a finding can stop at the reviewer." },
+      { id: "s9", html: "Each review ends with a dated review note that records what was read, what was found, and who was told.", flaw: null,
+        why: "The note is the evidence that each review happened, so anyone can check the act, not just the setting." },
+      { id: "s10", html: "The review also identifies the root cause and restores service.", flaw: "response",
+        why: "Finding a cause and restoring service belong to the response that follows a finding, not to the review." }
+    ]
+  ];
+
+  var ALL = [];
+  DRAFT.forEach(function (para) { para.forEach(function (s) { ALL.push(s); }); });
+  var BY_ID = {};
+  ALL.forEach(function (s) { BY_ID[s.id] = s; });
+
+  var DRAFT2 = [
+    ["s1"],
+    ["s3", "s5", "t6"],
+    ["s7", "s9"]
+  ];
+  var EXTRA = {
+    t6: { id: "t6", html: 'The System log on <span class="path">hq-win-01</span> should show no unexpected shutdown entries.', flaw: null }
+  };
+  var KEY2 = "s3";
+
+  var selected = {};
+  var solved = false;
+
+  function makeSentence(id) {
+    var b = document.createElement("span");
+    b.className = "sent";
+    b.id = id;
+    b.setAttribute("role", "button");
+    b.setAttribute("tabindex", "0");
+    return b;
+  }
+
+  function activate(el, fn) {
+    el.addEventListener("click", fn);
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        fn();
+      }
+    });
+  }
+
+  function textOf(html) {
+    var d = document.createElement("div");
+    d.innerHTML = html;
+    return d.textContent;
+  }
+
+  function renderDraft() {
+    var el = document.getElementById("draft");
+    el.innerHTML = "";
+    var t = document.createElement("div");
+    t.className = "doc-title";
+    t.textContent = "Draft: storefront log review procedure";
+    el.appendChild(t);
+    DRAFT.forEach(function (para) {
+      var p = document.createElement("p");
+      para.forEach(function (s, i) {
+        var b = makeSentence("b-" + s.id);
+        b.setAttribute("aria-pressed", "false");
+        b.innerHTML = s.html;
+        activate(b, function () {
+          if (solved) { return; }
+          selected[s.id] = !selected[s.id];
+          b.setAttribute("aria-pressed", selected[s.id] ? "true" : "false");
+          clearFeedback();
+          updateStatus();
+        });
+        p.appendChild(b);
+        if (i < para.length - 1) { p.appendChild(document.createTextNode(" ")); }
+      });
+      el.appendChild(p);
+    });
+  }
+
+  function selectedIds() { return ALL.filter(function (s) { return selected[s.id]; }).map(function (s) { return s.id; }); }
+
+  function updateStatus() {
+    var n = selectedIds().length;
+    document.getElementById("check-btn").disabled = n === 0 || solved;
+    document.getElementById("status").textContent = n === 0
+      ? "Select at least one sentence to check."
+      : n.toLocaleString("en-US") + (n === 1 ? " sentence marked." : " sentences marked.");
+  }
+
+  function clearFeedback() {
+    var fb = document.getElementById("feedback");
+    fb.className = "feedback";
+    fb.innerHTML = "";
+  }
+
+  function evaluate(ids) {
+    var missed = ALL.filter(function (s) { return s.flaw && ids.indexOf(s.id) < 0; });
+    var extra = ALL.filter(function (s) { return !s.flaw && ids.indexOf(s.id) >= 0; });
+    var off = missed.length + extra.length;
+    if (off === 0) { return { cls: "correct" }; }
+    if (off === 1) { return { cls: "near", missed: missed, extra: extra }; }
+    return { cls: "wrong", off: off };
+  }
+
+  function check() {
+    var r = evaluate(selectedIds());
+    var fb = document.getElementById("feedback");
+    fb.innerHTML = "";
+    fb.className = "feedback show " + r.cls;
+    var st = document.createElement("strong");
+    var p = document.createElement("p");
+    if (r.cls === "correct") {
+      st.textContent = "Those five are the ones that fail.";
+      p.textContent = "Each leaves a part vague or describes something other than review. The five you left alone each supply a part or support the review.";
+      solved = true;
+      ALL.forEach(function (s) {
+        var b = document.getElementById("b-" + s.id);
+        b.setAttribute("aria-disabled", "true");
+        b.classList.add(s.flaw ? "mark-flaw" : "mark-sound");
+      });
+      showNotes();
+      document.getElementById("check-btn").disabled = true;
+      document.getElementById("status").textContent = "";
+      var sec = document.getElementById("second");
+      sec.classList.add("shown");
+      renderDraft2();
+    } else if (r.cls === "near") {
+      st.textContent = "Close. One sentence is out of place.";
+      if (r.missed.length) {
+        var m = r.missed[0];
+        p.textContent = "One unmarked sentence still fails the test: \u201C" + textOf(m.html) + "\u201D Ask which of the three parts it leaves vague, or whether it describes review at all.";
+      } else {
+        var x = r.extra[0];
+        p.textContent = "One marked sentence holds up: \u201C" + textOf(x.html) + "\u201D Ask which part it supplies.";
+      }
+    } else {
+      st.textContent = "Some marks need another look.";
+      p.textContent = r.off.toLocaleString("en-US") + " sentences are out of place. Go one sentence at a time. Ask whether it states how often, what the log should say, or who is told. If it does none of these, ask whether it describes a review at all.";
+    }
+    fb.appendChild(st);
+    fb.appendChild(p);
+  }
+
+  function showNotes() {
+    var ul = document.getElementById("notes");
+    ul.innerHTML = "";
+    ALL.forEach(function (s) {
+      var li = document.createElement("li");
+      li.className = s.flaw ? "flaw" : "sound";
+      var a = document.createElement("span");
+      a.className = "s";
+      a.textContent = textOf(s.html);
+      var w = document.createElement("span");
+      w.className = "why";
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = (s.flaw ? PART[s.flaw] : "Holds") + ". ";
+      w.appendChild(tag);
+      w.appendChild(document.createTextNode(s.why));
+      li.appendChild(a);
+      li.appendChild(w);
+      ul.appendChild(li);
+    });
+    ul.classList.add("show");
+  }
+
+  function renderDraft2() {
+    var el = document.getElementById("draft2");
+    el.innerHTML = "";
+    var t = document.createElement("div");
+    t.className = "doc-title";
+    t.textContent = "Revised: storefront log review procedure";
+    el.appendChild(t);
+    DRAFT2.forEach(function (para) {
+      var p = document.createElement("p");
+      para.forEach(function (id, i) {
+        var s = BY_ID[id] || EXTRA[id];
+        var b = makeSentence("c-" + id);
+        b.setAttribute("aria-pressed", "false");
+        b.innerHTML = s.html;
+        activate(b, function () { pick2(id); });
+        p.appendChild(b);
+        if (i < para.length - 1) { p.appendChild(document.createTextNode(" ")); }
+      });
+      el.appendChild(p);
+    });
+    var fb = document.getElementById("feedback2");
+    fb.className = "feedback";
+    fb.innerHTML = "";
+    document.getElementById("second-title").focus();
+  }
+
+  function pick2(id) {
+    var buttons = document.querySelectorAll("#draft2 .sent");
+    Array.prototype.forEach.call(buttons, function (b) {
+      b.setAttribute("aria-pressed", b.id === "c-" + id ? "true" : "false");
+    });
+    var fb = document.getElementById("feedback2");
+    fb.innerHTML = "";
+    var st = document.createElement("strong");
+    var p = document.createElement("p");
+    if (id === KEY2) {
+      fb.className = "feedback show correct";
+      st.textContent = "This is the sentence that has to change.";
+      p.textContent = "Raised risk calls for looking more often or more closely, and this sentence sets how often. Once each weekday morning leaves a whole peak-season evening unread until the next day, and a weekend unread until Monday. A revised version might read: during peak season, the on-call administrator reviews both logs every morning and every evening, weekends included.";
+      var p2 = document.createElement("p");
+      p2.textContent = "The expectation and the recipient still hold. Only the frequency moved, because the risk moved.";
+      fb.appendChild(st);
+      fb.appendChild(p);
+      fb.appendChild(p2);
+    } else if (id === "s5" || id === "t6") {
+      fb.className = "feedback show near";
+      st.textContent = "Peak season may shift what the logs contain, but that is not what raised risk asks for.";
+      p.textContent = "The control asks the review itself to tighten when risk rises: to look more often or more closely. Find the sentence that sets how often someone looks.";
+      fb.appendChild(st);
+      fb.appendChild(p);
+    } else {
+      fb.className = "feedback show wrong";
+      st.textContent = "This sentence still holds under raised risk.";
+      p.textContent = "Ask what tightening a review means: looking more often or more closely. Then find the sentence that decides how often anyone looks.";
+      fb.appendChild(st);
+      fb.appendChild(p);
+    }
+  }
+
+  function restart() {
+    selected = {};
+    solved = false;
+    clearFeedback();
+    var ul = document.getElementById("notes");
+    ul.classList.remove("show");
+    ul.innerHTML = "";
+    document.getElementById("second").classList.remove("shown");
+    renderDraft();
+    updateStatus();
+    var first = document.querySelector("#draft .sent");
+    if (first) { first.focus(); }
+  }
+
+  document.getElementById("check-btn").addEventListener("click", check);
+  document.getElementById("restart-btn").addEventListener("click", restart);
+  renderDraft();
+  updateStatus();
+})();
+</script>
+</body>
+</html>

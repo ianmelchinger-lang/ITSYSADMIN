@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Put the Monitoring Steps in Order</title>
+<style>
+:root {
+  --night: #172030;
+  --panel: #1f2a3d;
+  --panel-raised: #26334a;
+  --line: #34435c;
+  --text: #e4e8ef;
+  --muted: #a6b1c2;
+  --dawn: #e9b872;
+  --dawn-soft: #3a3326;
+  --gap: #e8a090;
+  --gap-soft: #3b2a2c;
+  --sound: #8fcbb9;
+  --sound-soft: #233a37;
+  --focus: #f4d79e;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body { margin: 0; background: var(--night); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55; }
+main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+h1 { font-size: 2rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.3rem; }
+p { margin: 0 0 0.9rem; }
+.lede { color: var(--muted); font-size: 1.08rem; margin-top: 0.75rem; max-width: 40rem; }
+
+.how { margin: 2rem 0 1.75rem; padding: 1.1rem 1.3rem; background: var(--panel); border-left: 3px solid var(--dawn); border-radius: 0 6px 6px 0; }
+.how p { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.95rem; }
+.how p:last-child { margin: 0; }
+.how b { color: var(--text); font-weight: 600; }
+
+section.zone { margin-bottom: 2rem; }
+section.zone > h2 { margin-bottom: 0.3rem; }
+section.zone > p.sub { color: var(--muted); font-size: 0.93rem; margin-bottom: 0.8rem; }
+
+.pool, .tray, .lane { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.empty-note { color: var(--muted); font-size: 0.93rem; padding: 0.7rem 0.9rem; border: 1px dashed var(--line); border-radius: 6px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem 0.9rem; }
+.card .text { font-family: var(--serif); font-size: 1.04rem; line-height: 1.45; display: block; }
+.card .tools { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.55rem; }
+.tray .card { background: transparent; border-style: dashed; }
+.tray .card .text { color: var(--muted); }
+
+.lane { position: relative; gap: 0; }
+.lane li { display: grid; grid-template-columns: 2.4rem 1fr; gap: 0.75rem; position: relative; padding-bottom: 0.6rem; }
+.lane li::before { content: ""; position: absolute; left: 1.15rem; top: 2.2rem; bottom: 0; width: 2px; background: var(--line); }
+.lane li:last-child::before { display: none; }
+.node { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--muted); background: var(--night); position: relative; z-index: 1; }
+.lane li.pos-first .node, .lane li.pos-last .node { border-color: var(--dawn); color: var(--dawn); }
+.slot-label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.15rem; letter-spacing: 0.01em; }
+.lane .card.flagged { border-color: var(--gap); }
+.lane .card.ok { border-color: var(--sound); }
+.lane .card.done { opacity: 0.55; border-style: dashed; }
+.flag { display: block; margin-top: 0.45rem; font-size: 0.9rem; color: var(--gap); }
+.flag.okmsg { color: var(--sound); }
+
+button { font: inherit; cursor: pointer; }
+button.mini { font-size: 0.85rem; padding: 0.3rem 0.65rem; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); }
+button.mini:hover:not(:disabled) { border-color: var(--muted); }
+button.mini:disabled { color: var(--muted); opacity: 0.45; cursor: not-allowed; }
+button.primary { font-weight: 600; padding: 0.65rem 1.15rem; border-radius: 6px; border: 1px solid var(--dawn); background: var(--dawn); color: #1b1712; }
+button.primary:hover:not(:disabled) { background: #f1c887; }
+button.primary:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+button.quiet { font-weight: 500; padding: 0.65rem 1.15rem; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--text); }
+button.quiet:hover { border-color: var(--muted); }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.actions { margin-top: 0.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.status { color: var(--muted); font-size: 0.93rem; margin: 0; font-variant-numeric: tabular-nums; }
+
+.feedback { display: none; margin-top: 1.25rem; padding: 0.85rem 1rem; border-radius: 4px; }
+.feedback.show { display: block; }
+.feedback strong { display: block; margin-bottom: 0.25rem; }
+.feedback p { margin: 0 0 0.5rem; }
+.feedback p:last-child { margin: 0; }
+.feedback.correct { background: var(--sound-soft); border-left: 3px solid var(--sound); }
+.feedback.correct strong { color: var(--sound); }
+.feedback.near { background: var(--dawn-soft); border-left: 3px solid var(--dawn); }
+.feedback.near strong { color: var(--dawn); }
+.feedback.wrong { background: var(--gap-soft); border-left: 3px solid var(--gap); }
+.feedback.wrong strong { color: var(--gap); }
+.feedback.explore { background: var(--panel-raised); border-left: 3px solid var(--muted); }
+
+.second { display: none; margin-top: 2.25rem; padding: 1.1rem 1.25rem; border: 1px solid var(--line); border-radius: 6px; }
+.second.shown { display: block; }
+.second h2 { margin-bottom: 0.4rem; }
+.second h2:focus { outline: none; }
+.second h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.second p { color: var(--muted); }
+.toggle { display: flex; gap: 0.45rem; flex-wrap: wrap; margin: 0; padding: 0; border: none; }
+.toggle legend { font-weight: 600; margin-bottom: 0.5rem; padding: 0; color: var(--text); }
+.choice { position: relative; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice label { display: inline-block; padding: 0.4rem 0.85rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); cursor: pointer; font-size: 0.93rem; }
+.choice input:checked + label { background: var(--dawn-soft); border-color: var(--dawn); color: var(--text); }
+.choice input:checked + label::before { content: "\2713\00a0"; color: var(--dawn); }
+.choice input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+.restart { margin-top: 1.75rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .feedback.show { animation: appear 240ms ease-out both; }
+}
+@keyframes appear { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.6rem; }
+  .lane li { grid-template-columns: 2rem 1fr; gap: 0.55rem; }
+  .node { width: 2rem; height: 2rem; font-size: 0.9rem; }
+  .lane li::before { left: 0.95rem; top: 1.9rem; }
+  .actions { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Put the Monitoring Steps in Order</h1>
+    <p class="lede">Everything in monitoring waits on something earlier. A reading needs a normal to be judged against, and a normal needs a record to be drawn from. Assemble the whole path, from the problem to the signal that it worked, and check that each step has what it needs before it.</p>
+  </header>
+
+  <section class="how" aria-label="How this works">
+    <p><b>Your path</b> starts with the problem, ends with the signal that the fix worked, and holds the moves in between.</p>
+    <p><b>Some cards do not belong on this path.</b> Set those aside.</p>
+    <p>More than one order can be right. The check flags only a step that comes before something it depends on.</p>
+  </section>
+
+  <section class="zone" aria-labelledby="pool-title">
+    <h2 id="pool-title">Cards to place</h2>
+    <p class="sub">Add each card to your path or set it aside.</p>
+    <ul class="pool" id="pool"></ul>
+  </section>
+
+  <section class="zone" aria-labelledby="lane-title">
+    <h2 id="lane-title">Your path</h2>
+    <p class="sub">Use the move buttons to change the order.</p>
+    <ol class="lane" id="lane"></ol>
+  </section>
+
+  <section class="zone" aria-labelledby="tray-title">
+    <h2 id="tray-title">Set aside</h2>
+    <ul class="tray" id="tray"></ul>
+  </section>
+
+  <div class="actions">
+    <button type="button" class="primary" id="check-btn" disabled>Check my path</button>
+    <p class="status" id="status" aria-live="polite"></p>
+  </div>
+  <div class="feedback" id="feedback" aria-live="polite"></div>
+
+  <section class="second" id="second" aria-labelledby="second-title">
+    <h2 id="second-title" tabindex="-1">Start with a record already in place</h2>
+    <p>Nothing here is checked. Change one fact about the server and see which part of the path is already done.</p>
+    <fieldset class="toggle" id="toggle">
+      <legend>The storefront server</legend>
+    </fieldset>
+    <div class="feedback" id="feedback2" aria-live="polite"></div>
+  </section>
+
+  <div class="restart"><button type="button" class="quiet" id="restart-btn">Start over</button></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var CARDS = {
+    problem: { kind: "problem", text: "Only the server's present state can be seen, so last night's slowdown can't be judged, and the next one will reach the team through a customer." },
+    m1: { kind: "move", text: "Start a collector on the server, with the sampling interval and how long to keep files decided." },
+    m2: { kind: "move", text: "Keep collecting until the record shows what an ordinary day and night look like." },
+    m3: { kind: "move", text: "State the server's normal for one hour, drawn from that record." },
+    m4: { kind: "move", text: "Read a named window of readings and log entries against the normal." },
+    m5: { kind: "move", text: "Write an alert with a line drawn from the normal, a duration, and a named recipient." },
+    m6: { kind: "move", text: "Record a dated review note saying what was read, what was found, and who was told." },
+    signal: { kind: "signal", text: "The next slow evening reaches the on-call administrator through the alert, before a customer reports it." },
+    x1: { kind: "out", text: "Find the cause of last night's slowdown.",
+      why: "Finding a cause is the response to a finding. This path ends when the right person hears." },
+    x2: { kind: "out", text: "Restart the storefront service.",
+      why: "Restarting is a repair. Nothing on this path changes the server itself." },
+    x3: { kind: "out", text: "Set the alert at 80% on every server.",
+      why: "A round number ignores each server's own normal. It fires on ordinary load and stays silent on unusual load." }
+  };
+  var START_ORDER = ["m4", "x1", "signal", "m1", "m6", "x3", "problem", "m3", "m5", "x2", "m2"];
+
+  /* Each pair [a, b]: a must come before b. */
+  var DEPS = [
+    ["m1", "m2", "Keeping a record needs a collector running first."],
+    ["m2", "m3", "A normal can only be stated from a record that already holds ordinary days."],
+    ["m3", "m4", "Reading a window against the normal needs the normal stated first."],
+    ["m3", "m5", "An alert's line is drawn from the normal, so the normal comes first."],
+    ["m4", "m6", "A review note records what was read, so the reading comes first."]
+  ];
+  var REQUIRED = ["problem", "m1", "m2", "m3", "m4", "m5", "m6", "signal"];
+
+  var pool, lane, tray;
+  var alreadyRecorded = false;
+  var solved = false;
+
+  function reset() {
+    pool = START_ORDER.slice();
+    lane = [];
+    tray = [];
+    alreadyRecorded = false;
+    solved = false;
+  }
+
+  function evaluate(laneArr, trayArr, recorded) {
+    var issues = { outInLane: [], missing: [], misplacedEnds: [], deps: [] };
+    laneArr.forEach(function (id) { if (CARDS[id].kind === "out") { issues.outInLane.push(id); } });
+    REQUIRED.forEach(function (id) {
+      if (recorded && (id === "m1" || id === "m2")) { return; }
+      if (laneArr.indexOf(id) < 0) { issues.missing.push(id); }
+    });
+    if (laneArr.length && laneArr.indexOf("problem") > 0) { issues.misplacedEnds.push("problem"); }
+    var si = laneArr.indexOf("signal");
+    if (si >= 0 && si !== laneArr.length - 1) { issues.misplacedEnds.push("signal"); }
+    DEPS.forEach(function (d) {
+      if (recorded && (d[0] === "m1" || d[0] === "m2")) { return; }
+      var a = laneArr.indexOf(d[0]), b = laneArr.indexOf(d[1]);
+      if (a >= 0 && b >= 0 && a > b) { issues.deps.push(d); }
+    });
+    var structureOk = !issues.outInLane.length && !issues.missing.length && !issues.misplacedEnds.length;
+    var state;
+    if (structureOk && issues.deps.length === 0) { state = "correct"; }
+    else if (structureOk && issues.deps.length === 1) { state = "near"; }
+    else { state = "wrong"; }
+    return { state: state, issues: issues };
+  }
+
+  function mini(label, fn, disabled, aria) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "mini";
+    b.textContent = label;
+    if (aria) { b.setAttribute("aria-label", aria); }
+    b.disabled = !!disabled;
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  var lastFlags = null;
+  var focusAfter = null;
+
+  function render() {
+    var poolEl = document.getElementById("pool");
+    poolEl.innerHTML = "";
+    if (!pool.length) {
+      var e = document.createElement("li");
+      e.className = "empty-note";
+      e.textContent = "Every card is placed.";
+      poolEl.appendChild(e);
+    }
+    pool.forEach(function (id) {
+      var li = document.createElement("li");
+      li.className = "card";
+      var t = document.createElement("span");
+      t.className = "text";
+      t.textContent = CARDS[id].text;
+      li.appendChild(t);
+      var tools = document.createElement("div");
+      tools.className = "tools";
+      tools.appendChild(mini("Add to path", function () { move(id, "lane"); }, solved, "Add to path: " + CARDS[id].text));
+      tools.appendChild(mini("Set aside", function () { move(id, "tray"); }, solved, "Set aside: " + CARDS[id].text));
+      li.appendChild(tools);
+      poolEl.appendChild(li);
+    });
+
+    var laneEl = document.getElementById("lane");
+    laneEl.innerHTML = "";
+    if (!lane.length) {
+      var e2 = document.createElement("li");
+      e2.className = "empty-note";
+      e2.style.display = "block";
+      e2.textContent = "No cards on the path yet.";
+      laneEl.appendChild(e2);
+    }
+    lane.forEach(function (id, i) {
+      var li = document.createElement("li");
+      if (i === 0) { li.classList.add("pos-first"); }
+      if (i === lane.length - 1 && lane.length > 1) { li.classList.add("pos-last"); }
+      var node = document.createElement("span");
+      node.className = "node";
+      node.setAttribute("aria-hidden", "true");
+      node.textContent = (i + 1).toLocaleString("en-US");
+      var card = document.createElement("div");
+      card.className = "card";
+      var lab = document.createElement("span");
+      lab.className = "slot-label";
+      lab.textContent = i === 0 ? "Starts the path" : (i === lane.length - 1 && lane.length > 1 ? "Ends the path" : "Position " + (i + 1).toLocaleString("en-US"));
+      card.appendChild(lab);
+      var t = document.createElement("span");
+      t.className = "text";
+      t.textContent = CARDS[id].text;
+      card.appendChild(t);
+      if (alreadyRecorded && (id === "m1" || id === "m2")) {
+        card.classList.add("done");
+        var dn = document.createElement("span");
+        dn.className = "flag okmsg";
+        dn.textContent = "Already done. Six weeks of records exist.";
+        card.appendChild(dn);
+      }
+      if (lastFlags && lastFlags[id]) {
+        card.classList.add("flagged");
+        var fl = document.createElement("span");
+        fl.className = "flag";
+        fl.textContent = lastFlags[id];
+        card.appendChild(fl);
+      }
+      if (solved && !alreadyRecorded) { card.classList.add("ok"); }
+      var tools = document.createElement("div");
+      tools.className = "tools";
+      var up = mini("Move up", function () { shift(i, -1, "up"); }, solved || i === 0, "Move up: " + CARDS[id].text);
+      up.dataset.key = id + "-up";
+      var down = mini("Move down", function () { shift(i, 1, "down"); }, solved || i === lane.length - 1, "Move down: " + CARDS[id].text);
+      down.dataset.key = id + "-down";
+      tools.appendChild(up);
+      tools.appendChild(down);
+      tools.appendChild(mini("Return", function () { move(id, "pool"); }, solved, "Return to cards: " + CARDS[id].text));
+      card.appendChild(tools);
+      li.appendChild(node);
+      li.appendChild(card);
+      laneEl.appendChild(li);
+    });
+
+    var trayEl = document.getElementById("tray");
+    trayEl.innerHTML = "";
+    if (!tray.length) {
+      var e3 = document.createElement("li");
+      e3.className = "empty-note";
+      e3.textContent = "Nothing set aside yet.";
+      trayEl.appendChild(e3);
+    }
+    tray.forEach(function (id) {
+      var li = document.createElement("li");
+      li.className = "card";
+      var t = document.createElement("span");
+      t.className = "text";
+      t.textContent = CARDS[id].text;
+      li.appendChild(t);
+      if (solved && CARDS[id].why) {
+        var w = document.createElement("span");
+        w.className = "flag okmsg";
+        w.textContent = CARDS[id].why;
+        li.appendChild(w);
+      }
+      var tools = document.createElement("div");
+      tools.className = "tools";
+      tools.appendChild(mini("Return", function () { move(id, "pool"); }, solved, "Return to cards: " + CARDS[id].text));
+      li.appendChild(tools);
+      trayEl.appendChild(li);
+    });
+
+    var btn = document.getElementById("check-btn");
+    btn.disabled = pool.length > 0 || solved;
+    document.getElementById("status").textContent = solved ? "" : (pool.length > 0
+      ? "Place every card to check. " + pool.length.toLocaleString("en-US") + " left."
+      : "Every card is placed.");
+
+    if (focusAfter) {
+      var target = document.querySelector('[data-key="' + focusAfter + '"]');
+      if (target && !target.disabled) { target.focus(); }
+      else { var h = document.getElementById("lane-title"); h.setAttribute("tabindex", "-1"); h.focus(); }
+      focusAfter = null;
+    }
+  }
+
+  function removeFrom(arr, id) { var i = arr.indexOf(id); if (i >= 0) { arr.splice(i, 1); } }
+
+  function move(id, to) {
+    removeFrom(pool, id); removeFrom(lane, id); removeFrom(tray, id);
+    if (to === "lane") { lane.push(id); }
+    if (to === "tray") { tray.push(id); }
+    if (to === "pool") { pool.push(id); }
+    lastFlags = null;
+    clearFeedback();
+    render();
+    var next = document.querySelector("#pool button.mini") || document.getElementById("check-btn");
+    if (next && !next.disabled) { next.focus(); }
+  }
+
+  function shift(i, delta, dir) {
+    var j = i + delta;
+    if (j < 0 || j >= lane.length) { return; }
+    var id = lane[i];
+    lane[i] = lane[j];
+    lane[j] = id;
+    lastFlags = null;
+    clearFeedback();
+    focusAfter = id + "-" + dir;
+    render();
+  }
+
+  function clearFeedback() {
+    var fb = document.getElementById("feedback");
+    fb.className = "feedback";
+    fb.innerHTML = "";
+  }
+
+  function check() {
+    var r = evaluate(lane, tray, false);
+    var fb = document.getElementById("feedback");
+    fb.innerHTML = "";
+    fb.className = "feedback show " + r.state;
+    var st = document.createElement("strong");
+    var p = document.createElement("p");
+    lastFlags = {};
+    r.issues.deps.forEach(function (d) {
+      lastFlags[d[1]] = "This step depends on one placed after it. " + d[2];
+    });
+    if (r.state === "correct") {
+      solved = true;
+      lastFlags = null;
+      st.textContent = "Every step has what it needs before it.";
+      p.textContent = "The record comes first, the normal is drawn from it, and both the reading and the alert depend on that normal. Three orders hold: the alert needs only the normal, so it can come before the reading, between the reading and the review note, or after the note.";
+      document.getElementById("second").classList.add("shown");
+      buildToggle();
+    } else if (r.state === "near") {
+      st.textContent = "Close. One step is out of order.";
+      p.textContent = "The right cards are on the path, starting with the problem and ending with the signal. The flagged step comes before something it depends on.";
+    } else {
+      st.textContent = "The path doesn't hold together yet.";
+      var parts = [];
+      if (r.issues.outInLane.length || r.issues.missing.length) {
+        parts.push("Check which cards belong. The path holds only moves that build a record and report on it, not repairs, causes, or fixed numbers.");
+      }
+      if (r.issues.misplacedEnds.length) {
+        parts.push("The problem starts the path and the signal ends it.");
+      }
+      if (r.issues.deps.length) {
+        parts.push("Some steps come before what they depend on. They are flagged on the path.");
+      }
+      parts.push("Start with what has to exist first: nothing can be compared until something has been recorded.");
+      p.textContent = parts.join(" ");
+    }
+    fb.appendChild(st);
+    fb.appendChild(p);
+    render();
+    if (solved) { document.getElementById("second-title").focus(); }
+  }
+
+  function buildToggle() {
+    var fs = document.getElementById("toggle");
+    Array.prototype.slice.call(fs.querySelectorAll(".choice")).forEach(function (n) { n.remove(); });
+    [["new", "Has no collector yet"], ["recorded", "Has collected for six weeks"]].forEach(function (o, i) {
+      var w = document.createElement("div");
+      w.className = "choice";
+      var input = document.createElement("input");
+      input.type = "radio";
+      input.name = "recorded";
+      input.id = "rec-" + o[0];
+      input.value = o[0];
+      if (i === 0) { input.checked = true; }
+      input.addEventListener("change", function () {
+        alreadyRecorded = o[0] === "recorded";
+        render();
+        var fb = document.getElementById("feedback2");
+        fb.innerHTML = "";
+        fb.className = "feedback show explore";
+        var st = document.createElement("strong");
+        var p = document.createElement("p");
+        if (alreadyRecorded) {
+          st.textContent = "The path now starts at stating the normal.";
+          p.textContent = "Starting a collector and waiting for ordinary days are already done. Everything after them keeps its order, because every later step still depends on the normal. The record's existence is the part no one can rush on the day it is needed.";
+        } else {
+          st.textContent = "With no collector, the full path applies.";
+          p.textContent = "Nothing after the first two steps can begin until the record holds ordinary days. That wait is the one part of the path that has to start before anyone needs an answer.";
+        }
+        fb.appendChild(st);
+        fb.appendChild(p);
+      });
+      var label = document.createElement("label");
+      label.setAttribute("for", input.id);
+      label.textContent = o[1];
+      w.appendChild(input);
+      w.appendChild(label);
+      fs.appendChild(w);
+    });
+    var fb2 = document.getElementById("feedback2");
+    fb2.className = "feedback";
+    fb2.innerHTML = "";
+  }
+
+  function restart() {
+    reset();
+    lastFlags = null;
+    clearFeedback();
+    document.getElementById("second").classList.remove("shown");
+    render();
+    var first = document.querySelector("#pool button.mini");
+    if (first) { first.focus(); }
+  }
+
+  document.getElementById("check-btn").addEventListener("click", check);
+  document.getElementById("restart-btn").addEventListener("click", restart);
+  reset();
+  render();
+})();
+</script>
+</body>
+</html>

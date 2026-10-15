@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Write an Alert in Three Parts</title>
+<style>
+:root {
+  --night: #172030;
+  --panel: #1f2a3d;
+  --panel-raised: #26334a;
+  --line: #34435c;
+  --text: #e4e8ef;
+  --muted: #a6b1c2;
+  --dawn: #e9b872;
+  --dawn-soft: #3a3326;
+  --gap: #e8a090;
+  --gap-soft: #3b2a2c;
+  --sound: #8fcbb9;
+  --sound-soft: #233a37;
+  --focus: #f4d79e;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body { margin: 0; background: var(--night); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55; }
+main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+h1 { font-size: 2rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+p { margin: 0 0 0.9rem; }
+.lede { color: var(--muted); font-size: 1.08rem; margin-top: 0.75rem; max-width: 40rem; }
+.host { font-family: var(--mono); font-size: 0.92em; color: var(--dawn); }
+.num { font-variant-numeric: tabular-nums; }
+
+.day {
+  margin: 2rem 0 1.75rem;
+  padding: 1.25rem 1.4rem 1.35rem;
+  background: var(--panel);
+  border-left: 3px solid var(--dawn);
+  border-radius: 0 6px 6px 0;
+}
+.day h2 { font-size: 1.1rem; margin-bottom: 0.35rem; }
+.day .note { color: var(--muted); font-size: 0.93rem; }
+.usual { margin: 0 0 1rem; padding: 0.7rem 0.85rem; background: var(--panel-raised); border-radius: 6px; font-size: 0.95rem; }
+.usual b { font-weight: 600; }
+.stretches { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+.stretches li { display: grid; grid-template-columns: 8.5rem 1fr; gap: 0.75rem; font-size: 0.95rem; padding: 0.45rem 0; border-bottom: 1px solid var(--line); }
+.stretches li:last-child { border-bottom: none; }
+.stretches .t { font-variant-numeric: tabular-nums; color: var(--dawn); font-weight: 500; }
+.stretches .d span { color: var(--muted); }
+
+.parts { display: grid; gap: 0.75rem; }
+.parts-intro { margin-bottom: 1rem; }
+.parts-intro h2 { margin-bottom: 0.4rem; }
+.parts-intro p { color: var(--muted); margin: 0; }
+fieldset.part { margin: 0; padding: 1rem 1.1rem 1.05rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+fieldset.part legend { float: left; width: 100%; padding: 0; margin-bottom: 0.2rem; font-family: var(--serif); font-size: 1.12rem; }
+.part .help { clear: both; color: var(--muted); font-size: 0.92rem; margin: 0 0 0.7rem; }
+.choices { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+.choice { position: relative; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice label { display: inline-block; padding: 0.4rem 0.85rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); cursor: pointer; font-size: 0.93rem; user-select: none; }
+.choice label:hover { border-color: var(--muted); color: var(--text); }
+.choice input:checked + label { background: var(--dawn-soft); border-color: var(--dawn); color: var(--text); }
+.choice input:checked + label::before { content: "\2713\00a0"; color: var(--dawn); }
+.choice input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.sentence { margin: 1.25rem 0 0; padding: 0.9rem 1rem; border: 1px dashed var(--line); border-radius: 6px; font-family: var(--serif); font-size: 1.08rem; line-height: 1.5; }
+.sentence .blank { color: var(--dawn); border-bottom: 1px solid var(--dawn); }
+.sentence .empty { color: var(--muted); border-bottom: 1px dotted var(--muted); }
+
+.actions { margin-top: 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+button { font: inherit; font-weight: 600; padding: 0.65rem 1.15rem; border-radius: 6px; border: 1px solid var(--dawn); background: var(--dawn); color: #1b1712; cursor: pointer; }
+button:hover:not(:disabled) { background: #f1c887; }
+button:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+button.quiet { background: transparent; color: var(--text); border-color: var(--line); font-weight: 500; }
+button.quiet:hover { border-color: var(--muted); background: transparent; }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.status { color: var(--muted); font-size: 0.93rem; margin: 0; }
+
+.replay { display: none; margin-top: 1.75rem; }
+.replay.shown { display: block; }
+.replay h2 { margin-bottom: 0.75rem; }
+.replay h2:focus { outline: none; }
+.replay h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.events { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: 0.5rem; }
+.events li { padding: 0.75rem 0.95rem; background: var(--panel); border-radius: 6px; border-left: 3px solid var(--line); }
+.events li.sent-good { border-left-color: var(--sound); }
+.events li.sent-bad { border-left-color: var(--gap); }
+.events li.silent-bad { border-left-color: var(--gap); }
+.events li.silent-good { border-left-color: var(--line); }
+.events .ev { font-family: var(--serif); display: block; }
+.events .out { font-size: 0.93rem; display: block; margin-top: 0.15rem; color: var(--muted); }
+.events li.sent-good .out { color: var(--sound); }
+.events li.sent-bad .out, .events li.silent-bad .out { color: var(--gap); }
+.tally { font-variant-numeric: tabular-nums; margin: 0 0 1rem; }
+
+.feedback { padding: 0.8rem 0.95rem; border-radius: 4px; font-size: 0.97rem; }
+.feedback strong { display: block; margin-bottom: 0.2rem; }
+.feedback p { margin: 0; }
+.feedback.correct { background: var(--sound-soft); border-left: 3px solid var(--sound); }
+.feedback.correct strong { color: var(--sound); }
+.feedback.near { background: var(--dawn-soft); border-left: 3px solid var(--dawn); }
+.feedback.near strong { color: var(--dawn); }
+.feedback.wrong { background: var(--gap-soft); border-left: 3px solid var(--gap); }
+.feedback.wrong strong { color: var(--gap); }
+.feedback.explore { background: var(--panel-raised); border-left: 3px solid var(--muted); }
+
+.second { display: none; margin-top: 2rem; padding: 1.1rem 1.25rem; border: 1px solid var(--line); border-radius: 6px; }
+.second.shown { display: block; }
+.second h2 { margin-bottom: 0.4rem; }
+.second > p { color: var(--muted); }
+fieldset.mover { margin: 1rem 0 0; padding: 0; border: none; }
+fieldset.mover legend { font-weight: 600; margin-bottom: 0.5rem; padding: 0; }
+.restart { margin-top: 1.75rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .replay.shown .events li { animation: appear 240ms ease-out both; }
+}
+@keyframes appear { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.6rem; }
+  .stretches li { grid-template-columns: 1fr; gap: 0.1rem; }
+  .choices { flex-direction: column; }
+  .choice label { display: block; }
+  .actions { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Write an Alert in Three Parts</h1>
+    <p class="lede">An alert is a comparison written down in advance, so the server can make it on every reading and a person hears the result. It needs a line, a duration, and a named person. Leave out any one, and the next slow evening still reaches you through a customer.</p>
+  </header>
+
+  <section class="day" aria-labelledby="day-title">
+    <h2 id="day-title">One recorded day on the storefront server</h2>
+    <p class="note">The collector on <span class="host">cld-lnx-01</span> took a processor reading every five minutes. All figures are made up for this exercise.</p>
+    <p class="usual"><b>Usual, from earlier weeks:</b> about 85% in the 02:00 hour, when the nightly job runs, and about 20% at every other hour.</p>
+    <ul class="stretches" id="stretches"></ul>
+  </section>
+
+  <section class="parts-intro" aria-labelledby="parts-title">
+    <h2 id="parts-title">Choose one option for each part</h2>
+    <p>Then replay the day. The server applies your alert to every reading, in order.</p>
+  </section>
+
+  <div class="parts" id="parts"></div>
+
+  <p class="sentence" id="sentence" aria-live="polite"></p>
+
+  <div class="actions">
+    <button type="button" id="replay-btn" disabled>Replay the day</button>
+    <p class="status" id="status" aria-live="polite"></p>
+  </div>
+
+
+  <section class="second" id="second" aria-labelledby="second-title">
+    <h2 id="second-title">Shorten the slow evening</h2>
+    <p>Nothing here is checked. Keep your alert and change how long the slow evening lasted. The results below update. You can also change any part and replay.</p>
+    <fieldset class="mover">
+      <legend>The slow evening lasted</legend>
+      <div class="choices" id="mover-choices"></div>
+    </fieldset>
+  </section>
+
+  <section class="replay" id="replay" aria-labelledby="replay-title">
+    <h2 id="replay-title" tabindex="-1">What your alert did</h2>
+    <ul class="events" id="events"></ul>
+    <p class="tally" id="tally"></p>
+    <div class="feedback" id="feedback"></div>
+  </section>
+
+  <div class="restart" id="restart-wrap" hidden><button type="button" class="quiet" id="restart-btn">Start over</button></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var STEP = 5;               /* minutes between readings */
+  var SAMPLES = 24 * 60 / STEP;
+
+  var PARTS = [
+    { id: "threshold", title: "The line", help: "The reading the server compares against.",
+      options: [
+        { id: "fixed", label: "Above 80% at any hour", say: "the processor goes above 80%" },
+        { id: "baseline", label: "More than 20 points above the usual for that hour", say: "the processor goes more than 20 points above its usual for that hour" }
+      ] },
+    { id: "duration", title: "The duration", help: "How long a reading must stay across the line before anyone is told.",
+      options: [
+        { id: "1", label: "Any single reading", say: "for a single reading" },
+        { id: "3", label: "Three readings in a row (15 minutes)", say: "for three readings in a row" },
+        { id: "12", label: "Twelve readings in a row (one hour)", say: "for twelve readings in a row" }
+      ] },
+    { id: "recipient", title: "The recipient", help: "Who hears about it.",
+      options: [
+        { id: "mailbox", label: "A shared mailbox no one is assigned to read", say: "Send a message to a shared mailbox" },
+        { id: "oncall", label: "The on-call administrator", say: "Tell the on-call administrator" },
+        { id: "file", label: "A line written to a file", say: "Write a line to a file" }
+      ] }
+  ];
+
+  var KEY = { threshold: "baseline", duration: "3", recipient: "oncall" };
+
+  function minutes(h, m) { return h * 60 + m; }
+  function clock(min) {
+    var h = Math.floor(min / 60), m = min % 60;
+    return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+  }
+  function usualAt(min) { return Math.floor(min / 60) === 2 ? 85 : 20; }
+
+  /* Build the day. eveningMin is the length of the slow evening in minutes. */
+  function buildDay(eveningMin) {
+    var day = [];
+    for (var i = 0; i < SAMPLES; i++) {
+      var t = i * STEP;
+      var v = 18 + ((i * 7) % 5);
+      var ev = null;
+      if (t >= minutes(2, 0) && t <= minutes(2, 50)) { v = 84 + (i % 5); ev = "nightly"; }
+      if (t === minutes(11, 15)) { v = 83; ev = "spike"; }
+      if (t >= minutes(21, 0) && t < minutes(21, 0) + eveningMin) { v = 55 + ((i * 3) % 8); ev = "evening"; }
+      day.push({ t: t, v: v, ev: ev });
+    }
+    return day;
+  }
+
+  var EVENTS = [
+    { id: "nightly", name: "The nightly job, 02:00 to 02:50", should: false },
+    { id: "spike", name: "One reading at 83% at 11:15", should: false },
+    { id: "evening", name: "The slow evening, from 21:00", should: true }
+  ];
+
+  function stretchList(eveningMin) {
+    var endEvening = clock(minutes(21, 0) + eveningMin - STEP);
+    return [
+      ["02:00\u201302:50", "84% to 88%. ", "The nightly job, as on every night."],
+      ["11:15", "83% for one reading. ", "Back to about 20% by 11:20."],
+      ["21:00\u2013" + endEvening, "55% to 62%. ", "The slow evening, when checkouts timed out."],
+      ["All other times", "18% to 22%.", ""]
+    ];
+  }
+
+  /* The control: apply the alert to every reading and return each notification. */
+  function replay(sel, day) {
+    var need = parseInt(sel.duration, 10);
+    var run = 0;
+    var fired = [];
+    day.forEach(function (s) {
+      var line = sel.threshold === "fixed" ? 80 : usualAt(s.t) + 20;
+      if (s.v > line) {
+        run++;
+        if (run === need) { fired.push({ t: s.t, ev: s.ev }); }
+      } else {
+        run = 0;
+      }
+    });
+    return fired;
+  }
+
+  function delivery(rec) {
+    if (rec === "oncall") { return { reaches: true, text: "the on-call administrator" }; }
+    if (rec === "mailbox") { return { reaches: false, text: "a mailbox no one reads" }; }
+    return { reaches: false, text: "a file no one is told about" };
+  }
+
+  var sel = {};
+  var eveningMin = 40;
+  var pass = 1;
+  var keyReached = false;
+
+  function buildParts() {
+    var wrap = document.getElementById("parts");
+    wrap.innerHTML = "";
+    PARTS.forEach(function (p) {
+      var fs = document.createElement("fieldset");
+      fs.className = "part";
+      var lg = document.createElement("legend");
+      lg.textContent = p.title;
+      fs.appendChild(lg);
+      var help = document.createElement("p");
+      help.className = "help";
+      help.textContent = p.help;
+      fs.appendChild(help);
+      var ch = document.createElement("div");
+      ch.className = "choices";
+      p.options.forEach(function (o) {
+        var w = document.createElement("div");
+        w.className = "choice";
+        var input = document.createElement("input");
+        input.type = "radio";
+        input.name = p.id;
+        input.value = o.id;
+        input.id = p.id + "-" + o.id;
+        input.addEventListener("change", function () {
+          sel[p.id] = o.id;
+          renderSentence();
+          updateStatus();
+        });
+        var label = document.createElement("label");
+        label.setAttribute("for", input.id);
+        label.textContent = o.label;
+        w.appendChild(input);
+        w.appendChild(label);
+        ch.appendChild(w);
+      });
+      fs.appendChild(ch);
+      wrap.appendChild(fs);
+    });
+  }
+
+  function optionSay(partId, optId) {
+    var part = PARTS.filter(function (p) { return p.id === partId; })[0];
+    var o = part.options.filter(function (x) { return x.id === optId; })[0];
+    return o ? o.say : null;
+  }
+
+  function renderSentence() {
+    var el = document.getElementById("sentence");
+    el.innerHTML = "";
+    function piece(partId, fallback) {
+      var span = document.createElement("span");
+      var s = sel[partId] ? optionSay(partId, sel[partId]) : null;
+      span.className = s ? "blank" : "empty";
+      span.textContent = s || fallback;
+      return span;
+    }
+    el.appendChild(piece("recipient", "Tell someone"));
+    el.appendChild(document.createTextNode(" when "));
+    el.appendChild(piece("threshold", "something crosses a line"));
+    el.appendChild(document.createTextNode(" "));
+    el.appendChild(piece("duration", "for some length of time"));
+    el.appendChild(document.createTextNode("."));
+  }
+
+  function chosenCount() { return PARTS.filter(function (p) { return sel[p.id]; }).length; }
+
+  function updateStatus() {
+    var left = PARTS.length - chosenCount();
+    var btn = document.getElementById("replay-btn");
+    btn.disabled = left > 0;
+    document.getElementById("status").textContent = left > 0
+      ? "Choose all three parts to replay. " + left.toLocaleString("en-US") + " left."
+      : "Ready to replay.";
+  }
+
+  function feedbackFor(s) {
+    var off = PARTS.filter(function (p) { return s[p.id] !== KEY[p.id]; }).map(function (p) { return p.id; });
+    if (off.length === 0) {
+      return { cls: "correct", head: "This alert does its job.",
+        body: "The line comes from this server's own record, so the nightly job stays quiet. Three readings in a row lets the single spike pass. A named person hears about the slow evening within fifteen minutes of its start." };
+    }
+    if (off.length === 1) {
+      var msg = {
+        threshold: "Two parts are right. The line is out of place: a fixed 80% fires on the nightly job, which is ordinary, and never sees the slow evening, which is not. Ask where the line comes from.",
+        duration: "Two parts are right. The duration is out of place. Look at which readings it lets pass and which it waits too long for.",
+        recipient: "Two parts are right. The recipient is out of place. The alert fires at the right moment, but no named person hears it."
+      };
+      return { cls: "near", head: "Close. One part needs another look.", body: msg[off[0]] };
+    }
+    return { cls: "wrong", head: "This alert misses what matters on this day.",
+      body: "Start with the line. Ask where it comes from: a round number, or what this server usually shows at that hour? Then check the other two parts against the day's three events." };
+  }
+
+  function doReplay() {
+    if (chosenCount() < PARTS.length) { return; }
+    var day = buildDay(eveningMin);
+    var fired = replay(sel, day);
+    var d = delivery(sel.recipient);
+    var ul = document.getElementById("events");
+    ul.innerHTML = "";
+    EVENTS.forEach(function (e) {
+      var hits = fired.filter(function (f) { return f.ev === e.id; });
+      var li = document.createElement("li");
+      var name = document.createElement("span");
+      name.className = "ev";
+      name.textContent = e.name;
+      var out = document.createElement("span");
+      out.className = "out";
+      if (hits.length) {
+        var reachedGood = e.should && d.reaches;
+        li.className = reachedGood ? "sent-good" : "sent-bad";
+        out.textContent = "Alert at " + clock(hits[0].t) + ", sent to " + d.text + "." +
+          (e.should ? (d.reaches ? " A person hears about it." : " No one is told.") : " This is ordinary for this hour, so the alert is noise.");
+      } else {
+        li.className = e.should ? "silent-bad" : "silent-good";
+        out.textContent = e.should ? "No alert. The slow evening passes unseen." : "No alert. Correctly quiet.";
+      }
+      li.appendChild(name);
+      li.appendChild(out);
+      ul.appendChild(li);
+    });
+    var reached = fired.filter(function () { return d.reaches; }).length;
+    document.getElementById("tally").textContent =
+      "Alerts fired: " + fired.length.toLocaleString("en-US") +
+      ". Alerts that reached a named person: " + reached.toLocaleString("en-US") + ".";
+
+    var fb = document.getElementById("feedback");
+    fb.innerHTML = "";
+    var st = document.createElement("strong");
+    var p = document.createElement("p");
+    if (pass === 1) {
+      var f = feedbackFor(sel);
+      fb.className = "feedback " + f.cls;
+      st.textContent = f.head;
+      p.textContent = f.body;
+      if (f.cls === "correct" && !keyReached) {
+        keyReached = true;
+        document.getElementById("second").classList.add("shown");
+        document.getElementById("restart-wrap").hidden = false;
+        buildMover();
+      }
+    } else {
+      fb.className = "feedback explore";
+      st.textContent = "There is no single right answer here.";
+      p.textContent = eveningMin === 10
+        ? "None of the three durations catches a ten-minute evening without also sending the one-reading spike. Choosing a duration means choosing which mistake costs more: a missed slow evening, or a person interrupted for nothing."
+        : "With a forty-minute evening, three readings in a row catches it and lets the spike pass. Shorten the evening to see the trade-off appear.";
+    }
+    fb.appendChild(st);
+    fb.appendChild(p);
+    var rep = document.getElementById("replay");
+    var first = !rep.classList.contains("shown");
+    rep.classList.add("shown");
+    if (first) { document.getElementById("replay-title").focus(); }
+  }
+
+  function renderStretches() {
+    var ul = document.getElementById("stretches");
+    ul.innerHTML = "";
+    stretchList(eveningMin).forEach(function (s) {
+      var li = document.createElement("li");
+      var t = document.createElement("span");
+      t.className = "t";
+      t.textContent = s[0];
+      var d = document.createElement("span");
+      d.className = "d";
+      d.appendChild(document.createTextNode(s[1]));
+      if (s[2]) {
+        var sp = document.createElement("span");
+        sp.textContent = s[2];
+        d.appendChild(sp);
+      }
+      li.appendChild(t);
+      li.appendChild(d);
+      ul.appendChild(li);
+    });
+  }
+
+  function buildMover() {
+    var el = document.getElementById("mover-choices");
+    el.innerHTML = "";
+    [[40, "40 minutes, as recorded"], [10, "10 minutes"]].forEach(function (m, i) {
+      var w = document.createElement("div");
+      w.className = "choice";
+      var input = document.createElement("input");
+      input.type = "radio";
+      input.name = "evening";
+      input.value = String(m[0]);
+      input.id = "evening-" + m[0];
+      if (i === 0) { input.checked = true; }
+      input.addEventListener("change", function () {
+        eveningMin = m[0];
+        pass = 2;
+        renderStretches();
+        doReplay();
+      });
+      var label = document.createElement("label");
+      label.setAttribute("for", input.id);
+      label.textContent = m[1];
+      w.appendChild(input);
+      w.appendChild(label);
+      el.appendChild(w);
+    });
+  }
+
+  function restart() {
+    sel = {};
+    eveningMin = 40;
+    pass = 1;
+    keyReached = false;
+    document.getElementById("replay").classList.remove("shown");
+    document.getElementById("second").classList.remove("shown");
+    document.getElementById("restart-wrap").hidden = true;
+    buildParts();
+    renderStretches();
+    renderSentence();
+    updateStatus();
+    var first = document.querySelector("#parts input");
+    if (first) { first.focus(); }
+  }
+
+  document.getElementById("replay-btn").addEventListener("click", doReplay);
+  document.getElementById("restart-btn").addEventListener("click", restart);
+
+  buildParts();
+  renderStretches();
+  renderSentence();
+  updateStatus();
+})();
+</script>
+</body>
+</html>

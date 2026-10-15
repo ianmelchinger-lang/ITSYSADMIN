@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explain Last Night’s Slowdown</title>
+<style>
+:root {
+  --night: #172030;
+  --panel: #1f2a3d;
+  --panel-raised: #26334a;
+  --line: #34435c;
+  --text: #e4e8ef;
+  --muted: #a6b1c2;
+  --dawn: #e9b872;
+  --dawn-soft: #3a3326;
+  --gap: #e8a090;
+  --gap-soft: #3b2a2c;
+  --sound: #8fcbb9;
+  --sound-soft: #233a37;
+  --focus: #f4d79e;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3rem;
+}
+h1, h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+h1 { font-size: 2rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+p { margin: 0 0 0.9rem; }
+.lede { color: var(--muted); font-size: 1.08rem; margin-top: 0.75rem; max-width: 38rem; }
+.host { font-family: var(--mono); font-size: 0.92em; color: var(--dawn); }
+
+.situation {
+  margin: 2rem 0 2.25rem;
+  padding: 1.25rem 1.4rem;
+  border-left: 3px solid var(--dawn);
+  background: var(--panel);
+  border-radius: 0 6px 6px 0;
+}
+.situation h2 { font-size: 1.1rem; margin-bottom: 0.6rem; }
+.situation ul { margin: 0; padding-left: 1.1rem; }
+.situation li { margin-bottom: 0.4rem; }
+.situation li:last-child { margin-bottom: 0; }
+
+.task { margin-bottom: 1.25rem; }
+.task h2 { margin-bottom: 0.4rem; }
+.task p { color: var(--muted); margin: 0; }
+
+.statements { display: grid; gap: 0.75rem; }
+fieldset.statement {
+  margin: 0;
+  padding: 1rem 1.1rem 1.05rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+fieldset.statement legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  line-height: 1.4;
+}
+fieldset.statement legend::before { content: "\201C"; color: var(--muted); }
+fieldset.statement legend::after { content: "\201D"; color: var(--muted); }
+.choices { clear: both; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.choice { position: relative; }
+.choice input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.choice label {
+  display: inline-block;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  user-select: none;
+}
+.choice label:hover { border-color: var(--muted); color: var(--text); }
+.choice input:checked + label {
+  background: var(--dawn-soft);
+  border-color: var(--dawn);
+  color: var(--text);
+}
+.choice input:checked + label::before { content: "\2713\00a0"; color: var(--dawn); }
+.choice input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+.choice input:disabled + label { cursor: default; }
+.choice input:disabled:not(:checked) + label { opacity: 0.45; }
+.choice input:disabled + label:hover { border-color: var(--line); color: var(--muted); }
+.choice input:disabled:checked + label:hover { border-color: var(--dawn); color: var(--text); }
+
+.verdict {
+  display: none;
+  margin-top: 0.85rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 4px;
+  font-size: 0.97rem;
+}
+.revealed .verdict { display: block; }
+.verdict.is-sound { background: var(--sound-soft); border-left: 3px solid var(--sound); }
+.verdict.is-gap { background: var(--gap-soft); border-left: 3px solid var(--gap); }
+.verdict strong { display: block; margin-bottom: 0.25rem; }
+.verdict.is-sound strong { color: var(--sound); }
+.verdict.is-gap strong { color: var(--gap); }
+.verdict p { margin: 0; }
+
+.actions { margin-top: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.65rem 1.15rem;
+  border-radius: 6px;
+  border: 1px solid var(--dawn);
+  background: var(--dawn);
+  color: #1b1712;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: #f1c887; }
+button:disabled { background: transparent; color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+button.quiet { background: transparent; color: var(--text); border-color: var(--line); font-weight: 500; }
+button.quiet:hover { border-color: var(--muted); background: transparent; }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.status { color: var(--muted); font-size: 0.93rem; margin: 0; font-variant-numeric: tabular-nums; }
+
+.reveal { display: none; margin-top: 2.5rem; }
+.reveal.shown { display: block; }
+.reveal h2 { margin-bottom: 1rem; }
+.reveal h2:focus { outline: none; }
+.reveal h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+
+.night {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 1.75rem;
+}
+.night-row { display: grid; grid-template-columns: 3fr 2fr; }
+.night-row + .night-row { border-top: 1px solid var(--line); }
+.zone { padding: 0.85rem 1rem; font-size: 0.93rem; }
+.zone b { display: block; font-weight: 600; margin-bottom: 0.15rem; }
+.zone span { color: var(--muted); }
+.zone.empty {
+  background:
+    repeating-linear-gradient(135deg, transparent 0 10px, rgba(232,160,144,0.10) 10px 12px),
+    var(--panel);
+}
+.zone.empty b { color: var(--gap); }
+.zone.now { background: var(--panel-raised); border-left: 1px solid var(--line); }
+.zone.now b { color: var(--dawn); }
+.zone.log { grid-column: 1 / -1; background: var(--panel); }
+.zone.log b { color: var(--text); }
+
+.missing { margin: 0 0 1.5rem; padding: 0; list-style: none; display: grid; gap: 0.6rem; }
+.missing li {
+  padding: 0.8rem 1rem;
+  background: var(--panel);
+  border-radius: 6px;
+  border-left: 3px solid var(--gap);
+}
+.missing b { font-family: var(--serif); font-size: 1.08rem; font-weight: 600; display: block; }
+.missing span { color: var(--muted); font-size: 0.95rem; }
+
+.capability {
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--dawn);
+  border-radius: 6px;
+  background: var(--dawn-soft);
+}
+.capability p { margin: 0 0 0.6rem; }
+.capability p:last-child { margin: 0; }
+.capability .name { font-family: var(--serif); font-size: 1.3rem; line-height: 1.3; color: var(--dawn); }
+
+.restart { margin-top: 1.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal.shown .night .zone.empty { animation: settle 700ms ease-out both; }
+  .revealed .verdict { animation: appear 260ms ease-out both; }
+}
+@keyframes settle { from { opacity: 0; } to { opacity: 1; } }
+@keyframes appear { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 480px) {
+  main { padding: 1.75rem 1rem 2.5rem; }
+  h1 { font-size: 1.6rem; }
+  .choices { flex-direction: column; }
+  .choice label { display: block; text-align: left; }
+  .night-row { grid-template-columns: 1fr; }
+  .zone.now { border-left: none; border-top: 1px solid var(--line); }
+  .actions { flex-direction: column; align-items: stretch; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Explain Last Night’s Slowdown</h1>
+    <p class="lede">Your answer to your lead can only be as good as what the server can tell you about last night. Decide what you can honestly say before you reply.</p>
+  </header>
+
+  <section class="situation" aria-labelledby="situation-title">
+    <h2 id="situation-title">What you have this morning</h2>
+    <ul>
+      <li>You are the junior administrator on a three-person operations team at a retailer in its busiest season.</li>
+      <li>The help desk passed on complaints: the online store was slow last night, and some checkouts timed out.</li>
+      <li>You logged in to the storefront server, <span class="host">cld-lnx-01</span>. It is up, serving, and its processor is mostly idle.</li>
+      <li>A few minutes ago, its processor climbed to 90% and held there for a few minutes.</li>
+      <li>The store's application writes a log to <span class="host">/var/log/storefront</span>.</li>
+      <li>Your lead asks two questions: what happened last night, and will it happen again tonight?</li>
+    </ul>
+  </section>
+
+  <section class="task" aria-labelledby="task-title">
+    <h2 id="task-title">Which of these would you tell your lead?</h2>
+    <p>Mark each statement. Your choices stay on screen when the answers appear.</p>
+  </section>
+
+  <form id="statements" class="statements" novalidate></form>
+
+  <div class="actions">
+    <button type="button" id="reveal-btn" disabled>Show what each reading misses</button>
+    <p class="status" id="status" aria-live="polite"></p>
+  </div>
+
+  <section class="reveal" id="reveal" aria-labelledby="reveal-title">
+    <h2 id="reveal-title" tabindex="-1">What last night looks like from here</h2>
+
+    <div class="night" role="group" aria-label="What exists about last night and this morning">
+      <div class="night-row">
+        <div class="zone empty">
+          <b>Last night</b>
+          <span>No record of processor, memory, or disk. Nothing was set up to sample the server and keep the samples.</span>
+        </div>
+        <div class="zone now">
+          <b>This morning</b>
+          <span>Up, serving, mostly idle, one climb to 90%.</span>
+        </div>
+      </div>
+      <div class="night-row">
+        <div class="zone log">
+          <b>Application log</b>
+          <span>Written all night. No one on the team reads it.</span>
+        </div>
+      </div>
+    </div>
+
+    <p>Each reading that goes wrong here leans on something the server and the team don't have yet.</p>
+    <ul class="missing">
+      <li><b>A recorded past</b><span>Something sampling the server and keeping the samples, running before the evening began.</span></li>
+      <li><b>A recorded normal</b><span>What this server usually does at this hour, written down, so a number has something to be compared with.</span></li>
+      <li><b>A reader on a schedule</b><span>Someone who reads the log at set times, knows what it should say, and tells a named person.</span></li>
+    </ul>
+
+    <div class="capability">
+      <p class="name">Recording what a system normally does, before you need it.</p>
+      <p>This capability has to be in place before an alert, a log review, or any later diagnosis can work. Each of them starts from that record.</p>
+    </div>
+
+    <div class="restart">
+      <button type="button" class="quiet" id="restart-btn">Start over</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var GAPS = {
+    past: "a recorded past",
+    normal: "a recorded normal",
+    reader: "a reader on a schedule"
+  };
+
+  var STATEMENTS = [
+    {
+      id: "s1",
+      text: "The storefront server is up and serving right now.",
+      kind: "sound",
+      explain: "This is accurate, and it is what your tools can see. It describes this morning only."
+    },
+    {
+      id: "s2",
+      text: "The processor just hit 90%, so the processor is the likely problem.",
+      kind: "gap",
+      gap: "normal",
+      explain: "Ninety percent says nothing about what this server usually does at this hour. If a heavy job runs at this time every day, ninety is ordinary. If the server usually idles, a much lower number could be the unusual one."
+    },
+    {
+      id: "s3",
+      text: "The application wrote its log all through last night.",
+      kind: "sound",
+      explain: "This is accurate. A record of last night's application activity exists."
+    },
+    {
+      id: "s4",
+      text: "It looks healthy this morning, so it was most likely healthy last night.",
+      kind: "gap",
+      gap: "past",
+      explain: "A server keeps a history of its processor, memory, and disk only if something was set up beforehand to sample them and keep the samples. Nothing you have shows such a record, so this morning tells you nothing about last night."
+    },
+    {
+      id: "s5",
+      text: "The help desk heard about the slowdown before anyone on the team did.",
+      kind: "sound",
+      explain: "This is accurate, and worth saying plainly. Customers were the first to notice, so nothing on the team's side told anyone."
+    },
+    {
+      id: "s6",
+      text: "The log has been on all along, so we would have been told if something went wrong.",
+      kind: "gap",
+      gap: "reader",
+      explain: "A log that is written and never read informs no one. Being told takes a person who reads it on a schedule, something to compare it with, and someone to tell."
+    }
+  ];
+
+  var answers = {};
+  var revealed = false;
+
+  var form = document.getElementById("statements");
+  var revealBtn = document.getElementById("reveal-btn");
+  var statusEl = document.getElementById("status");
+  var revealEl = document.getElementById("reveal");
+  var revealTitle = document.getElementById("reveal-title");
+  var restartBtn = document.getElementById("restart-btn");
+
+  function verdictFor(statement, choice) {
+    var told = choice === "tell";
+    if (statement.kind === "sound") {
+      return {
+        cls: "is-sound",
+        head: told ? "You'd say this. It holds." : "You'd hold this back. It's accurate, and your lead can use it."
+      };
+    }
+    var gapName = GAPS[statement.gap];
+    return {
+      cls: "is-gap",
+      head: told ? "You'd say this. It leans on " + gapName + ", which you don't have." : "You'd hold this back, and rightly. It leans on " + gapName + ", which you don't have."
+    };
+  }
+
+  function build() {
+    form.innerHTML = "";
+    STATEMENTS.forEach(function (s) {
+      var fs = document.createElement("fieldset");
+      fs.className = "statement";
+      fs.id = "fs-" + s.id;
+
+      var lg = document.createElement("legend");
+      lg.textContent = s.text;
+      fs.appendChild(lg);
+
+      var choices = document.createElement("div");
+      choices.className = "choices";
+      [["tell", "I'd tell my lead this"], ["hold", "I wouldn't say this"]].forEach(function (opt) {
+        var wrap = document.createElement("div");
+        wrap.className = "choice";
+        var input = document.createElement("input");
+        input.type = "radio";
+        input.name = s.id;
+        input.value = opt[0];
+        input.id = s.id + "-" + opt[0];
+        input.addEventListener("change", function () {
+          answers[s.id] = opt[0];
+          updateStatus();
+        });
+        var label = document.createElement("label");
+        label.setAttribute("for", input.id);
+        label.textContent = opt[1];
+        wrap.appendChild(input);
+        wrap.appendChild(label);
+        choices.appendChild(wrap);
+      });
+      fs.appendChild(choices);
+
+      var v = document.createElement("div");
+      v.className = "verdict";
+      v.id = "v-" + s.id;
+      fs.appendChild(v);
+
+      form.appendChild(fs);
+    });
+  }
+
+  function remaining() {
+    return STATEMENTS.filter(function (s) { return !answers[s.id]; }).length;
+  }
+
+  function updateStatus() {
+    if (revealed) { return; }
+    var left = remaining();
+    revealBtn.disabled = left > 0;
+    if (left > 0) {
+      statusEl.textContent = "Mark all six to continue. " + left.toLocaleString("en-US") + " left.";
+    } else {
+      statusEl.textContent = "All six marked.";
+    }
+  }
+
+  function reveal() {
+    if (remaining() > 0 || revealed) { return; }
+    revealed = true;
+    form.classList.add("revealed");
+    STATEMENTS.forEach(function (s) {
+      var v = document.getElementById("v-" + s.id);
+      var verdict = verdictFor(s, answers[s.id]);
+      v.className = "verdict " + verdict.cls;
+      v.innerHTML = "";
+      var strong = document.createElement("strong");
+      strong.textContent = verdict.head;
+      var p = document.createElement("p");
+      p.textContent = s.explain;
+      v.appendChild(strong);
+      v.appendChild(p);
+      var inputs = form.querySelectorAll('input[name="' + s.id + '"]');
+      Array.prototype.forEach.call(inputs, function (i) { i.disabled = true; });
+    });
+    revealBtn.disabled = true;
+    statusEl.textContent = "Your choices are locked in above.";
+    revealEl.classList.add("shown");
+    revealTitle.focus();
+  }
+
+  function restart() {
+    answers = {};
+    revealed = false;
+    form.classList.remove("revealed");
+    revealEl.classList.remove("shown");
+    build();
+    updateStatus();
+    var first = form.querySelector("input");
+    if (first) { first.focus(); }
+  }
+
+  revealBtn.addEventListener("click", reveal);
+  restartBtn.addEventListener("click", restart);
+
+  build();
+  updateStatus();
+
+})();
+</script>
+</body>
+</html>
