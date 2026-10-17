@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read both reports from each line</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1b2430; --muted:#505d6e; --line:#cfd6df;
+  --accent:#0b5cd5; --accent-soft:#e4eeff;
+  --ok:#146c36; --ok-soft:#e2f3e8; --warn:#7a4f00; --warn-soft:#fcf0d2; --bad:#9d2229; --bad-soft:#fae4e5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 56px}
+.eyebrow{margin:0 0 6px;color:var(--muted);font-size:.85rem}
+h1{font-size:1.65rem;line-height:1.2;margin:0 0 10px}
+h2{font-size:1.2rem;line-height:1.3;margin:0 0 8px}
+h3{font-size:1rem;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:1.06rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+dl{margin:0} dt{font-weight:600;margin-top:10px} dt:first-child{margin-top:0} dd{margin:2px 0 0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.note{color:var(--muted);font-size:.93rem}
+.question{border-left:5px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:8px;margin:0 0 12px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative;display:inline-block}
+.pill input{position:absolute;opacity:0;top:0;left:0;width:100%;height:100%;margin:0;cursor:pointer}
+.pill span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;min-height:40px}
+.pill input:checked+span{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.pill input:disabled+span{opacity:.6;cursor:default}
+.check{display:flex;align-items:flex-start;gap:10px;min-height:40px;padding:4px 0}
+.check input{width:22px;height:22px;margin:2px 0 0;flex:none}
+.check input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:44px;max-width:100%}
+select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;font-weight:600;margin-bottom:4px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;min-height:44px}
+button.quiet{background:#fff;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.feedback{margin-top:12px}
+.verdict{padding:10px 12px;border-radius:8px;border-left:5px solid;margin:0 0 8px}
+.verdict.ok{background:var(--ok-soft);border-color:var(--ok)}
+.verdict.near{background:var(--warn-soft);border-color:var(--warn)}
+.verdict.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.verdict.hold{background:#eef1f5;border-color:var(--muted)}
+.verdict p:last-child{margin-bottom:0}
+.tag{font-weight:700}
+.switchrow{display:flex;align-items:center;gap:10px;min-height:44px}
+.switchrow input{width:22px;height:22px;margin:0}
+.switchrow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{border:1px solid var(--line);border-radius:8px;background:#fbfcfd;padding:12px;margin-top:12px}
+.panel .block{padding:8px 0;border-bottom:1px solid var(--line)}
+.panel .block:last-child{border-bottom:0}
+.steps{list-style:none;margin:0 0 12px;padding:0}
+.step{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;margin:0 0 8px}
+.step .head{font-weight:600}
+.step .sub{color:var(--muted);font-size:.93rem}
+.step.idle{background:#eef1f5;color:var(--muted)}
+.step.failed{border-color:var(--bad);background:var(--bad-soft)}
+.step.done{border-color:var(--ok)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.col{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:.9rem;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.recline{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9rem;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;overflow-wrap:anywhere}
+.none{color:var(--muted);font-style:italic}
+.result{font-weight:600}
+.mark{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.85rem;margin-left:6px}
+@media (max-width:480px){
+  main{padding:14px 12px 44px}
+  h1{font-size:1.4rem}
+  .card{padding:12px}
+  .pill span{padding:8px 12px}
+  .cols{grid-template-columns:1fr}
+  th,td{padding:6px 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">Hands-on exercise · about 5 minutes · nothing here is graded</p>
+  <h1>Read both reports from each line</h1>
+  <p class="lead">A command reports twice. What it prints is for the person watching. The number it returns is for the shell, and for any program or reader that runs the script later. When a script runs without you, only the number can be acted on. Here you read each line’s number, then work out the one number the whole script reports.</p>
+</header>
+
+<section class="card" aria-labelledby="terms-h">
+  <h2 id="terms-h">Key ideas</h2>
+  <dl>
+    <dt>Exit status</dt>
+    <dd>The number a command returns when it ends, separate from anything it prints. Zero means the command succeeded. Any other number means it failed.</dd>
+    <dt>Shell</dt>
+    <dd>The program that reads a script and runs its lines, one after another.</dd>
+  </dl>
+</section>
+
+<section class="card" aria-labelledby="practice-h">
+  <h2 id="practice-h">Practice: four lines, one failed copy</h2>
+  <p class="question">A four-line script runs with its shell left to the defaults. The budget spreadsheet it tries to copy does not exist. Each card shows what the line put on the screen and what happened.</p>
+  <ol class="steps" id="lineCards"></ol>
+  <div id="answers"></div>
+  <div class="row"><button type="button" id="checkBtn">Check my answers</button></div>
+  <div class="feedback" id="fb" role="status" aria-live="polite"></div>
+</section>
+
+<section class="card" aria-labelledby="play-h">
+  <h2 id="play-h">Play: move the failure</h2>
+  <p>Nothing here is marked right or wrong. Change what goes wrong and which line comes last, and watch which number the script reports.</p>
+  <fieldset>
+    <legend>What goes wrong?</legend>
+    <div class="pills" id="wrongPills">
+      <label class="pill"><input type="radio" name="wrong" value="none"><span>Nothing goes wrong</span></label>
+      <label class="pill"><input type="radio" name="wrong" value="copy" checked><span>The copy fails</span></label>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Which line comes last?</legend>
+    <div class="pills" id="lastPills">
+      <label class="pill"><input type="radio" name="last" value="done" checked><span>Print the word Done</span></label>
+      <label class="pill"><input type="radio" name="last" value="check"><span>Check that the copy is in the folder</span></label>
+    </div>
+  </fieldset>
+  <div class="panel" id="playOut" role="status" aria-live="polite"></div>
+</section>
+</main>
+
+<noscript><p style="max-width:720px;margin:16px auto;padding:0 16px">This exercise needs JavaScript to run.</p></noscript>
+
+<script>
+/*CORE*/
+const Core = (function () {
+  var LABELS = {
+    folder: "Make today’s folder",
+    copy: "Copy the budget spreadsheet into it",
+    check: "Check that the copy is in the folder",
+    done: "Print the word Done"
+  };
+  // One line's behaviour. printed is what appears on the screen (null for nothing); ok is whether the line's work succeeded.
+  function runLine(id, copied) {
+    if (id === "folder") return { printed: null, ok: true, happened: "The folder is made." };
+    if (id === "copy") return copied
+      ? { printed: null, ok: true, happened: "The spreadsheet is copied." }
+      : { printed: "A complaint that the spreadsheet does not exist.", ok: false, happened: "There is no spreadsheet to copy." };
+    if (id === "check") return copied
+      ? { printed: null, ok: true, happened: "The copy is in the folder." }
+      : { printed: null, ok: false, happened: "The copy is not in the folder." };
+    return { printed: "Done", ok: true, happened: "The word is printed." };
+  }
+  // The shell's defaults: every line runs, and the script reports the number of the last line.
+  function run(copyFails, order) {
+    var copied = !copyFails, lines = [];
+    order.forEach(function (id, i) {
+      var r = runLine(id, copied);
+      lines.push({ id: id, pos: i + 1, label: LABELS[id], printed: r.printed, ok: r.ok, happened: r.happened });
+    });
+    var last = lines[lines.length - 1];
+    return { lines: lines, scriptOk: last.ok, owner: last.pos };
+  }
+  var PRACTICE_ORDER = ["folder", "copy", "check", "done"];
+  function key() {
+    var r = run(true, PRACTICE_ORDER);
+    return { lines: r.lines.map(function (l) { return l.ok; }), script: r.scriptOk, owner: r.owner };
+  }
+  var CRITERION = {
+    line: "A line’s number depends on whether its work succeeded, not on whether it printed anything.",
+    script: "The script reports a single number, and it is the number of the last line that ran.",
+    owner: "The script’s number belongs to the last line that ran, and to no other."
+  };
+  // ans: { n: ["zero"|"nonzero" x4], script: "zero"|"nonzero", owner: 1..4 }
+  function grade(ans) {
+    var k = key(), off = [];
+    for (var i = 0; i < 4; i++) {
+      if ((ans.n[i] === "zero") !== k.lines[i]) off.push({ kind: "line", pos: i + 1 });
+    }
+    if ((ans.script === "zero") !== k.script) off.push({ kind: "script" });
+    if (Number(ans.owner) !== k.owner) off.push({ kind: "owner" });
+    return { state: off.length === 0 ? "correct" : off.length === 1 ? "near" : "wrong", off: off };
+  }
+  function elementName(o) {
+    if (o.kind === "line") return "line " + o.pos + "’s number";
+    if (o.kind === "script") return "the number the script reports";
+    return "whose number the script reports";
+  }
+  return { LABELS: LABELS, PRACTICE_ORDER: PRACTICE_ORDER, run: run, key: key, grade: grade, elementName: elementName, CRITERION: CRITERION };
+})();
+/*ENDCORE*/
+
+(function () {
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  function val(name) { var el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : null; }
+
+  var practice = Core.run(true, Core.PRACTICE_ORDER);
+  var cards = "";
+  practice.lines.forEach(function (l) {
+    cards += '<li class="step"><div class="head">Line ' + fmt(l.pos) + ": " + esc(l.label) + '</div>' +
+      '<div class="sub">On the screen: ' + (l.printed ? esc(l.printed) : "nothing") + "</div>" +
+      '<div class="sub">What happened: ' + esc(l.happened) + "</div></li>";
+  });
+  document.getElementById("lineCards").innerHTML = cards;
+
+  var ans = "";
+  practice.lines.forEach(function (l) {
+    ans += '<fieldset><legend>The number line ' + fmt(l.pos) + " returns</legend><div class=\"pills\">" +
+      '<label class="pill"><input type="radio" name="n' + l.pos + '" value="zero"><span>Zero</span></label>' +
+      '<label class="pill"><input type="radio" name="n' + l.pos + '" value="nonzero"><span>Not zero</span></label></div></fieldset>';
+  });
+  ans += '<fieldset><legend>The number the whole script reports</legend><div class="pills">' +
+    '<label class="pill"><input type="radio" name="script" value="zero"><span>Zero</span></label>' +
+    '<label class="pill"><input type="radio" name="script" value="nonzero"><span>Not zero</span></label></div></fieldset>';
+  ans += '<label class="field"><span>That number is the one returned by</span><select id="owner"><option value="">Choose a line</option>';
+  practice.lines.forEach(function (l) { ans += '<option value="' + l.pos + '">Line ' + fmt(l.pos) + "</option>"; });
+  ans += "</select></label>";
+  document.getElementById("answers").innerHTML = ans;
+
+  function clearFb() { document.getElementById("fb").innerHTML = ""; }
+  document.getElementById("answers").addEventListener("change", clearFb);
+
+  document.getElementById("checkBtn").addEventListener("click", function () {
+    var a = { n: [], script: val("script"), owner: document.getElementById("owner").value };
+    var open = 0;
+    for (var i = 1; i <= 4; i++) { var v = val("n" + i); a.n.push(v); if (!v) open++; }
+    if (!a.script) open++;
+    if (!a.owner) open++;
+    var fb = document.getElementById("fb");
+    if (open > 0) { fb.innerHTML = '<div class="verdict hold"><p><span class="tag">Answer first.</span> ' + fmt(open) + (open === 1 ? " question is" : " questions are") + " still open.</p></div>"; return; }
+    var g = Core.grade(a), h;
+    if (g.state === "correct") {
+      h = '<div class="verdict ok"><p><span class="tag">Correct.</span> Line 3 put nothing on the screen and still returned a number that is not zero. Line 4 printed a cheerful word and returned zero. The script reports line 4’s number, the last one, so it reports success although the copy failed.</p></div>';
+    } else if (g.state === "near") {
+      var o = g.off[0];
+      h = '<div class="verdict near"><p><span class="tag">Close.</span> The structure is right, and one answer is out of place: ' + esc(Core.elementName(o)) + ".</p><p>" + esc(Core.CRITERION[o.kind]) + "</p></div>";
+    } else {
+      h = '<div class="verdict wrong"><p><span class="tag">Not yet.</span> Several answers do not match. Two rules decide this one. A line returns its own number, whatever it prints. The script reports a single number.</p><p><strong>First move:</strong> cover the “on the screen” text, and for each line ask only whether its work succeeded.</p></div>';
+    }
+    fb.innerHTML = h;
+  });
+
+  function play() {
+    var wrong = val("wrong"), last = val("last");
+    var order = last === "done" ? ["folder", "copy", "check", "done"] : ["folder", "copy", "done", "check"];
+    var r = Core.run(wrong === "copy", order);
+    var h = "";
+    r.lines.forEach(function (l) {
+      h += '<div class="block"><div class="head"><strong>Line ' + fmt(l.pos) + ":</strong> " + esc(l.label) + "</div>" +
+        "<div>On the screen: " + (l.printed ? esc(l.printed) : "nothing") + "</div>" +
+        '<div class="num">Returns: ' + (l.ok ? "0, success" : "not 0, failure") + "</div></div>";
+    });
+    h += '<div class="block result">The script reports: ' + (r.scriptOk ? "0, success" : "not 0, failure") + ". It is line " + fmt(r.owner) + "’s number.</div>";
+    document.getElementById("playOut").innerHTML = h;
+  }
+  document.getElementById("wrongPills").addEventListener("change", play);
+  document.getElementById("lastPills").addEventListener("change", play);
+  play();
+})();
+</script>
+</body>
+</html>

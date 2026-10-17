@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Write the line you want to find tomorrow</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1b2430; --muted:#505d6e; --line:#cfd6df;
+  --accent:#0b5cd5; --accent-soft:#e4eeff;
+  --ok:#146c36; --ok-soft:#e2f3e8; --warn:#7a4f00; --warn-soft:#fcf0d2; --bad:#9d2229; --bad-soft:#fae4e5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 56px}
+.eyebrow{margin:0 0 6px;color:var(--muted);font-size:.85rem}
+h1{font-size:1.65rem;line-height:1.2;margin:0 0 10px}
+h2{font-size:1.2rem;line-height:1.3;margin:0 0 8px}
+h3{font-size:1rem;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:1.06rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+dl{margin:0} dt{font-weight:600;margin-top:10px} dt:first-child{margin-top:0} dd{margin:2px 0 0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.note{color:var(--muted);font-size:.93rem}
+.question{border-left:5px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:8px;margin:0 0 12px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative;display:inline-block}
+.pill input{position:absolute;opacity:0;top:0;left:0;width:100%;height:100%;margin:0;cursor:pointer}
+.pill span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;min-height:40px}
+.pill input:checked+span{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.pill input:disabled+span{opacity:.6;cursor:default}
+.check{display:flex;align-items:flex-start;gap:10px;min-height:40px;padding:4px 0}
+.check input{width:22px;height:22px;margin:2px 0 0;flex:none}
+.check input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:44px;max-width:100%}
+select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;font-weight:600;margin-bottom:4px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;min-height:44px}
+button.quiet{background:#fff;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.feedback{margin-top:12px}
+.verdict{padding:10px 12px;border-radius:8px;border-left:5px solid;margin:0 0 8px}
+.verdict.ok{background:var(--ok-soft);border-color:var(--ok)}
+.verdict.near{background:var(--warn-soft);border-color:var(--warn)}
+.verdict.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.verdict.hold{background:#eef1f5;border-color:var(--muted)}
+.verdict p:last-child{margin-bottom:0}
+.tag{font-weight:700}
+.switchrow{display:flex;align-items:center;gap:10px;min-height:44px}
+.switchrow input{width:22px;height:22px;margin:0}
+.switchrow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{border:1px solid var(--line);border-radius:8px;background:#fbfcfd;padding:12px;margin-top:12px}
+.panel .block{padding:8px 0;border-bottom:1px solid var(--line)}
+.panel .block:last-child{border-bottom:0}
+.steps{list-style:none;margin:0 0 12px;padding:0}
+.step{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;margin:0 0 8px}
+.step .head{font-weight:600}
+.step .sub{color:var(--muted);font-size:.93rem}
+.step.idle{background:#eef1f5;color:var(--muted)}
+.step.failed{border-color:var(--bad);background:var(--bad-soft)}
+.step.done{border-color:var(--ok)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.col{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:.9rem;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.recline{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9rem;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;overflow-wrap:anywhere}
+.none{color:var(--muted);font-style:italic}
+.result{font-weight:600}
+.mark{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.85rem;margin-left:6px}
+@media (max-width:480px){
+  main{padding:14px 12px 44px}
+  h1{font-size:1.4rem}
+  .card{padding:12px}
+  .pill span{padding:8px 12px}
+  .cols{grid-template-columns:1fr}
+  th,td{padding:6px 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">Hands-on exercise · about 5 minutes · nothing here is graded</p>
+  <h1>Write the line you want to find tomorrow</h1>
+  <p class="lead">When someone asks whether a job finished on a given day, and how it ended, you can answer only from what the run itself recorded. A script file shows what would be done. A dated line the run writes shows what was done. Start from the one line you want to find the morning after, then test it on a reader who has never seen the script.</p>
+</header>
+
+<section class="card" aria-labelledby="terms-h">
+  <h2 id="terms-h">Key ideas</h2>
+  <dl>
+    <dt>Run record</dt>
+    <dd>A dated line that a script writes itself, saying what the run did and how it ended.</dd>
+    <dt>Exit status</dt>
+    <dd>The number a command or script returns when it ends. Zero means success. Any other number means failure.</dd>
+  </dl>
+</section>
+
+<section class="card" aria-labelledby="practice-h">
+  <h2 id="practice-h">Practice: build the line</h2>
+  <p class="question"><strong>The question a reader will ask:</strong> did the archive job finish on that date, and how did it end?</p>
+  <p>Choose how your script words each part of its line. One set of choices writes the line for a clean run and for a run that stops at a step. <span class="note">The date in this exercise is illustrative, and no answer depends on it.</span></p>
+  <div id="fields"></div>
+  <div class="panel" id="preview" aria-live="polite"></div>
+  <div class="row" style="margin-top:12px"><button type="button" id="testBtn">Test my line on a reader</button></div>
+  <div class="feedback" id="fb" role="status" aria-live="polite"></div>
+  <div class="panel" id="reader" role="status" aria-live="polite" hidden></div>
+</section>
+
+<section class="card" aria-labelledby="play-h">
+  <h2 id="play-h">Play: move the failure</h2>
+  <p>Nothing here is marked right or wrong. Choose the step where the failed run stops, and read the lines your choices write.</p>
+  <fieldset>
+    <legend>The failed run stops at</legend>
+    <div class="pills" id="stepPills">
+      <label class="pill"><input type="radio" name="fstep" value="1"><span>Step 1</span></label>
+      <label class="pill"><input type="radio" name="fstep" value="2" checked><span>Step 2</span></label>
+      <label class="pill"><input type="radio" name="fstep" value="3"><span>Step 3</span></label>
+    </div>
+  </fieldset>
+  <div class="panel" id="playOut" role="status" aria-live="polite"></div>
+</section>
+</main>
+
+<noscript><p style="max-width:720px;margin:16px auto;padding:0 16px">This exercise needs JavaScript to run.</p></noscript>
+
+<script>
+/*CORE*/
+const Core = (function () {
+  var DATE = "2026-10-13";
+  var FIELDS = [
+    { id: "date", label: "The date", options: [
+      { id: "full", text: "The full date", ok: true },
+      { id: "weekday", text: "Only the weekday", ok: false },
+      { id: "none", text: "No date", ok: false } ] },
+    { id: "did", label: "What the run did", options: [
+      { id: "named", text: "Names the job", ok: true },
+      { id: "vague", text: "Says only “script”", ok: false } ] },
+    { id: "ended", label: "How the run ended", options: [
+      { id: "outcome", text: "Says whether every step succeeded, or where the run stopped", ok: true },
+      { id: "ran", text: "Says only that the job ran", ok: false },
+      { id: "nothing", text: "Says nothing about the ending", ok: false } ] },
+    { id: "status", label: "The exit status", options: [
+      { id: "yes", text: "Includes it", ok: true },
+      { id: "no", text: "Leaves it out", ok: false } ] }
+  ];
+  var BEST = { date: "full", did: "named", ended: "outcome", status: "yes" };
+  // c: { date, did, ended, status }; failStep: null for a clean run, else the step number where the run stops.
+  function lineFor(c, failStep) {
+    var left = [];
+    if (c.date === "full") left.push(DATE); else if (c.date === "weekday") left.push("Tuesday");
+    left.push(c.did === "named" ? "archive job" : "script");
+    var tail = [];
+    if (c.ended === "outcome") tail.push(failStep ? "stopped at step " + failStep : "all steps succeeded");
+    else if (c.ended === "ran") tail.push("ran");
+    if (c.status === "yes") tail.push(failStep ? "exit status not 0" : "exit status 0");
+    return left.join(" ") + (tail.length ? ": " + tail.join(", ") : "");
+  }
+  function canAnswer(c) { return c.date === "full" && c.did === "named" && c.ended === "outcome" && c.status === "yes"; }
+  function missing(c) {
+    var m = [];
+    if (c.date === "weekday") m.push("which Tuesday it describes");
+    else if (c.date === "none") m.push("which day it describes");
+    if (c.did === "vague") m.push("which job it describes");
+    if (c.ended === "ran") m.push("how it ended, because “ran” says only that the script reached its last line");
+    else if (c.ended === "nothing") m.push("how it ended");
+    if (c.status === "no") m.push("the exit status");
+    return m;
+  }
+  function readerAnswer(c, failStep) {
+    if (canAnswer(c)) {
+      return failStep
+        ? "No, it did not finish on " + DATE + ". It stopped at step " + failStep + ", and the exit status was not 0."
+        : "Yes, it finished on " + DATE + ". All steps succeeded, and the exit status was 0.";
+    }
+    return "A reader cannot say. The line does not tell them " + missing(c).join(", or ") + ".";
+  }
+  function distinguishable(c, failStep) { return lineFor(c, null) !== lineFor(c, failStep); }
+  // Elements are the four parts; a part is out of place when its chosen option is not the one that carries the fact.
+  function grade(c) {
+    var off = [];
+    FIELDS.forEach(function (f) {
+      var opt = f.options.filter(function (o) { return o.id === c[f.id]; })[0];
+      if (!opt.ok) off.push({ field: f.id, chosen: c[f.id] });
+    });
+    return { state: off.length === 0 ? "correct" : off.length === 1 ? "near" : "wrong", off: off };
+  }
+  var REASON = {
+    date: { weekday: "A weekday comes round every week, so the line cannot be matched to the day a reader is asking about.",
+            none: "With no date, the line names no day, so a reader cannot match it to the day they are asking about." },
+    did: { vague: "“Script” does not say which job ran, and one machine can run many." },
+    ended: { ran: "“Ran” means only that the script reached its last line. It reads the same after a clean run and after a failed one.",
+             nothing: "A line with nothing about the ending cannot say how the job ended." },
+    status: { no: "The exit status is the one fact a reviewer or a program can check without trusting the script’s wording, and this line leaves it out." }
+  };
+  var PART_NAME = { date: "the date", did: "what the run did", ended: "how the run ended", status: "the exit status" };
+  return { DATE: DATE, FIELDS: FIELDS, BEST: BEST, lineFor: lineFor, canAnswer: canAnswer, missing: missing, readerAnswer: readerAnswer, distinguishable: distinguishable, grade: grade, REASON: REASON, PART_NAME: PART_NAME };
+})();
+/*ENDCORE*/
+
+(function () {
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  function val(name) { var el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : null; }
+  var PRACTICE_FAIL = 2;
+
+  var fh = "";
+  Core.FIELDS.forEach(function (f) {
+    fh += '<fieldset><legend>' + esc(f.label) + '</legend><div class="pills">';
+    f.options.forEach(function (o) { fh += '<label class="pill"><input type="radio" name="f-' + f.id + '" value="' + o.id + '"><span>' + esc(o.text) + "</span></label>"; });
+    fh += "</div></fieldset>";
+  });
+  document.getElementById("fields").innerHTML = fh;
+
+  function choices() {
+    var c = {}, open = 0;
+    Core.FIELDS.forEach(function (f) { var v = val("f-" + f.id); c[f.id] = v; if (!v) open++; });
+    return { c: c, open: open };
+  }
+
+  function preview() {
+    var ch = choices(), box = document.getElementById("preview");
+    if (ch.open > 0) { box.innerHTML = '<span class="none">Choose each part to see your line.</span>'; return; }
+    box.innerHTML = "<h3>Your line</h3><div>Clean run</div><div class=\"recline\">" + esc(Core.lineFor(ch.c, null)) + "</div>" +
+      "<div style=\"margin-top:8px\">Run that stops at step " + fmt(PRACTICE_FAIL) + "</div><div class=\"recline\">" + esc(Core.lineFor(ch.c, PRACTICE_FAIL)) + "</div>";
+  }
+
+  document.getElementById("fields").addEventListener("change", function () {
+    preview(); play();
+    document.getElementById("fb").innerHTML = "";
+    document.getElementById("reader").hidden = true;
+  });
+
+  document.getElementById("testBtn").addEventListener("click", function () {
+    var ch = choices(), fb = document.getElementById("fb"), reader = document.getElementById("reader");
+    if (ch.open > 0) { fb.innerHTML = '<div class="verdict hold"><p><span class="tag">Answer first.</span> ' + fmt(ch.open) + (ch.open === 1 ? " part is" : " parts are") + " still open.</p></div>"; reader.hidden = true; return; }
+    var g = Core.grade(ch.c), h;
+    if (g.state === "correct") {
+      h = '<div class="verdict ok"><p><span class="tag">Correct.</span> A reader who has never seen the script can answer from either line. The clean run says all steps succeeded with an exit status of 0, and the failed run says where it stopped, with an exit status that is not 0. The two lines cannot be mistaken for each other.</p></div>';
+    } else if (g.state === "near") {
+      var o = g.off[0];
+      h = '<div class="verdict near"><p><span class="tag">Close.</span> The structure is right, and one part is out of place: ' + esc(Core.PART_NAME[o.field]) + ".</p><p>" + esc(Core.REASON[o.field][o.chosen]) + "</p></div>";
+    } else {
+      h = '<div class="verdict wrong"><p><span class="tag">Not yet.</span> A reader could not answer from this line. A record must carry the date, what the run did, and how it ended, including its exit status, and it must read differently after a failed run than after a clean one.</p><p><strong>First move:</strong> write the line you want to find the morning after a failed run, then ask whether someone who has never seen the script could decide from it whether the job worked.</p></div>';
+    }
+    fb.innerHTML = h;
+    var cleanLine = Core.lineFor(ch.c, null), failLine = Core.lineFor(ch.c, PRACTICE_FAIL);
+    var r = "<h3>What a reader can answer</h3>" +
+      "<div class=\"block\"><div>Clean run: <span class=\"mono\">" + esc(cleanLine) + "</span></div><div class=\"result\">" + esc(Core.readerAnswer(ch.c, null)) + "</div></div>" +
+      "<div class=\"block\"><div>Run that stops at step " + fmt(PRACTICE_FAIL) + ": <span class=\"mono\">" + esc(failLine) + "</span></div><div class=\"result\">" + esc(Core.readerAnswer(ch.c, PRACTICE_FAIL)) + "</div></div>" +
+      "<div class=\"block\">" + (Core.distinguishable(ch.c, PRACTICE_FAIL) ? "The two runs write different lines, so a reader can tell them apart." : "The two runs write the same line, so a reader cannot tell them apart.") + "</div>";
+    reader.innerHTML = r; reader.hidden = false;
+  });
+
+  function play() {
+    var ch = choices(), example = ch.open > 0, c = example ? Core.BEST : ch.c, step = Number(val("fstep"));
+    var h = example ? '<p class="note">Your line is not complete yet, so this shows an example line. Choose each part above to see yours.</p>' : "";
+    h += '<div class="block"><div>Clean run</div><div class="recline">' + esc(Core.lineFor(c, null)) + "</div></div>";
+    h += '<div class="block"><div>Run that stops at step ' + fmt(step) + '</div><div class="recline">' + esc(Core.lineFor(c, step)) + "</div></div>";
+    h += '<div class="block result">' + esc(Core.readerAnswer(c, step)) + "</div>";
+    document.getElementById("playOut").innerHTML = h;
+  }
+  document.getElementById("stepPills").addEventListener("change", play);
+  preview(); play();
+})();
+</script>
+</body>
+</html>

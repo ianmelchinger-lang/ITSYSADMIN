@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Name the line that must never run</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1b2430; --muted:#505d6e; --line:#cfd6df;
+  --accent:#0b5cd5; --accent-soft:#e4eeff;
+  --ok:#146c36; --ok-soft:#e2f3e8; --warn:#7a4f00; --warn-soft:#fcf0d2; --bad:#9d2229; --bad-soft:#fae4e5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 56px}
+.eyebrow{margin:0 0 6px;color:var(--muted);font-size:.85rem}
+h1{font-size:1.65rem;line-height:1.2;margin:0 0 10px}
+h2{font-size:1.2rem;line-height:1.3;margin:0 0 8px}
+h3{font-size:1rem;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:1.06rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+dl{margin:0} dt{font-weight:600;margin-top:10px} dt:first-child{margin-top:0} dd{margin:2px 0 0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.note{color:var(--muted);font-size:.93rem}
+.question{border-left:5px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:8px;margin:0 0 12px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative;display:inline-block}
+.pill input{position:absolute;opacity:0;top:0;left:0;width:100%;height:100%;margin:0;cursor:pointer}
+.pill span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;min-height:40px}
+.pill input:checked+span{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.pill input:disabled+span{opacity:.6;cursor:default}
+.check{display:flex;align-items:flex-start;gap:10px;min-height:40px;padding:4px 0}
+.check input{width:22px;height:22px;margin:2px 0 0;flex:none}
+.check input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:44px;max-width:100%}
+select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;font-weight:600;margin-bottom:4px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;min-height:44px}
+button.quiet{background:#fff;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.feedback{margin-top:12px}
+.verdict{padding:10px 12px;border-radius:8px;border-left:5px solid;margin:0 0 8px}
+.verdict.ok{background:var(--ok-soft);border-color:var(--ok)}
+.verdict.near{background:var(--warn-soft);border-color:var(--warn)}
+.verdict.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.verdict.hold{background:#eef1f5;border-color:var(--muted)}
+.verdict p:last-child{margin-bottom:0}
+.tag{font-weight:700}
+.switchrow{display:flex;align-items:center;gap:10px;min-height:44px}
+.switchrow input{width:22px;height:22px;margin:0}
+.switchrow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{border:1px solid var(--line);border-radius:8px;background:#fbfcfd;padding:12px;margin-top:12px}
+.panel .block{padding:8px 0;border-bottom:1px solid var(--line)}
+.panel .block:last-child{border-bottom:0}
+.steps{list-style:none;margin:0 0 12px;padding:0}
+.step{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;margin:0 0 8px}
+.step .head{font-weight:600}
+.step .sub{color:var(--muted);font-size:.93rem}
+.step.idle{background:#eef1f5;color:var(--muted)}
+.step.failed{border-color:var(--bad);background:var(--bad-soft)}
+.step.done{border-color:var(--ok)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.col{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:.9rem;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.recline{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9rem;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;overflow-wrap:anywhere}
+.none{color:var(--muted);font-style:italic}
+.result{font-weight:600}
+.mark{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.85rem;margin-left:6px}
+@media (max-width:480px){
+  main{padding:14px 12px 44px}
+  h1{font-size:1.4rem}
+  .card{padding:12px}
+  .pill span{padding:8px 12px}
+  .cols{grid-template-columns:1fr}
+  th,td{padding:6px 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">Hands-on exercise · about 6 minutes · nothing here is graded</p>
+  <h1>Name the line that must never run</h1>
+  <p class="lead">Fail-fast means the first failed command ends the run, so no later step acts on what the failure left behind. The stop is a setting an author switches on, and then proves with a forced failure: break one step on purpose and watch the lines after it. Here you decide which later lines must never run, then force the failure and read the result.</p>
+</header>
+
+<section class="card" aria-labelledby="terms-h">
+  <h2 id="terms-h">Key ideas</h2>
+  <dl>
+    <dt>Fail-fast</dt>
+    <dd>A way of running a script in which the first failed command ends the run. In Bash it is a setting the author turns on, named errexit. The shell leaves it off until asked.</dd>
+    <dt>Forced failure</dt>
+    <dd>A step you break on purpose, so you can see whether a protection works.</dd>
+  </dl>
+</section>
+
+<section class="card" aria-labelledby="practice-h">
+  <h2 id="practice-h">Practice: break line 2</h2>
+  <p class="question">A five-line script changes the web server’s settings. Its stop is on. Each card says what the line does and what it relies on.</p>
+  <ol class="steps" id="stepCards"></ol>
+  <p><strong>The forced failure:</strong> line 2 fails, because the new settings file cannot be written.</p>
+  <fieldset>
+    <legend>Which later lines must never run if line 2 fails? Mark each one that must not.</legend>
+    <div id="marks"></div>
+  </fieldset>
+  <div class="row">
+    <button type="button" id="checkBtn">Check my marks</button>
+    <button type="button" id="forceBtn" class="quiet">Force the failure</button>
+  </div>
+  <div class="feedback" id="fb" role="status" aria-live="polite"></div>
+  <div class="panel" id="proof" role="status" aria-live="polite" hidden></div>
+</section>
+
+<section class="card" aria-labelledby="play-h">
+  <h2 id="play-h">Play: break a different line</h2>
+  <p>Nothing here is marked right or wrong. Choose which line fails and see which later lines rely on it, and which ones the stop idles anyway.</p>
+  <fieldset>
+    <legend>Which line fails?</legend>
+    <div class="pills" id="breakPills"></div>
+  </fieldset>
+  <div class="panel" id="playOut" role="status" aria-live="polite"></div>
+</section>
+</main>
+
+<noscript><p style="max-width:720px;margin:16px auto;padding:0 16px">This exercise needs JavaScript to run.</p></noscript>
+
+<script>
+/*CORE*/
+const Core = (function () {
+  // Each step lists the earlier steps whose results it relies on.
+  var STEPS = [
+    { pos: 1, label: "Back up the current settings file", does: "Leaves a backup copy beside the current file.", needs: [] },
+    { pos: 2, label: "Write the new settings file", does: "Replaces the current file, so the backup becomes the only other copy.", needs: [1] },
+    { pos: 3, label: "Test the new settings file", does: "Reads the file that line 2 wrote and says whether it is valid.", needs: [2] },
+    { pos: 4, label: "Reload the web server", does: "Makes the web server start using the new file once the test has passed.", needs: [3] },
+    { pos: 5, label: "Copy the backup to the archive folder", does: "Stores the backup copy somewhere safe.", needs: [1] }
+  ];
+  function step(p) { return STEPS[p - 1]; }
+  function listLines(a) {
+    if (a.length === 0) return "nothing earlier";
+    var names = a.map(function (p) { return "line " + p; });
+    return names.length === 1 ? names[0] : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  }
+  function reliesText(s) { return "Relies on " + listLines(s.needs) + "."; }
+  // Later lines that rely on the broken line, directly or through a chain.
+  function dependents(broken) {
+    var set = [broken], changed = true;
+    while (changed) {
+      changed = false;
+      STEPS.forEach(function (s) {
+        if (set.indexOf(s.pos) < 0 && s.needs.some(function (n) { return set.indexOf(n) >= 0; })) { set.push(s.pos); changed = true; }
+      });
+    }
+    return set.filter(function (p) { return p !== broken; }).sort(function (a, b) { return a - b; });
+  }
+  // With the stop on: lines before the break succeed, the broken line fails, every later line is idled.
+  function simulate(broken) {
+    var rows = STEPS.map(function (s) {
+      return { pos: s.pos, state: s.pos < broken ? "succeeded" : s.pos === broken ? "failed" : "idle" };
+    });
+    var must = dependents(broken);
+    var idled = STEPS.filter(function (s) { return s.pos > broken; }).map(function (s) { return s.pos; });
+    return {
+      rows: rows, scriptOk: false, owner: broken, must: must, idled: idled,
+      blunt: idled.filter(function (p) { return must.indexOf(p) < 0; })
+    };
+  }
+  // A path of reliance from line s back to the broken line, for example [4, 3, 2].
+  function chain(s, broken) {
+    function walk(p, path) {
+      if (p === broken) return path;
+      var needs = step(p).needs;
+      for (var i = 0; i < needs.length; i++) {
+        var r = walk(needs[i], path.concat(needs[i]));
+        if (r) return r;
+      }
+      return null;
+    }
+    return walk(s, [s]);
+  }
+  function chainText(path) {
+    var parts = [];
+    for (var i = 0; i < path.length - 1; i++) parts.push("line " + path[i] + " relies on line " + path[i + 1]);
+    return parts.join(", and ");
+  }
+  // marked: array of line numbers the learner says must never run.
+  function grade(broken, marked) {
+    var must = dependents(broken), off = [];
+    STEPS.filter(function (s) { return s.pos > broken; }).forEach(function (s) {
+      var m = marked.indexOf(s.pos) >= 0, k = must.indexOf(s.pos) >= 0;
+      if (m !== k) off.push({ pos: s.pos, kind: m ? "extra" : "missing" });
+    });
+    return { state: off.length === 0 ? "correct" : off.length === 1 ? "near" : "wrong", off: off, must: must };
+  }
+  return { STEPS: STEPS, step: step, reliesText: reliesText, listLines: listLines, dependents: dependents, simulate: simulate, chain: chain, chainText: chainText, grade: grade };
+})();
+/*ENDCORE*/
+
+(function () {
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  function val(name) { var el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : null; }
+  var BROKEN = 2;
+
+  var cards = "";
+  Core.STEPS.forEach(function (s) {
+    cards += '<li class="step"><div class="head">Line ' + fmt(s.pos) + ": " + esc(s.label) + '</div><div class="sub">' + esc(s.does) + " " + esc(Core.reliesText(s)) + "</div></li>";
+  });
+  document.getElementById("stepCards").innerHTML = cards;
+
+  var marks = "";
+  Core.STEPS.forEach(function (s) {
+    if (s.pos > BROKEN) marks += '<label class="check"><input type="checkbox" name="mark" value="' + s.pos + '"><span>Line ' + fmt(s.pos) + ": " + esc(s.label) + "</span></label>";
+  });
+  document.getElementById("marks").innerHTML = marks;
+
+  function marked() {
+    return Array.prototype.map.call(document.querySelectorAll('input[name="mark"]:checked'), function (el) { return Number(el.value); });
+  }
+
+  document.getElementById("marks").addEventListener("change", function () { document.getElementById("fb").innerHTML = ""; });
+
+  document.getElementById("checkBtn").addEventListener("click", function () {
+    var g = Core.grade(BROKEN, marked()), h;
+    if (g.state === "correct") {
+      h = '<div class="verdict ok"><p><span class="tag">Correct.</span> Line 3 tests the file line 2 should have written, and line 4 reloads the server on the strength of that test. Line 5 relies only on the backup, so a failure at line 2 does not make it unsafe.</p></div>';
+    } else if (g.state === "near") {
+      var o = g.off[0], s = Core.step(o.pos), why;
+      if (o.kind === "extra") why = "Line " + o.pos + " relies on " + Core.listLines(s.needs) + ", not on anything line " + BROKEN + " produces or protects, so a failure at line " + BROKEN + " does not make it unsafe. The stop will still idle it.";
+      else why = "Line " + o.pos + " is unsafe after a failure at line " + BROKEN + ": " + Core.chainText(Core.chain(o.pos, BROKEN)) + ".";
+      h = '<div class="verdict near"><p><span class="tag">Close.</span> The structure is right, and one mark is out of place: line ' + fmt(o.pos) + ".</p><p>" + esc(why) + "</p></div>";
+    } else {
+      h = '<div class="verdict wrong"><p><span class="tag">Not yet.</span> Two or more marks do not match. A later line must never run when it relies on what the broken line produces or protects, either directly or through a chain of other lines.</p><p><strong>First move:</strong> for each later line, ask what it relies on, then follow that back to line ' + fmt(BROKEN) + ".</p></div>";
+    }
+    document.getElementById("fb").innerHTML = h;
+  });
+
+  document.getElementById("forceBtn").addEventListener("click", function () {
+    var r = Core.simulate(BROKEN), mine = marked();
+    var h = "<h3>The forced failure, with the stop on</h3>" + stateList(r);
+    h += '<div class="block result">The script reports: not 0, failure. It is line ' + fmt(r.owner) + "’s number, and no later line ran.</div>";
+    if (mine.length) h += '<div class="block">You marked ' + esc(Core.listLines(mine.sort(function (a, b) { return a - b; }))) + ". Every one of them stayed idle.</div>";
+    else h += '<div class="block">You marked no lines. Every later line stayed idle all the same.</div>';
+    if (r.blunt.length) h += '<div class="block">The stop also idled ' + esc(Core.listLines(r.blunt)) + ", which did not rely on line " + fmt(BROKEN) + ". The stop ends the run, so it does not pick and choose.</div>";
+    var box = document.getElementById("proof");
+    box.innerHTML = h; box.hidden = false;
+  });
+
+  function stateList(r) {
+    var h = '<ol class="steps">';
+    r.rows.forEach(function (row) {
+      var s = Core.step(row.pos), cls = row.state === "succeeded" ? "done" : row.state === "failed" ? "failed" : "idle";
+      var txt = row.state === "succeeded" ? "Ran, succeeded" : row.state === "failed" ? "Ran, failed. The run ends here." : "Did not run";
+      var why = "";
+      if (row.state === "idle") why = r.must.indexOf(row.pos) >= 0 ? " It relies on what the broken line produces or protects." : " It did not rely on the broken line, and the stop ended the run before it.";
+      h += '<li class="step ' + cls + '"><div class="head">Line ' + fmt(row.pos) + ": " + esc(s.label) + ': <span class="num">' + esc(txt) + "</span></div>" + (why ? '<div class="sub">' + esc(why.trim()) + "</div>" : "") + "</li>";
+    });
+    return h + "</ol>";
+  }
+
+  var bp = "";
+  Core.STEPS.forEach(function (s) {
+    bp += '<label class="pill"><input type="radio" name="brk" value="' + s.pos + '"' + (s.pos === 3 ? " checked" : "") + "><span>Line " + fmt(s.pos) + " fails</span></label>";
+  });
+  document.getElementById("breakPills").innerHTML = bp;
+
+  function play() {
+    var b = Number(val("brk")), r = Core.simulate(b);
+    var h = stateList(r);
+    h += '<div class="block result">The script reports: not 0, failure. It is line ' + fmt(r.owner) + "’s number.</div>";
+    if (r.idled.length === 0) h += '<div class="block">Nothing comes after this line, so no later line is at risk. The script still reports failure.</div>';
+    else {
+      h += '<div class="block">Lines that must never run after this failure: ' + (r.must.length ? esc(Core.listLines(r.must)) : "none") + ".</div>";
+      if (r.blunt.length) h += '<div class="block">Idled by the stop although they did not rely on line ' + fmt(b) + ": " + esc(Core.listLines(r.blunt)) + ".</div>";
+    }
+    document.getElementById("playOut").innerHTML = h;
+  }
+  document.getElementById("breakPills").addEventListener("change", play);
+  play();
+})();
+</script>
+</body>
+</html>

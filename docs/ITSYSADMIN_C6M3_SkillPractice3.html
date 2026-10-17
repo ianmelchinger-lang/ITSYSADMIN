@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walk the script a second time</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1b2430; --muted:#505d6e; --line:#cfd6df;
+  --accent:#0b5cd5; --accent-soft:#e4eeff;
+  --ok:#146c36; --ok-soft:#e2f3e8; --warn:#7a4f00; --warn-soft:#fcf0d2; --bad:#9d2229; --bad-soft:#fae4e5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 56px}
+.eyebrow{margin:0 0 6px;color:var(--muted);font-size:.85rem}
+h1{font-size:1.65rem;line-height:1.2;margin:0 0 10px}
+h2{font-size:1.2rem;line-height:1.3;margin:0 0 8px}
+h3{font-size:1rem;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:1.06rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+dl{margin:0} dt{font-weight:600;margin-top:10px} dt:first-child{margin-top:0} dd{margin:2px 0 0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.note{color:var(--muted);font-size:.93rem}
+.question{border-left:5px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:8px;margin:0 0 12px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative;display:inline-block}
+.pill input{position:absolute;opacity:0;top:0;left:0;width:100%;height:100%;margin:0;cursor:pointer}
+.pill span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;min-height:40px}
+.pill input:checked+span{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.pill input:disabled+span{opacity:.6;cursor:default}
+.check{display:flex;align-items:flex-start;gap:10px;min-height:40px;padding:4px 0}
+.check input{width:22px;height:22px;margin:2px 0 0;flex:none}
+.check input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:44px;max-width:100%}
+select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;font-weight:600;margin-bottom:4px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;min-height:44px}
+button.quiet{background:#fff;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.feedback{margin-top:12px}
+.verdict{padding:10px 12px;border-radius:8px;border-left:5px solid;margin:0 0 8px}
+.verdict.ok{background:var(--ok-soft);border-color:var(--ok)}
+.verdict.near{background:var(--warn-soft);border-color:var(--warn)}
+.verdict.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.verdict.hold{background:#eef1f5;border-color:var(--muted)}
+.verdict p:last-child{margin-bottom:0}
+.tag{font-weight:700}
+.switchrow{display:flex;align-items:center;gap:10px;min-height:44px}
+.switchrow input{width:22px;height:22px;margin:0}
+.switchrow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{border:1px solid var(--line);border-radius:8px;background:#fbfcfd;padding:12px;margin-top:12px}
+.panel .block{padding:8px 0;border-bottom:1px solid var(--line)}
+.panel .block:last-child{border-bottom:0}
+.steps{list-style:none;margin:0 0 12px;padding:0}
+.step{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;margin:0 0 8px}
+.step .head{font-weight:600}
+.step .sub{color:var(--muted);font-size:.93rem}
+.step.idle{background:#eef1f5;color:var(--muted)}
+.step.failed{border-color:var(--bad);background:var(--bad-soft)}
+.step.done{border-color:var(--ok)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.col{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:.9rem;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.recline{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9rem;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;overflow-wrap:anywhere}
+.none{color:var(--muted);font-style:italic}
+.result{font-weight:600}
+.mark{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.85rem;margin-left:6px}
+@media (max-width:480px){
+  main{padding:14px 12px 44px}
+  h1{font-size:1.4rem}
+  .card{padding:12px}
+  .pill span{padding:8px 12px}
+  .cols{grid-template-columns:1fr}
+  th,td{padding:6px 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">Hands-on exercise · about 5 minutes · nothing here is graded</p>
+  <h1>Walk the script a second time</h1>
+  <p class="lead">A script that a person or a scheduler starts again begins each run from whatever the last run left behind. A step that makes a change may complain, repeat its work, or fail the second time. A step that first asks for the condition it wants does nothing when that condition already holds. Here you walk a script through its second run and find the lines that go wrong.</p>
+</header>
+
+<section class="card" aria-labelledby="terms-h">
+  <h2 id="terms-h">Key ideas</h2>
+  <dl>
+    <dt>Idempotent</dt>
+    <dd>Describes a step, or a whole script, that leaves the same result whether it runs once or many times.</dd>
+    <dt>Asks for a condition</dt>
+    <dd>A step that states what it wants, such as “the folder exists,” and does nothing when that is already true.</dd>
+    <dt>Makes a change</dt>
+    <dd>A step that creates, adds, or moves something every time it runs.</dd>
+  </dl>
+</section>
+
+<section class="card" aria-labelledby="practice-h">
+  <h2 id="practice-h">Practice: the second run</h2>
+  <p class="question">The first run has already finished, and every line’s work is done. Take each line on its own and ask what it does when its work is already done.</p>
+  <div id="lineList"></div>
+  <div class="row"><button type="button" id="checkBtn">Check my answers</button></div>
+  <div class="feedback" id="fb" role="status" aria-live="polite"></div>
+</section>
+
+<section class="card" aria-labelledby="play-h">
+  <h2 id="play-h">Play: change the wording</h2>
+  <p>Nothing here is marked right or wrong. For each job, choose how the line is worded, then read what the second run does.</p>
+  <div id="wordings"></div>
+  <div class="panel" id="playOut" role="status" aria-live="polite"></div>
+</section>
+</main>
+
+<noscript><p style="max-width:720px;margin:16px auto;padding:0 16px">This exercise needs JavaScript to run.</p></noscript>
+
+<script>
+/*CORE*/
+const Core = (function () {
+  var EFFECTS = {
+    nothing: "Does nothing",
+    complains: "Complains, because the work is already done",
+    duplicates: "Adds a second copy",
+    gone: "Looks for something that has already gone"
+  };
+  var KINDS = { condition: "Asks for a condition", change: "Makes a change" };
+  var LINES = [
+    { n: 1, text: "Create the folder reports.", kind: "change", effect: "complains",
+      why: "The folder already exists, so the step complains." },
+    { n: 2, text: "Make sure the note “job started” is in the notes file.", kind: "condition", effect: "nothing",
+      why: "The note is already there, so the step finds nothing to do." },
+    { n: 3, text: "Move the report from the inbox to the archive.", kind: "change", effect: "gone",
+      why: "The report has already moved, so the step looks for a file that is no longer there." },
+    { n: 4, text: "Make sure the folder reports exists.", kind: "condition", effect: "nothing",
+      why: "The folder is already there, so the step finds nothing to do." },
+    { n: 5, text: "Add the note “job started” to the end of the notes file.", kind: "change", effect: "duplicates",
+      why: "The step adds the note again, so the file now holds a second copy." },
+    { n: 6, text: "If the report is still in the inbox, move it to the archive.", kind: "condition", effect: "nothing",
+      why: "The report is no longer in the inbox, so the step finds nothing to move." }
+  ];
+  var CRITERION = "A step that asks for a condition does nothing when the condition already holds. A step that makes a change makes it again, or fails because the first run already made it.";
+  // ans: array of { kind, effect } per line, in order.
+  function grade(ans) {
+    var off = [];
+    LINES.forEach(function (l, i) {
+      var a = ans[i], kindOff = a.kind !== l.kind, effOff = a.effect !== l.effect;
+      if (kindOff || effOff) off.push({ n: l.n, kindOff: kindOff, effOff: effOff });
+    });
+    return { state: off.length === 0 ? "correct" : off.length === 1 ? "near" : "wrong", off: off };
+  }
+  // Second-run walk for the play piece. State is { folder, copies, report }.
+  function initial() { return { folder: false, copies: 0, report: "inbox" }; }
+  function runOnce(state, w) {
+    var s = { folder: state.folder, copies: state.copies, report: state.report }, notes = {}, complaints = 0;
+    if (w.folder === "change") {
+      if (s.folder) { notes.folder = "Complained: the folder already exists."; complaints++; }
+      else { s.folder = true; notes.folder = "Made the folder."; }
+    } else {
+      if (s.folder) notes.folder = "Found the folder and did nothing.";
+      else { s.folder = true; notes.folder = "Made the folder."; }
+    }
+    if (w.line === "change") {
+      s.copies += 1; notes.line = s.copies === 1 ? "Added the note." : "Added the note again.";
+    } else {
+      if (s.copies >= 1) notes.line = "Found the note and did nothing.";
+      else { s.copies = 1; notes.line = "Added the note."; }
+    }
+    if (w.report === "change") {
+      if (s.report === "inbox") { s.report = "archive"; notes.report = "Moved the report."; }
+      else { notes.report = "Complained: the report is no longer in the inbox."; complaints++; }
+    } else {
+      if (s.report === "inbox") { s.report = "archive"; notes.report = "Moved the report."; }
+      else notes.report = "Found nothing to move and did nothing.";
+    }
+    return { state: s, notes: notes, complaints: complaints };
+  }
+  function same(a, b) { return a.folder === b.folder && a.copies === b.copies && a.report === b.report; }
+  function twoRuns(w) {
+    var r1 = runOnce(initial(), w), r2 = runOnce(r1.state, w);
+    return { r1: r1, r2: r2, same: same(r1.state, r2.state), complaints2: r2.complaints };
+  }
+  return { EFFECTS: EFFECTS, KINDS: KINDS, LINES: LINES, CRITERION: CRITERION, grade: grade, initial: initial, runOnce: runOnce, same: same, twoRuns: twoRuns };
+})();
+/*ENDCORE*/
+
+(function () {
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  function val(name) { var el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : null; }
+
+  var h = "";
+  Core.LINES.forEach(function (l, i) {
+    h += '<fieldset><legend>Line ' + fmt(l.n) + ": " + esc(l.text) + '</legend>' +
+      '<div class="pills"><label class="pill"><input type="radio" name="k' + i + '" value="condition"><span>Asks for a condition</span></label>' +
+      '<label class="pill"><input type="radio" name="k' + i + '" value="change"><span>Makes a change</span></label></div>' +
+      '<label class="field" style="margin-top:10px"><span>On the second run, this line</span><select id="e' + i + '"><option value="">Choose what it does</option>';
+    Object.keys(Core.EFFECTS).forEach(function (k) { h += '<option value="' + k + '">' + esc(Core.EFFECTS[k]) + "</option>"; });
+    h += "</select></label></fieldset>";
+  });
+  document.getElementById("lineList").innerHTML = h;
+  document.getElementById("lineList").addEventListener("change", function () { document.getElementById("fb").innerHTML = ""; });
+
+  document.getElementById("checkBtn").addEventListener("click", function () {
+    var ans = [], open = 0;
+    Core.LINES.forEach(function (l, i) {
+      var k = val("k" + i), e = document.getElementById("e" + i).value;
+      if (!k || !e) open++;
+      ans.push({ kind: k, effect: e });
+    });
+    var fb = document.getElementById("fb");
+    if (open > 0) { fb.innerHTML = '<div class="verdict hold"><p><span class="tag">Answer first.</span> ' + fmt(open) + (open === 1 ? " line is" : " lines are") + " still open.</p></div>"; return; }
+    var g = Core.grade(ans), out;
+    if (g.state === "correct") {
+      out = '<div class="verdict ok"><p><span class="tag">Correct.</span> The three lines that make a change each go wrong in a different way. Creating a folder that exists produces a complaint, adding a note puts a second copy in the file, and moving a report looks for a file that has already gone. The three lines that ask for a condition find the work done and do nothing.</p></div>';
+    } else if (g.state === "near") {
+      var o = g.off[0], l = Core.LINES[o.n - 1], why;
+      if (o.kindOff) why = "Line " + o.n + " " + (l.kind === "change" ? "makes a change" : "asks for a condition") + ". On a second run: " + l.why.charAt(0).toLowerCase() + l.why.slice(1);
+      else why = "You have the right kind for line " + o.n + ", and the second-run effect is what is out of place. " + l.why;
+      out = '<div class="verdict near"><p><span class="tag">Close.</span> The structure is right, and one line is out of place: line ' + fmt(o.n) + ".</p><p>" + esc(why) + "</p></div>";
+    } else {
+      out = '<div class="verdict wrong"><p><span class="tag">Not yet.</span> Several lines do not match. ' + esc(Core.CRITERION) + '</p><p><strong>First move:</strong> for each line, ask what it does when its work is already done, and mark it only after you have answered that.</p></div>';
+    }
+    fb.innerHTML = out;
+  });
+
+  var JOBS = [
+    { id: "folder", name: "The folder reports", change: "Create the folder", condition: "Make sure the folder exists" },
+    { id: "line", name: "The note “job started”", change: "Add the note", condition: "Make sure the note is there" },
+    { id: "report", name: "The report", change: "Move the report", condition: "If the report is still in the inbox, move it" }
+  ];
+  var wh = "";
+  JOBS.forEach(function (j) {
+    wh += '<fieldset><legend>' + esc(j.name) + '</legend><div class="pills" data-job="' + j.id + '">' +
+      '<label class="pill"><input type="radio" name="w-' + j.id + '" value="change" checked><span>' + esc(j.change) + "</span></label>" +
+      '<label class="pill"><input type="radio" name="w-' + j.id + '" value="condition"><span>' + esc(j.condition) + "</span></label></div></fieldset>";
+  });
+  document.getElementById("wordings").innerHTML = wh;
+
+  function describe(s) {
+    return (s.folder ? "folder made" : "no folder") + "; " + fmt(s.copies) + (s.copies === 1 ? " copy" : " copies") + " of the note; report in the " + s.report;
+  }
+  function play() {
+    var w = { folder: val("w-folder"), line: val("w-line"), report: val("w-report") };
+    var t = Core.twoRuns(w);
+    var h = '<table><thead><tr><th scope="col">Job</th><th scope="col">First run</th><th scope="col">Second run</th></tr></thead><tbody>';
+    JOBS.forEach(function (j) {
+      h += "<tr><td>" + esc(j.name) + "</td><td>" + esc(t.r1.notes[j.id]) + "</td><td>" + esc(t.r2.notes[j.id]) + "</td></tr>";
+    });
+    h += "</tbody></table>";
+    h += '<div class="block">After the first run: ' + esc(describe(t.r1.state)) + ".</div>";
+    h += '<div class="block">After the second run: ' + esc(describe(t.r2.state)) + ".</div>";
+    h += '<div class="block result">' + (t.same ? "The second run left the same result as the first." : "The second run left a different result from the first.") +
+      " Steps that complained in the second run: " + fmt(t.complaints2) + ".</div>";
+    document.getElementById("playOut").innerHTML = h;
+  }
+  document.getElementById("wordings").addEventListener("change", play);
+  play();
+})();
+</script>
+</body>
+</html>

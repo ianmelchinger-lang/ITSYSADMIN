@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assemble the path from problem to proof</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1b2430; --muted:#505d6e; --line:#cfd6df;
+  --accent:#0b5cd5; --accent-soft:#e4eeff;
+  --ok:#146c36; --ok-soft:#e2f3e8; --warn:#7a4f00; --warn-soft:#fcf0d2; --bad:#9d2229; --bad-soft:#fae4e5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 56px}
+.eyebrow{margin:0 0 6px;color:var(--muted);font-size:.85rem}
+h1{font-size:1.65rem;line-height:1.2;margin:0 0 10px}
+h2{font-size:1.2rem;line-height:1.3;margin:0 0 8px}
+h3{font-size:1rem;margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:1.06rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:16px 0}
+dl{margin:0} dt{font-weight:600;margin-top:10px} dt:first-child{margin-top:0} dd{margin:2px 0 0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.note{color:var(--muted);font-size:.93rem}
+.question{border-left:5px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:8px;margin:0 0 12px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{position:relative;display:inline-block}
+.pill input{position:absolute;opacity:0;top:0;left:0;width:100%;height:100%;margin:0;cursor:pointer}
+.pill span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;min-height:40px}
+.pill input:checked+span{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.pill input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.pill input:disabled+span{opacity:.6;cursor:default}
+.check{display:flex;align-items:flex-start;gap:10px;min-height:40px;padding:4px 0}
+.check input{width:22px;height:22px;margin:2px 0 0;flex:none}
+.check input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:44px;max-width:100%}
+select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;font-weight:600;margin-bottom:4px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;min-height:44px}
+button.quiet{background:#fff;color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.feedback{margin-top:12px}
+.verdict{padding:10px 12px;border-radius:8px;border-left:5px solid;margin:0 0 8px}
+.verdict.ok{background:var(--ok-soft);border-color:var(--ok)}
+.verdict.near{background:var(--warn-soft);border-color:var(--warn)}
+.verdict.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.verdict.hold{background:#eef1f5;border-color:var(--muted)}
+.verdict p:last-child{margin-bottom:0}
+.tag{font-weight:700}
+.switchrow{display:flex;align-items:center;gap:10px;min-height:44px}
+.switchrow input{width:22px;height:22px;margin:0}
+.switchrow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{border:1px solid var(--line);border-radius:8px;background:#fbfcfd;padding:12px;margin-top:12px}
+.panel .block{padding:8px 0;border-bottom:1px solid var(--line)}
+.panel .block:last-child{border-bottom:0}
+.steps{list-style:none;margin:0 0 12px;padding:0}
+.step{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;margin:0 0 8px}
+.step .head{font-weight:600}
+.step .sub{color:var(--muted);font-size:.93rem}
+.step.idle{background:#eef1f5;color:var(--muted)}
+.step.failed{border-color:var(--bad);background:var(--bad-soft)}
+.step.done{border-color:var(--ok)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.col{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:.9rem;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.recline{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9rem;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;overflow-wrap:anywhere}
+.none{color:var(--muted);font-style:italic}
+.result{font-weight:600}
+.mark{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.85rem;margin-left:6px}
+@media (max-width:480px){
+  main{padding:14px 12px 44px}
+  h1{font-size:1.4rem}
+  .card{padding:12px}
+  .pill span{padding:8px 12px}
+  .cols{grid-template-columns:1fr}
+  th,td{padding:6px 4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">Hands-on exercise · about 6 minutes · nothing here is graded</p>
+  <h1>Assemble the path from problem to proof</h1>
+  <p class="lead">A script is ready to run unwatched only when you can state the problem it solves, name the moves that make it fit, and point to the evidence that the moves worked. Here you assemble all three on one board. Pick the problem statement, put the moves in an order that holds up, and choose the evidence that shows the script is fit.</p>
+</header>
+
+<section class="card" aria-labelledby="terms-h">
+  <h2 id="terms-h">Key ideas</h2>
+  <dl>
+    <dt>Fail-fast</dt>
+    <dd>A way of running a script in which the first failed command ends the run, so no later step acts on what the failure left behind.</dd>
+    <dt>Idempotent</dt>
+    <dd>Describes a step, or a whole script, that leaves the same result whether it runs once or many times.</dd>
+    <dt>Exit status</dt>
+    <dd>The number a command returns when it ends. Zero means success, and any other number means failure.</dd>
+  </dl>
+</section>
+
+<section class="card" aria-labelledby="board-h">
+  <h2 id="board-h">The board</h2>
+
+  <fieldset>
+    <legend>1. The problem. Which statement puts it in operational terms?</legend>
+    <div id="problems"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>2. The moves. Put them in an order that holds up.</legend>
+    <p class="note">Several orders can work. Only some placements break a dependency, and the check names those.</p>
+    <ol class="steps" id="moves"></ol>
+  </fieldset>
+
+  <fieldset>
+    <legend>3. The evidence. Mark every item that shows the script is fit.</legend>
+    <div id="signals"></div>
+  </fieldset>
+
+  <div class="row"><button type="button" id="checkBtn">Check the board</button></div>
+  <div class="feedback" id="fb" role="status" aria-live="polite"></div>
+</section>
+
+<section class="card" aria-labelledby="play-h">
+  <h2 id="play-h">Play: take a move off the board</h2>
+  <p>Nothing here is marked right or wrong. Remove one move and see which evidence you could no longer produce.</p>
+  <fieldset>
+    <legend>Remove this move</legend>
+    <div class="pills" id="removePills"></div>
+  </fieldset>
+  <div class="panel" id="playOut" role="status" aria-live="polite"></div>
+</section>
+</main>
+
+<noscript><p style="max-width:720px;margin:16px auto;padding:0 16px">This exercise needs JavaScript to run.</p></noscript>
+
+<script>
+/*CORE*/
+const Core = (function () {
+  var PROBLEMS = [
+    { id: "p1", ok: true,
+      text: "A weekly job finishes without an error message, yet it can delete the originals after an incomplete copy, and nobody can show which runs did their work." },
+    { id: "p2", ok: false,
+      text: "The script has a bug, and someone needs to find the faulty line and fix it." },
+    { id: "p3", ok: false,
+      text: "The job should start every week without a person starting it." },
+    { id: "p4", ok: false,
+      text: "The archive job takes too long to finish." }
+  ];
+  var PROBLEM_CRITERION = "A problem in operational terms says what happens and what cannot be shown. It does not name a fix, a schedule, or a speed.";
+  var MOVES = [
+    { id: "m1", short: "Run the bare commands", text: "Run the bare commands with a failing middle step, and note what the later steps do and what number comes back." },
+    { id: "m2", short: "Find where a person would have looked", text: "Find the places where a person would have looked before going on." },
+    { id: "m3", short: "Turn on the stop", text: "Turn on the stop at the first failed step." },
+    { id: "m4", short: "Force and announce a failure", text: "Announce a failure, force it, and confirm that the later lines stay idle and the number is not zero." },
+    { id: "m5", short: "Make steps ask for a condition first", text: "Rewrite each step that makes a change so it asks for the condition first, then run the script twice and compare the end state." },
+    { id: "m6", short: "Write the dated line", text: "Make the script write a dated line saying how each run ended, with its exit status." }
+  ];
+  var START_ORDER = ["m4", "m5", "m3", "m1", "m6", "m2"];
+  // Each dependency says that "before" must come earlier in the order than "after".
+  var DEPS = [
+    { id: "d1", before: "m3", after: "m4", text: "A forced failure proves the stop only once the stop is on, so “Turn on the stop” must come before “Announce a failure, force it.”" },
+    { id: "d2", before: "m6", after: "m4", text: "The forced failure leaves a dated line only if the script already writes one, so “Make the script write a dated line” must come before “Announce a failure, force it.”" },
+    { id: "d3", before: "m2", after: "m3", text: "The stop belongs where a person would have looked, so “Find the places where a person would have looked” must come before “Turn on the stop.”" }
+  ];
+  var SIGNALS = [
+    { id: "s1", ok: true, text: "A forced failure ends the run with a number that is not zero, and no later line runs." },
+    { id: "s2", ok: true, text: "A second run leaves the same end state as the first." },
+    { id: "s3", ok: true, text: "A dated line from a clean run and a dated line from the forced failure, each saying how the run ended." },
+    { id: "x1", ok: false, text: "The script finishes without printing an error message.",
+      why: "A quiet finish shows only that the last line succeeded." },
+    { id: "x2", ok: false, text: "The script file is in place in the scripts folder.",
+      why: "The file shows what would be done, not that it was done or how it ended." }
+  ];
+  // Which moves each piece of evidence needs.
+  var PRODUCES = { s1: ["m2", "m3", "m4"], s2: ["m5"], s3: ["m6", "m4"] };
+  function idx(order, id) { return order.indexOf(id); }
+  function violations(order) {
+    return DEPS.filter(function (d) { return idx(order, d.before) > idx(order, d.after); });
+  }
+  function signalErrors(selected) {
+    var errs = [];
+    SIGNALS.forEach(function (s) {
+      var m = selected.indexOf(s.id) >= 0;
+      if (m !== s.ok) errs.push({ id: s.id, kind: m ? "extra" : "missing" });
+    });
+    return errs;
+  }
+  // board: { problem, order, signals }
+  function grade(board) {
+    var prob = PROBLEMS.filter(function (p) { return p.id === board.problem; })[0];
+    var problemOff = !prob || !prob.ok;
+    var viol = violations(board.order), sig = signalErrors(board.signals);
+    var total = (problemOff ? 1 : 0) + viol.length + sig.length;
+    return { state: total === 0 ? "correct" : total === 1 ? "near" : "wrong", total: total, problemOff: problemOff, violations: viol, signals: sig };
+  }
+  // Evidence that cannot be produced once a move is removed.
+  function lost(removed) {
+    return Object.keys(PRODUCES).filter(function (s) { return PRODUCES[s].indexOf(removed) >= 0; });
+  }
+  function signal(id) { return SIGNALS.filter(function (s) { return s.id === id; })[0]; }
+  function move(id) { return MOVES.filter(function (m) { return m.id === id; })[0]; }
+  return { PROBLEMS: PROBLEMS, PROBLEM_CRITERION: PROBLEM_CRITERION, MOVES: MOVES, START_ORDER: START_ORDER, DEPS: DEPS, SIGNALS: SIGNALS, PRODUCES: PRODUCES,
+           violations: violations, signalErrors: signalErrors, grade: grade, lost: lost, signal: signal, move: move };
+})();
+/*ENDCORE*/
+
+(function () {
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function fmt(n) { return Number(n).toLocaleString("en-US"); }
+  function val(name) { var el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : null; }
+  var order = Core.START_ORDER.slice();
+
+  var ph = "";
+  Core.PROBLEMS.forEach(function (p) {
+    ph += '<label class="check"><input type="radio" name="problem" value="' + p.id + '"><span>' + esc(p.text) + "</span></label>";
+  });
+  document.getElementById("problems").innerHTML = ph;
+
+  var sh = "";
+  Core.SIGNALS.forEach(function (s) {
+    sh += '<label class="check"><input type="checkbox" name="signal" value="' + s.id + '"><span>' + esc(s.text) + "</span></label>";
+  });
+  document.getElementById("signals").innerHTML = sh;
+
+  function renderMoves(focusId, focusDir) {
+    var h = "";
+    order.forEach(function (id, i) {
+      var m = Core.move(id);
+      h += '<li class="step"><div class="head">' + fmt(i + 1) + ". " + esc(m.short) + '</div><div class="sub">' + esc(m.text) + "</div>" +
+        '<div class="row" style="margin-top:8px">' +
+        '<button type="button" class="quiet" data-id="' + id + '" data-dir="up" aria-label="Move up: ' + esc(m.short) + '"' + (i === 0 ? " disabled" : "") + ">Move up</button>" +
+        '<button type="button" class="quiet" data-id="' + id + '" data-dir="down" aria-label="Move down: ' + esc(m.short) + '"' + (i === order.length - 1 ? " disabled" : "") + ">Move down</button></div></li>";
+    });
+    document.getElementById("moves").innerHTML = h;
+    if (focusId) {
+      var b = document.querySelector('button[data-id="' + focusId + '"][data-dir="' + focusDir + '"]');
+      if (!b || b.disabled) b = document.querySelector('button[data-id="' + focusId + '"]:not([disabled])');
+      if (b) b.focus();
+    }
+  }
+  renderMoves();
+
+  document.getElementById("moves").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("button[data-id]") : null;
+    if (!b || b.disabled) return;
+    var id = b.getAttribute("data-id"), dir = b.getAttribute("data-dir"), i = order.indexOf(id), j = dir === "up" ? i - 1 : i + 1;
+    if (j < 0 || j >= order.length) return;
+    var t = order[i]; order[i] = order[j]; order[j] = t;
+    renderMoves(id, dir);
+    document.getElementById("fb").innerHTML = "";
+  });
+  document.getElementById("problems").addEventListener("change", function () { document.getElementById("fb").innerHTML = ""; });
+  document.getElementById("signals").addEventListener("change", function () { document.getElementById("fb").innerHTML = ""; });
+
+  document.getElementById("checkBtn").addEventListener("click", function () {
+    var fb = document.getElementById("fb"), problem = val("problem");
+    if (!problem) { fb.innerHTML = '<div class="verdict hold"><p><span class="tag">Answer first.</span> Choose the problem statement.</p></div>'; return; }
+    var sel = Array.prototype.map.call(document.querySelectorAll('input[name="signal"]:checked'), function (el) { return el.value; });
+    var g = Core.grade({ problem: problem, order: order, signals: sel }), h;
+    if (g.state === "correct") {
+      h = '<div class="verdict ok"><p><span class="tag">Correct.</span> The problem is stated as what happens and what cannot be shown. The moves respect all three dependencies, and the evidence is what the script itself produces, not what a quiet finish suggests.</p></div>';
+    } else if (g.state === "near") {
+      var why, label;
+      if (g.problemOff) { label = "the problem statement"; why = Core.PROBLEM_CRITERION; }
+      else if (g.violations.length) { label = "the order of the moves"; why = g.violations[0].text; }
+      else {
+        var e = g.signals[0], s = Core.signal(e.id);
+        label = "the evidence";
+        why = e.kind === "extra" ? "“" + s.text + "” " + s.why : "Evidence is missing: “" + s.text + "” The script itself produces it, and you can read it back.";
+      }
+      h = '<div class="verdict near"><p><span class="tag">Close.</span> The structure is right, and one element is out of place: ' + esc(label) + ".</p><p>" + esc(why) + "</p></div>";
+    } else {
+      var lanes = [];
+      if (g.problemOff) lanes.push("the problem statement");
+      if (g.violations.length) lanes.push("the order of the moves");
+      if (g.signals.length) lanes.push("the evidence");
+      h = '<div class="verdict wrong"><p><span class="tag">Not yet.</span> More than one element does not hold. Look again at ' + esc(lanes.join(", ").replace(/, ([^,]*)$/, " and $1")) + '.</p><p>State the problem as what happens and what cannot be shown. Order the moves so that each protection is in place before the step that relies on it. Choose evidence the script itself produces.</p><p><strong>First move:</strong> for each move, ask which other move relies on it, and place it ahead of that one.</p></div>';
+    }
+    fb.innerHTML = h;
+  });
+
+  var rp = '<label class="pill"><input type="radio" name="rm" value="none" checked><span>None</span></label>';
+  Core.MOVES.forEach(function (m) { rp += '<label class="pill"><input type="radio" name="rm" value="' + m.id + '"><span>' + esc(m.short) + "</span></label>"; });
+  document.getElementById("removePills").innerHTML = rp;
+
+  function play() {
+    var rm = val("rm"), lostIds = rm === "none" ? [] : Core.lost(rm), h = "";
+    ["s1", "s2", "s3"].forEach(function (id) {
+      var s = Core.signal(id), gone = lostIds.indexOf(id) >= 0;
+      h += '<div class="block"><div>' + esc(s.text) + '</div><div class="result">' + (gone ? "Cannot be shown without “" + esc(Core.move(rm).short) + ".”" : "Can still be shown.") + "</div></div>";
+    });
+    if (rm !== "none" && lostIds.length === 0) h += '<div class="block">This move produces no evidence of its own. It shows the problem on the screen, and every other move answers it.</div>';
+    document.getElementById("playOut").innerHTML = h;
+  }
+  document.getElementById("removePills").addEventListener("change", play);
+  play();
+})();
+</script>
+</body>
+</html>
