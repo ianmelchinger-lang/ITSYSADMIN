@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — Storage Layers and Mounts</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #faf7f1;
+    --surface-raised: #f1e9d8;
+    --border: #ddd0b2;
+    --text: #141414;
+    --text-dim: #5c5548;
+    --accent: #9c7a42;
+    --accent-dim: #7c6333;
+    --accent-soft: #e9dcbd;
+    --focus: #2e6da4;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 64px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .kicker {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(24px, 5vw, 32px);
+    line-height: 1.28;
+    margin: 0 0 22px;
+    max-width: 24ch;
+  }
+
+  .briefing {
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0 0 28px;
+    max-width: 62ch;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 26px;
+  }
+
+  .fixtures {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    row-gap: 6px;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 22px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .fixtures dt { font-weight: 600; color: var(--text); }
+  .fixtures dd { margin: 0; font-family: var(--font-mono); }
+
+  .mount-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .mount-row-label {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .mount-row-path {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    color: var(--accent-dim);
+  }
+
+  .switch-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .switch-state-text {
+    font-size: 14px;
+    color: var(--text-dim);
+    min-width: 76px;
+    text-align: center;
+  }
+
+  .switch-state-text.active { color: var(--text); font-weight: 600; }
+
+  button.switch {
+    position: relative;
+    width: 56px;
+    height: 30px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  button.switch:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  button.switch .knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: transform 0.2s ease;
+  }
+
+  button.switch[aria-checked="true"] .knob {
+    transform: translateX(26px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button.switch .knob { transition: none; }
+  }
+
+  .data-location {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+  }
+
+  .listing-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .listing {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .listing li {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 10px 14px;
+    background: var(--bg);
+  }
+
+  .listing li + li { border-top: 1px solid var(--border); }
+
+  .caption {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--text);
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 0;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Skill Practice — Storage Layers and Mounts</p>
+  <h1>One path. Two different things could be sitting behind it.</h1>
+
+  <p class="briefing">
+    A filesystem sits on <strong>vol-archive-01</strong>, and one file &mdash; <code>before-mount.txt</code> &mdash; already sits in the <code>/data/archive</code> directory beneath it. That file is the panel's starting condition, not a fault you are being asked to find. Toggle the mount and watch which files appear at the path. Mounting hides <code>before-mount.txt</code>; unmounting brings it back &mdash; nothing here is deleted, and nothing refuses you. On a real machine one thing will refuse you: you cannot shrink a mounted filesystem, and that is a safety control working, not an error.
+  </p>
+
+  <div class="panel">
+    <dl class="fixtures">
+      <dt>Host</dt>
+      <dd>cld-lnx-01</dd>
+      <dt>Volume</dt>
+      <dd>vol-archive-01 &nbsp;(10 GB)</dd>
+      <dt>Owner</dt>
+      <dd>root:itops</dd>
+    </dl>
+
+    <div class="mount-row">
+      <div>
+        <div class="mount-row-label">Archive filesystem at</div>
+        <div class="mount-row-path">/data/archive</div>
+      </div>
+      <div class="switch-wrap">
+        <span class="switch-state-text" id="label-unmounted">Unmounted</span>
+        <button type="button" class="switch" id="mount-switch" role="switch" aria-checked="true" aria-labelledby="switch-desc">
+          <span class="knob"></span>
+        </button>
+        <span class="switch-state-text" id="label-mounted">Mounted</span>
+      </div>
+    </div>
+    <span id="switch-desc" class="sr-only">Toggle whether the archive filesystem is mounted at /data/archive</span>
+
+    <div class="data-location">Data location: vol-archive-01</div>
+
+    <div aria-live="polite">
+      <p class="listing-label">Visible at /data/archive:</p>
+      <ul class="listing" id="file-listing"></ul>
+      <p class="caption" id="caption"></p>
+    </div>
+  </div>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var states = {
+      mounted: {
+        files: ["archive-2024.tar", "archive-2025.tar"],
+        caption: "before-mount.txt is hidden beneath the mount \u2014 not deleted."
+      },
+      unmounted: {
+        files: ["before-mount.txt"],
+        caption: "the archive files still live on vol-archive-01 \u2014 just not attached here now."
+      }
+    };
+
+    var switchBtn = document.getElementById("mount-switch");
+    var listing = document.getElementById("file-listing");
+    var caption = document.getElementById("caption");
+    var labelMounted = document.getElementById("label-mounted");
+    var labelUnmounted = document.getElementById("label-unmounted");
+
+    function render(key) {
+      var data = states[key];
+      listing.innerHTML = "";
+      data.files.forEach(function (name) {
+        var li = document.createElement("li");
+        li.textContent = name;
+        listing.appendChild(li);
+      });
+      caption.textContent = data.caption;
+
+      var isMounted = key === "mounted";
+      switchBtn.setAttribute("aria-checked", isMounted ? "true" : "false");
+      labelMounted.classList.toggle("active", isMounted);
+      labelUnmounted.classList.toggle("active", !isMounted);
+    }
+
+    switchBtn.addEventListener("click", function () {
+      var isMounted = switchBtn.getAttribute("aria-checked") === "true";
+      render(isMounted ? "unmounted" : "mounted");
+    });
+
+    // starting condition: filesystem mounted
+    render("mounted");
+  })();
+</script>
+</body>
+</html>

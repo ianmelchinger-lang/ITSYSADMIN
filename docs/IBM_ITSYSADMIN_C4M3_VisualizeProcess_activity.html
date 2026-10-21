@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visualize the Process — Manage Storage and Filesystems</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #faf7f1;
+    --surface-raised: #f1e9d8;
+    --border: #ddd0b2;
+    --text: #141414;
+    --text-dim: #5c5548;
+    --accent: #9c7a42;
+    --accent-dim: #7c6333;
+    --accent-soft: #e9dcbd;
+    --focus: #2e6da4;
+    --good: #4b6b3a;
+    --good-soft: #e3ead9;
+    --warn: #8a5a2a;
+    --warn-soft: #f3e4cd;
+    --on-accent: #ffffff;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 64px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 680px;
+  }
+
+  .kicker {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(24px, 5vw, 32px);
+    line-height: 1.28;
+    margin: 0 0 16px;
+    max-width: 24ch;
+  }
+
+  .briefing {
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0 0 28px;
+    max-width: 64ch;
+  }
+
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 560px) {
+    .columns { grid-template-columns: 1fr; }
+  }
+
+  .block-heading {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  .bank, .sequence {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    min-height: 120px;
+  }
+
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .card + .card { margin-top: 8px; }
+
+  .card.flagged { border-color: var(--warn); background: var(--warn-soft); }
+
+  .card-text { display: block; margin-bottom: 8px; }
+
+  .card-flaw {
+    font-size: 13px;
+    color: var(--warn);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .card-actions button {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 5px;
+    font-size: 12px;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+
+  .card-actions button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .card-actions button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .seq-index {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent-dim);
+    margin-right: 6px;
+  }
+
+  .empty-note {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .check-btn {
+    margin-top: 24px;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 15px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .check-btn:hover { background: var(--accent-dim); }
+
+  .check-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .feedback {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 0 6px 6px 0;
+    border-left: 3px solid var(--border);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .feedback[hidden] { display: none; }
+  .feedback p { margin: 0 0 8px; }
+  .feedback p:last-child { margin-bottom: 0; }
+
+  .feedback.status-correct { border-left-color: var(--good); background: var(--good-soft); }
+  .feedback.status-near { border-left-color: var(--accent); background: var(--accent-soft); }
+  .feedback.status-wrong { border-left-color: var(--warn); background: var(--warn-soft); }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Visualize the Process &mdash; Manage Storage and Filesystems</p>
+  <h1>Build the whole path, in order.</h1>
+
+  <p class="briefing">
+    Below are candidate moves for fixing a filesystem that has run out of room. Not every card belongs in a safe path, and the ones that do only work in one order. Add the cards that belong, in the sequence that actually resolves the problem &mdash; starting with the problem itself and ending with the signal that says it worked.
+  </p>
+
+  <div class="columns">
+    <div>
+      <p class="block-heading">Available moves</p>
+      <div class="bank" id="bank" aria-label="Available moves"></div>
+    </div>
+    <div>
+      <p class="block-heading">Your path</p>
+      <div class="sequence" id="sequence" aria-label="Your path"></div>
+    </div>
+  </div>
+
+  <button type="button" class="check-btn" id="check-btn">Check my path</button>
+  <div class="feedback" id="feedback" hidden aria-live="polite"></div>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var required = {
+      problem: "The archive filesystem at /data/archive reports no free space, and writes are failing.",
+      place:   "Place a filesystem on the new block device.",
+      mount:   "Mount the filesystem at /data/archive.",
+      persist: "Persist the mount in /etc/fstab so it survives a reboot.",
+      confirm: "Confirm the new capacity at /data/archive with df and findmnt."
+    };
+
+    var requiredOrder = ["problem", "place", "mount", "persist", "confirm"];
+
+    var edgeHints = [
+      "Nothing about placing a filesystem makes sense until the problem itself is named first \u2014 check that the problem statement comes before any fix.",
+      "A filesystem can't be mounted before it's been placed on the device \u2014 check the order between placing it and mounting it.",
+      "A mount has to exist before you can make it survive a reboot \u2014 check whether persisting comes before the mount itself.",
+      "The confirmation is the last thing that happens, once everything else is already in place and already set to survive a reboot."
+    ];
+
+    var distractors = {
+      d1: {
+        text: "Delete some of the old archive files to clear space.",
+        flaw: "Deleting files might free a moment of room, but it destroys the thing the archive exists to keep, and adds no lasting capacity. The filesystem was full \u2014 that says nothing about which files are disposable."
+      },
+      d2: {
+        text: "Resize the block device and consider the space added \u2014 the filesystem will show it automatically.",
+        flaw: "Nothing hands new block-layer space up to the filesystem on its own. Without an explicit step to extend the filesystem onto it, df still reports the path as full, and nothing here ever throws an error to tell you that."
+      },
+      d3: {
+        text: "Mount the new disk straight onto /data/archive without placing a filesystem on it first.",
+        flaw: "Mounting over a directory that already holds files hides those files for as long as the mount stays attached. They're not deleted, but whatever job reads that path next finds the new disk's contents, not the archive's."
+      }
+    };
+
+    var poolOrder = ["mount", "d1", "confirm", "problem", "d3", "place", "persist", "d2"];
+    var labelOf = {};
+    requiredOrder.forEach(function (id) { labelOf[id] = required[id]; });
+    Object.keys(distractors).forEach(function (id) { labelOf[id] = distractors[id].text; });
+
+    var sequence = [];
+
+    function render() {
+      var bankEl = document.getElementById("bank");
+      var seqEl = document.getElementById("sequence");
+      bankEl.innerHTML = "";
+      seqEl.innerHTML = "";
+
+      var bankIds = poolOrder.filter(function (id) { return sequence.indexOf(id) === -1; });
+
+      if (bankIds.length === 0) {
+        var allUsed = document.createElement("p");
+        allUsed.className = "empty-note";
+        allUsed.textContent = "All cards are in your path.";
+        bankEl.appendChild(allUsed);
+      }
+
+      bankIds.forEach(function (id) {
+        var card = document.createElement("div");
+        card.className = "card";
+
+        var textEl = document.createElement("span");
+        textEl.className = "card-text";
+        textEl.textContent = labelOf[id];
+        card.appendChild(textEl);
+
+        var actions = document.createElement("div");
+        actions.className = "card-actions";
+        var addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.textContent = "Add to path";
+        addBtn.setAttribute("aria-label", "Add to path: " + labelOf[id]);
+        addBtn.addEventListener("click", function () {
+          sequence.push(id);
+          clearFeedback();
+          render();
+        });
+        actions.appendChild(addBtn);
+        card.appendChild(actions);
+
+        bankEl.appendChild(card);
+      });
+
+      if (sequence.length === 0) {
+        var empty = document.createElement("p");
+        empty.className = "empty-note";
+        empty.textContent = "Nothing added yet. Start with the problem itself.";
+        seqEl.appendChild(empty);
+      }
+
+      sequence.forEach(function (id, index) {
+        var card = document.createElement("div");
+        card.className = "card";
+
+        var idxSpan = document.createElement("span");
+        idxSpan.className = "seq-index";
+        idxSpan.textContent = (index + 1) + ".";
+
+        var textEl = document.createElement("span");
+        textEl.className = "card-text";
+        textEl.textContent = labelOf[id];
+
+        var row = document.createElement("div");
+        row.appendChild(idxSpan);
+        row.appendChild(textEl);
+        card.appendChild(row);
+
+        var actions = document.createElement("div");
+        actions.className = "card-actions";
+
+        var upBtn = document.createElement("button");
+        upBtn.type = "button";
+        upBtn.textContent = "\u2191";
+        upBtn.setAttribute("aria-label", "Move up: " + labelOf[id]);
+        upBtn.disabled = index === 0;
+        upBtn.addEventListener("click", function () {
+          var tmp = sequence[index - 1];
+          sequence[index - 1] = sequence[index];
+          sequence[index] = tmp;
+          clearFeedback();
+          render();
+        });
+
+        var downBtn = document.createElement("button");
+        downBtn.type = "button";
+        downBtn.textContent = "\u2193";
+        downBtn.setAttribute("aria-label", "Move down: " + labelOf[id]);
+        downBtn.disabled = index === sequence.length - 1;
+        downBtn.addEventListener("click", function () {
+          var tmp = sequence[index + 1];
+          sequence[index + 1] = sequence[index];
+          sequence[index] = tmp;
+          clearFeedback();
+          render();
+        });
+
+        var removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.textContent = "Remove";
+        removeBtn.setAttribute("aria-label", "Remove from path: " + labelOf[id]);
+        removeBtn.addEventListener("click", function () {
+          sequence.splice(index, 1);
+          clearFeedback();
+          render();
+        });
+
+        actions.appendChild(upBtn);
+        actions.appendChild(downBtn);
+        actions.appendChild(removeBtn);
+        card.appendChild(actions);
+
+        seqEl.appendChild(card);
+      });
+    }
+
+    function clearFeedback() {
+      document.getElementById("feedback").hidden = true;
+      [].forEach.call(document.querySelectorAll(".card"), function (c) { c.classList.remove("flagged"); });
+    }
+
+    function arraysEqual(a, b) {
+      return a.length === b.length && a.every(function (v, i) { return v === b[i]; });
+    }
+
+    function findTranspositionIndex(user, correct) {
+      for (var i = 0; i < correct.length - 1; i++) {
+        var swapped = correct.slice();
+        var t = swapped[i];
+        swapped[i] = swapped[i + 1];
+        swapped[i + 1] = t;
+        if (arraysEqual(user, swapped)) { return i; }
+      }
+      return -1;
+    }
+
+    function firstViolatedEdge(user, correct) {
+      for (var i = 0; i < correct.length - 1; i++) {
+        var posA = user.indexOf(correct[i]);
+        var posB = user.indexOf(correct[i + 1]);
+        if (posA === -1 || posB === -1 || posA > posB) { return i; }
+      }
+      return -1;
+    }
+
+    function check() {
+      var feedback = document.getElementById("feedback");
+      feedback.innerHTML = "";
+
+      var includedDistractors = sequence.filter(function (id) { return distractors.hasOwnProperty(id); });
+      var includedRequired = sequence.filter(function (id) { return requiredOrder.indexOf(id) !== -1; });
+
+      if (includedDistractors.length > 0) {
+        feedback.className = "feedback status-wrong";
+        var introD = document.createElement("p");
+        introD.textContent = includedDistractors.length === 1
+          ? "One of these doesn't belong in a safe path at all:"
+          : "A few of these don't belong in a safe path at all:";
+        feedback.appendChild(introD);
+        includedDistractors.forEach(function (id) {
+          var p = document.createElement("p");
+          p.textContent = "\u201c" + distractors[id].text + "\u201d \u2014 " + distractors[id].flaw;
+          feedback.appendChild(p);
+
+          var card = Array.prototype.find.call(document.querySelectorAll("#sequence .card"), function (c) {
+            return c.textContent.indexOf(distractors[id].text) !== -1;
+          });
+          if (card) { card.classList.add("flagged"); }
+        });
+      } else if (includedRequired.length < requiredOrder.length) {
+        var missing = requiredOrder.filter(function (id) { return includedRequired.indexOf(id) === -1; });
+        feedback.className = "feedback status-wrong";
+        var introM = document.createElement("p");
+        introM.textContent = "Your path is missing at least one necessary move:";
+        feedback.appendChild(introM);
+        missing.forEach(function (id) {
+          var p = document.createElement("p");
+          p.textContent = "\u201c" + required[id] + "\u201d";
+          feedback.appendChild(p);
+        });
+      } else if (arraysEqual(includedRequired, requiredOrder)) {
+        feedback.className = "feedback status-correct";
+        var p = document.createElement("p");
+        p.textContent = "That's the whole path: name what's actually broken, place the filesystem, mount it where the workload needs it, make the mount survive a reboot, then confirm the new capacity is really there \u2014 in that order, with nothing destroyed and nothing hidden along the way.";
+        feedback.appendChild(p);
+      } else {
+        var transIndex = findTranspositionIndex(includedRequired, requiredOrder);
+        if (transIndex !== -1) {
+          var first = required[requiredOrder[transIndex]];
+          var second = required[requiredOrder[transIndex + 1]];
+          feedback.className = "feedback status-near";
+          var pn = document.createElement("p");
+          pn.textContent = "Close \u2014 everything else is in the right place. \u201c" + first + "\u201d needs to happen before \u201c" + second + "\u201d, not after.";
+          feedback.appendChild(pn);
+        } else {
+          var edge = firstViolatedEdge(includedRequired, requiredOrder);
+          if (edge === -1) { edge = 0; }
+          feedback.className = "feedback status-wrong";
+          var pw = document.createElement("p");
+          pw.textContent = edgeHints[edge];
+          feedback.appendChild(pw);
+        }
+      }
+
+      feedback.hidden = false;
+    }
+
+    document.getElementById("check-btn").addEventListener("click", check);
+    render();
+  })();
+</script>
+</body>
+</html>

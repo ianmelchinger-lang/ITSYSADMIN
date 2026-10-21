@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You Are Here — Manage Storage and Filesystems</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #faf7f1;
+    --surface-raised: #f1e9d8;
+    --border: #ddd0b2;
+    --text: #141414;
+    --text-dim: #5c5548;
+    --accent: #9c7a42;
+    --accent-dim: #7c6333;
+    --accent-soft: #e9dcbd;
+    --focus: #2e6da4;
+    --layer-block: #a3b8c2;
+    --layer-fs: #c9a063;
+    --layer-path: #9cab83;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 64px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .kicker {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(26px, 5vw, 34px);
+    line-height: 1.25;
+    margin: 0 0 20px;
+    color: var(--text);
+    max-width: 22ch;
+  }
+
+  .scene {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 16px;
+    max-width: 62ch;
+  }
+
+  p:last-child { margin-bottom: 0; }
+
+  .diagram {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 4px 0 28px;
+  }
+
+  .layer-label {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    fill: var(--text-dim);
+  }
+
+  .layer-bar {
+    transition: opacity 0.4s ease, filter 0.4s ease;
+  }
+
+  .layer-bar.dim { opacity: 0.35; }
+  .layer-bar.hot { filter: drop-shadow(0 0 6px currentColor); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .layer-bar { transition: none; }
+  }
+
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  legend {
+    font-size: 17px;
+    font-weight: 600;
+    padding: 0 0 16px;
+    color: var(--text);
+  }
+
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .choice-btn {
+    text-align: left;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-size: 15px;
+    line-height: 1.5;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .choice-btn:hover { border-color: var(--accent-dim); }
+
+  .choice-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .choice-btn[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .choice-btn:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  .choice-btn:disabled:hover { border-color: var(--border); }
+
+  .reveal {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .reveal[hidden] { display: none; }
+
+  .reveal h2 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 21px;
+    margin: 0 0 14px;
+    color: var(--accent);
+  }
+
+  .closing-line {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--surface-raised);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin-top: 18px;
+  }
+
+  .switch-row {
+    margin-top: 22px;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--accent-dim);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+
+  .link-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .tail-note {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Manage Storage and Filesystems</p>
+  <h1>The archive is full, and the clock is already running.</h1>
+
+  <div class="scene">
+    <p>It's early in your shift. The archive directory on the storefront's Linux server has run out of space, and writes are starting to fail. You have a spare disk ready to go, and the sales floor's report job needs that same path working again before the morning rush.</p>
+
+    <svg class="diagram" viewBox="0 0 560 150" role="img" aria-label="A stack of three layers: block device at the bottom, filesystem in the middle, and the path on top.">
+      <rect id="bar-block" class="layer-bar" x="40" y="104" width="480" height="30" rx="5" fill="var(--layer-block)"></rect>
+      <text class="layer-label" x="50" y="123">Block device — the spare disk</text>
+
+      <rect id="bar-fs" class="layer-bar" x="40" y="60" width="480" height="30" rx="5" fill="var(--layer-fs)"></rect>
+      <text class="layer-label" x="50" y="79">Filesystem</text>
+
+      <rect id="bar-path" class="layer-bar" x="40" y="16" width="480" height="30" rx="5" fill="var(--layer-path)"></rect>
+      <text class="layer-label" x="50" y="35">/data/archive — what the report job reads</text>
+    </svg>
+
+    <fieldset id="question-set">
+      <legend>What do you do first?</legend>
+      <div class="choices" role="group" aria-label="Your first move">
+        <button type="button" class="choice-btn" id="choice-a" aria-pressed="false">
+          Mount the spare disk directly at <strong>/data/archive</strong>. It's the fastest way to get the path working again.
+        </button>
+        <button type="button" class="choice-btn" id="choice-b" aria-pressed="false">
+          Add the spare disk's capacity to the volume behind <strong>/data/archive</strong>, then check back — the extra room should show up on the path.
+        </button>
+      </div>
+    </fieldset>
+
+    <div class="reveal" id="reveal" hidden aria-live="polite">
+      <h2 id="reveal-heading"></h2>
+      <p id="reveal-body"></p>
+      <div class="closing-line" id="reveal-close"></div>
+      <div class="switch-row">
+        <button type="button" class="link-btn" id="switch-btn" hidden></button>
+      </div>
+    </div>
+  </div>
+
+  <p class="tail-note" id="tail-note" hidden>This module is about exactly that: knowing which layer you're actually working on before you touch it.</p>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var content = {
+      a: {
+        heading: "The path is working. The archive isn't.",
+        body: "Mounting over /data/archive didn't fail — that's the problem. It succeeded, and the files that were already there, the ones the report job actually reads, are now hidden underneath the new disk. They're not gone. They're sitting exactly where they were, on a different piece of storage, invisible for as long as this mount stays in place. If the report runs now, it finds the new disk's empty contents, not the archive.",
+        close: "You just found out that a directory isn't a box your files sit inside \u2014 it's a doorway, and what shows up depends on whatever's attached to it right now. Knowing when a path is hiding what's underneath it is the piece you're missing.",
+        hotBars: ["bar-path"],
+        dimBars: ["bar-block", "bar-fs"]
+      },
+      b: {
+        heading: "The disk is bigger. The path still isn't.",
+        body: "You gave the volume more room, and that part worked \u2014 the disk genuinely has more space now. But the filesystem sitting on top of it doesn't know that yet. Nothing automatically hands new space up from the disk to the filesystem reading /data/archive, so the path still reports full, the report job still fails, and none of it shows up as an error anywhere.",
+        close: "You just found out that adding space and the path actually using it are two separate layers, and nothing connects them on its own. Knowing which layer an operation actually touched is the piece you're missing.",
+        hotBars: ["bar-block"],
+        dimBars: ["bar-fs", "bar-path"]
+      }
+    };
+
+    var choiceA = document.getElementById("choice-a");
+    var choiceB = document.getElementById("choice-b");
+    var reveal = document.getElementById("reveal");
+    var revealHeading = document.getElementById("reveal-heading");
+    var revealBody = document.getElementById("reveal-body");
+    var revealClose = document.getElementById("reveal-close");
+    var switchBtn = document.getElementById("switch-btn");
+    var tailNote = document.getElementById("tail-note");
+    var allBars = ["bar-block", "bar-fs", "bar-path"];
+
+    var committed = null; // "a" or "b" — recorded once, never reset by exploration
+
+    function setBars(key) {
+      var data = content[key];
+      allBars.forEach(function (id) {
+        var el = document.getElementById(id);
+        el.classList.remove("hot", "dim");
+      });
+      data.hotBars.forEach(function (id) {
+        document.getElementById(id).classList.add("hot");
+      });
+      data.dimBars.forEach(function (id) {
+        document.getElementById(id).classList.add("dim");
+      });
+    }
+
+    function showReveal(key) {
+      var data = content[key];
+      revealHeading.textContent = data.heading;
+      revealBody.textContent = data.body;
+      revealClose.textContent = data.close;
+      setBars(key);
+      reveal.hidden = false;
+      tailNote.hidden = false;
+
+      var otherKey = key === "a" ? "b" : "a";
+      switchBtn.hidden = false;
+      switchBtn.textContent = "See what the other move would have done";
+      switchBtn.onclick = function () {
+        showReveal(otherKey);
+        switchBtn.hidden = true;
+      };
+
+      revealHeading.focus();
+    }
+
+    function commit(key) {
+      if (committed) { return; } // first choice is the one that counts
+      committed = key;
+
+      choiceA.disabled = true;
+      choiceB.disabled = true;
+      choiceA.setAttribute("aria-pressed", key === "a" ? "true" : "false");
+      choiceB.setAttribute("aria-pressed", key === "b" ? "true" : "false");
+
+      showReveal(key);
+    }
+
+    choiceA.addEventListener("click", function () { commit("a"); });
+    choiceB.addEventListener("click", function () { commit("b"); });
+
+    revealHeading.setAttribute("tabindex", "-1");
+  })();
+</script>
+</body>
+</html>

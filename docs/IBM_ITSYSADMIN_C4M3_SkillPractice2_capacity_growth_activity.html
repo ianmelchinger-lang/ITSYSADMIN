@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — Capacity Growth, One Way</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #faf7f1;
+    --surface-raised: #f1e9d8;
+    --border: #ddd0b2;
+    --text: #141414;
+    --text-dim: #5c5548;
+    --accent: #9c7a42;
+    --accent-dim: #7c6333;
+    --accent-soft: #e9dcbd;
+    --focus: #2e6da4;
+    --good: #4b6b3a;
+    --good-soft: #e3ead9;
+    --warn: #8a5a2a;
+    --warn-soft: #f3e4cd;
+    --on-accent: #ffffff;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 64px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .kicker {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(24px, 5vw, 32px);
+    line-height: 1.28;
+    margin: 0 0 16px;
+    max-width: 24ch;
+  }
+
+  .briefing {
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0 0 26px;
+    max-width: 62ch;
+  }
+
+  .mode-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .mode-btn[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--on-accent);
+    border-color: var(--accent-dim);
+  }
+
+  .mode-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 26px;
+  }
+
+  .panel[hidden] { display: none; }
+
+  .scenario-line {
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 20px;
+    color: var(--text);
+  }
+
+  .steps {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+    counter-reset: step;
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .steps li + li { margin-top: 8px; }
+
+  .step-index {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--accent-dim);
+    width: 1.4em;
+    flex-shrink: 0;
+  }
+
+  .step-text {
+    flex: 1;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .step-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .step-controls button {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 5px;
+    width: 30px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .step-controls button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .step-controls button:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .check-btn {
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 15px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .check-btn:hover { background: var(--accent-dim); }
+
+  .check-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .feedback {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 0 6px 6px 0;
+    border-left: 3px solid var(--border);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .feedback[hidden] { display: none; }
+
+  .feedback.status-correct {
+    border-left-color: var(--good);
+    background: var(--good-soft);
+  }
+
+  .feedback.status-near {
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .feedback.status-wrong {
+    border-left-color: var(--warn);
+    background: var(--warn-soft);
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Skill Practice — Capacity Growth, One Way</p>
+  <h1>Capacity only moves safely in one direction.</h1>
+
+  <p class="briefing">
+    Space can be added at the bottom of the stack or taken away at the top, but only one of those directions behaves like a simple edit. Arrange each procedure in the order that actually keeps the data intact &mdash; the instrument will tell you which step is out of place, not just that something is wrong.
+  </p>
+
+  <div class="mode-row" aria-label="Choose a scenario">
+    <button type="button" class="mode-btn" id="mode-grow" aria-pressed="true">Grow a volume</button>
+    <button type="button" class="mode-btn" id="mode-shrink" aria-pressed="false">Shrink a volume</button>
+  </div>
+
+  <div class="panel" id="panel-grow">
+    <p class="scenario-line">The archive volume on <strong>cld-lnx-01</strong> is getting tight again. Put these steps in the order that actually makes new room usable at <code>/data/archive</code>.</p>
+    <ol class="steps" id="list-grow"></ol>
+    <button type="button" class="check-btn" id="check-grow">Check my order</button>
+    <div class="feedback" id="feedback-grow" hidden aria-live="polite"></div>
+  </div>
+
+  <div class="panel" id="panel-shrink" hidden>
+    <p class="scenario-line">A team is migrating a vendor's proof-of-concept database to a smaller server, so the volume underneath it needs to shrink before the data moves. Put these steps in the order that keeps the data recoverable the whole way through.</p>
+    <ol class="steps" id="list-shrink"></ol>
+    <button type="button" class="check-btn" id="check-shrink">Check my order</button>
+    <div class="feedback" id="feedback-shrink" hidden aria-live="polite"></div>
+  </div>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var scenarios = {
+      grow: {
+        correct: ["add", "extend", "confirm"],
+        start: ["confirm", "add", "extend"],
+        labels: {
+          add: "Add capacity to vol-archive-01 at the block layer \u2014 attach the spare disk or resize the underlying volume.",
+          extend: "Extend the filesystem onto the new space.",
+          confirm: "Confirm the new capacity at /data/archive with df or findmnt."
+        },
+        edgeHints: [
+          "The block layer has to actually have the room before anything above it can use it \u2014 check which step touches vol-archive-01 directly, and make sure it comes first.",
+          "A filesystem doesn't show new room the instant disk space is added \u2014 it has to be extended onto that space first. Check whether you're confirming before that extension happens."
+        ],
+        correctMessage: "That's the safe order: capacity goes on at the block layer first, the filesystem is extended onto it second, and the confirmation at the path comes last \u2014 never before the extension actually happened."
+      },
+      shrink: {
+        correct: ["backup", "destroy", "create", "restore"],
+        start: ["create", "backup", "restore", "destroy"],
+        labels: {
+          backup: "Take a verified, restorable backup of the data.",
+          destroy: "Destroy the old filesystem.",
+          create: "Create a new, smaller filesystem in its place.",
+          restore: "Restore the data from the backup."
+        },
+        edgeHints: [
+          "Nothing here is safe to destroy without a recoverable copy in hand first \u2014 check whether your backup step comes before anything that touches the old filesystem.",
+          "You can't build the smaller filesystem until the old one is out of the way \u2014 check the order between destroying the old filesystem and creating the new one.",
+          "The data can't come back until there's somewhere for it to land \u2014 check whether you're restoring before the new, smaller filesystem exists."
+        ],
+        correctMessage: "That's the only safe order for a shrink: back up first, because destroying the old filesystem is irreversible, then rebuild smaller, then restore. Skipping the backup is the one mistake this order can't recover from."
+      }
+    };
+
+    var order = {
+      grow: scenarios.grow.start.slice(),
+      shrink: scenarios.shrink.start.slice()
+    };
+
+    function arraysEqual(a, b) {
+      return a.length === b.length && a.every(function (v, i) { return v === b[i]; });
+    }
+
+    function renderList(key) {
+      var scenario = scenarios[key];
+      var list = document.getElementById("list-" + key);
+      list.innerHTML = "";
+      order[key].forEach(function (id, index) {
+        var li = document.createElement("li");
+
+        var idxSpan = document.createElement("span");
+        idxSpan.className = "step-index";
+        idxSpan.textContent = (index + 1) + ".";
+
+        var textSpan = document.createElement("span");
+        textSpan.className = "step-text";
+        textSpan.textContent = scenario.labels[id];
+
+        var controls = document.createElement("div");
+        controls.className = "step-controls";
+
+        var upBtn = document.createElement("button");
+        upBtn.type = "button";
+        upBtn.textContent = "\u2191";
+        upBtn.setAttribute("aria-label", "Move step up: " + scenario.labels[id]);
+        upBtn.disabled = index === 0;
+        upBtn.addEventListener("click", function () { move(key, index, -1); });
+
+        var downBtn = document.createElement("button");
+        downBtn.type = "button";
+        downBtn.textContent = "\u2193";
+        downBtn.setAttribute("aria-label", "Move step down: " + scenario.labels[id]);
+        downBtn.disabled = index === order[key].length - 1;
+        downBtn.addEventListener("click", function () { move(key, index, 1); });
+
+        controls.appendChild(upBtn);
+        controls.appendChild(downBtn);
+
+        li.appendChild(idxSpan);
+        li.appendChild(textSpan);
+        li.appendChild(controls);
+        list.appendChild(li);
+      });
+    }
+
+    function move(key, index, delta) {
+      var target = index + delta;
+      if (target < 0 || target >= order[key].length) { return; }
+      var arr = order[key];
+      var tmp = arr[index];
+      arr[index] = arr[target];
+      arr[target] = tmp;
+      renderList(key);
+      var feedback = document.getElementById("feedback-" + key);
+      feedback.hidden = true;
+    }
+
+    function findTranspositionIndex(user, correct) {
+      for (var i = 0; i < correct.length - 1; i++) {
+        var swapped = correct.slice();
+        var t = swapped[i];
+        swapped[i] = swapped[i + 1];
+        swapped[i + 1] = t;
+        if (arraysEqual(user, swapped)) { return i; }
+      }
+      return -1;
+    }
+
+    function firstViolatedEdge(user, correct) {
+      for (var i = 0; i < correct.length - 1; i++) {
+        var posA = user.indexOf(correct[i]);
+        var posB = user.indexOf(correct[i + 1]);
+        if (posA > posB) { return i; }
+      }
+      return -1;
+    }
+
+    function check(key) {
+      var scenario = scenarios[key];
+      var user = order[key];
+      var feedback = document.getElementById("feedback-" + key);
+
+      if (arraysEqual(user, scenario.correct)) {
+        feedback.className = "feedback status-correct";
+        feedback.textContent = scenario.correctMessage;
+      } else {
+        var transIndex = findTranspositionIndex(user, scenario.correct);
+        if (transIndex !== -1) {
+          var first = scenario.labels[scenario.correct[transIndex]];
+          var second = scenario.labels[scenario.correct[transIndex + 1]];
+          feedback.className = "feedback status-near";
+          feedback.textContent = "Close \u2014 everything else is in the right place. \u201c" + first + "\u201d needs to happen before \u201c" + second + "\u201d, not after.";
+        } else {
+          var edge = firstViolatedEdge(user, scenario.correct);
+          if (edge === -1) { edge = 0; }
+          feedback.className = "feedback status-wrong";
+          feedback.textContent = scenario.edgeHints[edge];
+        }
+      }
+      feedback.hidden = false;
+    }
+
+    document.getElementById("check-grow").addEventListener("click", function () { check("grow"); });
+    document.getElementById("check-shrink").addEventListener("click", function () { check("shrink"); });
+
+    var modeGrow = document.getElementById("mode-grow");
+    var modeShrink = document.getElementById("mode-shrink");
+    var panelGrow = document.getElementById("panel-grow");
+    var panelShrink = document.getElementById("panel-shrink");
+
+    function setMode(mode) {
+      var isGrow = mode === "grow";
+      modeGrow.setAttribute("aria-pressed", isGrow ? "true" : "false");
+      modeShrink.setAttribute("aria-pressed", isGrow ? "false" : "true");
+      panelGrow.hidden = !isGrow;
+      panelShrink.hidden = isGrow;
+    }
+
+    modeGrow.addEventListener("click", function () { setMode("grow"); });
+    modeShrink.addEventListener("click", function () { setMode("shrink"); });
+
+    renderList("grow");
+    renderList("shrink");
+  })();
+</script>
+</body>
+</html>

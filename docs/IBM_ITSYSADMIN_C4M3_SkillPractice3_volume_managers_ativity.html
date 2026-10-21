@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Practice — Volume Managers, Same Move</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #faf7f1;
+    --surface-raised: #f1e9d8;
+    --border: #ddd0b2;
+    --text: #141414;
+    --text-dim: #5c5548;
+    --accent: #9c7a42;
+    --accent-dim: #7c6333;
+    --accent-soft: #e9dcbd;
+    --focus: #2e6da4;
+    --good: #4b6b3a;
+    --good-soft: #e3ead9;
+    --warn: #8a5a2a;
+    --warn-soft: #f3e4cd;
+    --on-accent: #ffffff;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 64px;
+  }
+
+  main {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .kicker {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(24px, 5vw, 32px);
+    line-height: 1.28;
+    margin: 0 0 16px;
+    max-width: 26ch;
+  }
+
+  .briefing {
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0 0 26px;
+    max-width: 62ch;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 26px;
+  }
+
+  .group-heading {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+  }
+
+  .platform-group + .platform-group { margin-top: 22px; }
+
+  .term-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .term-row + .term-row { margin-top: 8px; }
+
+  .term-row.marked-correct { border-color: var(--good); }
+  .term-row.marked-wrong { border-color: var(--warn); }
+
+  .term-name {
+    font-weight: 600;
+    font-size: 15px;
+    flex: 1 1 200px;
+    min-width: 160px;
+  }
+
+  .term-select-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 240px;
+  }
+
+  .term-select-wrap label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  select.layer-select {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface-raised);
+    color: var(--text);
+  }
+
+  select.layer-select:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .mark {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .mark.correct { color: var(--good); }
+  .mark.wrong { color: var(--warn); }
+
+  .check-btn {
+    margin-top: 22px;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 15px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+  }
+
+  .check-btn:hover { background: var(--accent-dim); }
+
+  .check-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .feedback {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 0 6px 6px 0;
+    border-left: 3px solid var(--border);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .feedback[hidden] { display: none; }
+
+  .feedback p { margin: 0 0 8px; }
+  .feedback p:last-child { margin-bottom: 0; }
+
+  .feedback.status-correct {
+    border-left-color: var(--good);
+    background: var(--good-soft);
+  }
+
+  .feedback.status-near {
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .feedback.status-wrong {
+    border-left-color: var(--warn);
+    background: var(--warn-soft);
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Skill Practice — Volume Managers, Same Move</p>
+  <h1>Different vendor, same three questions.</h1>
+
+  <p class="briefing">
+    Adding capacity at the block layer is the move you already have. A volume manager just does that move with a layer of indirection in between &mdash; raw disks gather into a group, and a piece of that group is what a filesystem actually sits on. For each term below, decide which part of that chain it names.
+  </p>
+
+  <div class="panel">
+    <div class="platform-group">
+      <p class="group-heading">Linux &mdash; LVM</p>
+      <div class="term-row" id="row-pv">
+        <span class="term-name">Physical volume</span>
+        <div class="term-select-wrap">
+          <label for="select-pv">Which part of the chain?</label>
+          <select class="layer-select" id="select-pv"></select>
+        </div>
+        <span class="mark" id="mark-pv" aria-hidden="true"></span>
+      </div>
+      <div class="term-row" id="row-vg">
+        <span class="term-name">Volume group</span>
+        <div class="term-select-wrap">
+          <label for="select-vg">Which part of the chain?</label>
+          <select class="layer-select" id="select-vg"></select>
+        </div>
+        <span class="mark" id="mark-vg" aria-hidden="true"></span>
+      </div>
+      <div class="term-row" id="row-lv">
+        <span class="term-name">Logical volume</span>
+        <div class="term-select-wrap">
+          <label for="select-lv">Which part of the chain?</label>
+          <select class="layer-select" id="select-lv"></select>
+        </div>
+        <span class="mark" id="mark-lv" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <div class="platform-group">
+      <p class="group-heading">Windows &mdash; Storage Spaces</p>
+      <div class="term-row" id="row-disk">
+        <span class="term-name">Physical disk</span>
+        <div class="term-select-wrap">
+          <label for="select-disk">Which part of the chain?</label>
+          <select class="layer-select" id="select-disk"></select>
+        </div>
+        <span class="mark" id="mark-disk" aria-hidden="true"></span>
+      </div>
+      <div class="term-row" id="row-pool">
+        <span class="term-name">Storage pool</span>
+        <div class="term-select-wrap">
+          <label for="select-pool">Which part of the chain?</label>
+          <select class="layer-select" id="select-pool"></select>
+        </div>
+        <span class="mark" id="mark-pool" aria-hidden="true"></span>
+      </div>
+      <div class="term-row" id="row-vdisk">
+        <span class="term-name">Virtual disk</span>
+        <div class="term-select-wrap">
+          <label for="select-vdisk">Which part of the chain?</label>
+          <select class="layer-select" id="select-vdisk"></select>
+        </div>
+        <span class="mark" id="mark-vdisk" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <button type="button" class="check-btn" id="check-btn">Check my sort</button>
+    <div class="feedback" id="feedback" hidden aria-live="polite"></div>
+  </div>
+</main>
+
+<script>
+  (function () {
+    "use strict";
+
+    var options = [
+      { value: "block", text: "Raw capacity \u2014 the actual disk, not yet gathered with anything" },
+      { value: "group", text: "The group that gathers raw disks together" },
+      { value: "carved", text: "What's carved out for a filesystem to actually sit on" }
+    ];
+
+    var terms = {
+      pv:    { correct: "block",  start: "carved", hint: "A physical volume is just the raw disk or partition itself \u2014 nothing has grouped it with anything yet. Ask whether it's still raw capacity." },
+      vg:    { correct: "group",  start: "block",  hint: "A volume group doesn't hold any files and isn't raw disk either \u2014 it only exists to gather physical volumes together." },
+      lv:    { correct: "carved", start: "group",  hint: "A logical volume is the piece actually carved out for a filesystem to sit on \u2014 it's not the raw disk, and it's not the group." },
+      disk:  { correct: "block",  start: "group",  hint: "A physical disk hasn't joined a pool yet \u2014 it's still raw capacity on its own." },
+      pool:  { correct: "group",  start: "carved", hint: "A storage pool doesn't hold files either \u2014 it only exists to gather physical disks together." },
+      vdisk: { correct: "carved", start: "block",  hint: "A virtual disk is the piece carved out of the pool for a filesystem to use \u2014 not the raw disk, and not the pool itself." }
+    };
+
+    var termOrder = ["pv", "vg", "lv", "disk", "pool", "vdisk"];
+
+    function populateSelects() {
+      termOrder.forEach(function (id) {
+        var select = document.getElementById("select-" + id);
+        options.forEach(function (opt) {
+          var o = document.createElement("option");
+          o.value = opt.value;
+          o.textContent = opt.text;
+          select.appendChild(o);
+        });
+        select.value = terms[id].start;
+        select.addEventListener("change", clearFeedback);
+      });
+    }
+
+    function clearFeedback() {
+      var feedback = document.getElementById("feedback");
+      feedback.hidden = true;
+      termOrder.forEach(function (id) {
+        document.getElementById("row-" + id).classList.remove("marked-correct", "marked-wrong");
+        document.getElementById("mark-" + id).textContent = "";
+      });
+    }
+
+    function check() {
+      var mismatched = [];
+      var correctCount = 0;
+
+      termOrder.forEach(function (id) {
+        var select = document.getElementById("select-" + id);
+        var row = document.getElementById("row-" + id);
+        var mark = document.getElementById("mark-" + id);
+        var isCorrect = select.value === terms[id].correct;
+
+        row.classList.toggle("marked-correct", isCorrect);
+        row.classList.toggle("marked-wrong", !isCorrect);
+        mark.textContent = isCorrect ? "\u2713" : "\u2717";
+        mark.className = "mark " + (isCorrect ? "correct" : "wrong");
+
+        if (isCorrect) {
+          correctCount++;
+        } else {
+          mismatched.push(id);
+        }
+      });
+
+      var feedback = document.getElementById("feedback");
+      feedback.innerHTML = "";
+
+      if (mismatched.length === 0) {
+        feedback.className = "feedback status-correct";
+        var p = document.createElement("p");
+        p.textContent = "That's the chain on both platforms: raw disks gather into a group, and a carved-out piece of that group is what a filesystem actually sits on. LVM and Storage Spaces are the same move wearing different names.";
+        feedback.appendChild(p);
+      } else if (mismatched.length <= 2) {
+        feedback.className = "feedback status-near";
+        var intro = document.createElement("p");
+        intro.textContent = "Close \u2014 the rest of the chain is right. Look again at:";
+        feedback.appendChild(intro);
+        mismatched.forEach(function (id) {
+          var item = document.createElement("p");
+          item.textContent = terms[id].hint;
+          feedback.appendChild(item);
+        });
+      } else {
+        feedback.className = "feedback status-wrong";
+        var wrongP = document.createElement("p");
+        wrongP.textContent = "Sort by asking three questions, in order: is this still a raw, ungathered disk? Is this only the group that gathers raw disks, with no files of its own? Or is this the piece carved out of that group for a filesystem to actually use? Each term answers exactly one of those.";
+        feedback.appendChild(wrongP);
+      }
+
+      feedback.hidden = false;
+    }
+
+    populateSelects();
+    document.getElementById("check-btn").addEventListener("click", check);
+  })();
+</script>
+</body>
+</html>
