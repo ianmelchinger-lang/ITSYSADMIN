@@ -207,7 +207,7 @@
 
   <h1>Assemble the Review, Start to Finish</h1>
 
-  <p>The bank below holds ten cards. Six of them are the review, in some order. The other four are moves that feel plausible but don\u2019t belong in this sequence at all. Build the path by adding only the cards that belong, in the order the review actually runs \u2014 then check it.</p>
+  <p>The bank below holds ten cards. Six of them are the review, in some order. The other four are moves that feel plausible but don’t belong in this sequence at all. Build the path by adding only the cards that belong, in the order the review actually runs — then check it.</p>
 
   <hr class="rule">
 
@@ -216,7 +216,7 @@
 
   <hr class="rule">
 
-  <h2 class="section">The sequence you\u2019re building</h2>
+  <h2 class="section">The sequence you’re building</h2>
   <div id="path"></div>
 
   <div class="controls">
@@ -232,11 +232,11 @@
 (function () {
 
   var required = [
-    { id: 'r0', text: 'Read the identity\u2019s effective access to the share from more than one source, on each platform.' },
-    { id: 'r1', text: 'Compare that reach against what the identity\u2019s role actually justifies.' },
+    { id: 'r0', text: 'Read the identity’s effective access to the share from more than one source, on each platform.' },
+    { id: 'r1', text: 'Compare that reach against what the identity’s role actually justifies.' },
     { id: 'r2', text: 'Name the gap between effective access and role-justified access as a finding.' },
     { id: 'r3', text: 'Write a recommended tightening into the finding record.' },
-    { id: 'r4', text: 'Route the finding and its recommendation to the share\u2019s resource owner.' },
+    { id: 'r4', text: 'Route the finding and its recommendation to the share’s resource owner.' },
     { id: 'r5', text: 'Put a recurring date on the calendar to run this same review again.' }
   ];
 
@@ -244,22 +244,22 @@
     {
       id: 'd0',
       text: 'Conclude the audit must be mistaken, since no permission names her by name.',
-      reason: 'An accurate permission list that never names her by name doesn\u2019t mean the audit is wrong \u2014 reach composes through groups, not individual grants. This is the trap, not a step in the review.'
+      reason: 'An accurate permission list that never names her by name doesn’t mean the audit is wrong — reach composes through groups, not individual grants. This is the trap, not a step in the review.'
     },
     {
       id: 'd1',
       text: 'Look for the one file permission that grants her access, and remove it.',
-      reason: 'There usually isn\u2019t a single file permission naming her to remove \u2014 her reach is composed from group memberships intersecting a share\u2019s permissions. This hunts the wrong layer entirely.'
+      reason: 'There usually isn’t a single file permission naming her to remove — her reach is composed from group memberships intersecting a share’s permissions. This hunts the wrong layer entirely.'
     },
     {
       id: 'd2',
       text: 'Fix the one bad grant you found, and consider the matter closed.',
-      reason: 'Treating one fix as the end of it ignores that access re-accumulates through the next membership. The review\u2019s own job includes scheduling its return, not closing the book after one pass.'
+      reason: 'Treating one fix as the end of it ignores that access re-accumulates through the next membership. The review’s own job includes scheduling its return, not closing the book after one pass.'
     },
     {
       id: 'd3',
       text: 'Remove her from the finance group yourself, right now, before routing anything.',
-      reason: 'Making the change yourself is the one move explicitly outside the review\u2019s boundary. The review documents and recommends; the resource owner decides whether, when, and how to act.'
+      reason: 'Making the change yourself is the one move explicitly outside the review’s boundary. The review documents and recommends; the resource owner decides whether, when, and how to act.'
     }
   ];
 
@@ -412,12 +412,12 @@
       if (distractorsPresent.length > 0) {
         var dp = document.createElement('p');
         dp.className = 'headline';
-        dp.textContent = distractorsPresent.length === 1 ? 'One card in your sequence doesn\u2019t belong:' : distractorsPresent.length + ' cards in your sequence don\u2019t belong:';
+        dp.textContent = distractorsPresent.length === 1 ? 'One card in your sequence doesn’t belong:' : distractorsPresent.length + ' cards in your sequence don’t belong:';
         feedbackEl.appendChild(dp);
         var dul = document.createElement('ul');
         distractorsPresent.forEach(function (d) {
           var li = document.createElement('li');
-          li.textContent = d.text + ' \u2014 ' + d.reason;
+          li.textContent = d.text + ' — ' + d.reason;
           dul.appendChild(li);
         });
         feedbackEl.appendChild(dul);
@@ -431,7 +431,7 @@
       }
 
       var closing = document.createElement('p');
-      closing.textContent = 'Fix these first \u2014 order only gets checked once the right six cards, and only the right six, are in the sequence.';
+      closing.textContent = 'Fix these first — order only gets checked once the right six cards, and only the right six, are in the sequence.';
       feedbackEl.appendChild(closing);
       return;
     }
@@ -451,7 +451,7 @@
       p.textContent = 'The whole chain is correct.';
       feedbackEl.appendChild(p);
       var p2 = document.createElement('p');
-      p2.textContent = 'Read, compare, name the gap, recommend, route, and schedule the return \u2014 in that order, with nothing that changes access anywhere in it. That\u2019s the review, start to finish.';
+      p2.textContent = 'Read, compare, name the gap, recommend, route, and schedule the return — in that order, with nothing that changes access anywhere in it. That’s the review, start to finish.';
       feedbackEl.appendChild(p2);
       return;
     }
@@ -477,7 +477,7 @@
       feedbackEl.classList.add('level-near');
       var np = document.createElement('p');
       np.className = 'headline';
-      np.textContent = 'Close \u2014 the right six cards, almost the right order.';
+      np.textContent = 'Close — the right six cards, almost the right order.';
       feedbackEl.appendChild(np);
       var np2 = document.createElement('p');
       if (firstViolation) {
@@ -490,11 +490,11 @@
       feedbackEl.classList.add('level-wrong');
       var wp = document.createElement('p');
       wp.className = 'headline';
-      wp.textContent = 'The right six cards, but the order isn\u2019t there yet.';
+      wp.textContent = 'The right six cards, but the order isn’t there yet.';
       feedbackEl.appendChild(wp);
       var wp2 = document.createElement('p');
       if (firstViolation) {
-        wp2.textContent = 'Start here: \u201C' + firstViolation.step.text + '\u201D can\u2019t come before \u201C' + firstViolation.pred.text + '\u201D \u2014 one depends on the other. Fix that pair and check again.';
+        wp2.textContent = 'Start here: \u201C' + firstViolation.step.text + '\u201D can’t come before \u201C' + firstViolation.pred.text + '\u201D — one depends on the other. Fix that pair and check again.';
       } else {
         wp2.textContent = 'Work through the chain one dependency at a time: what has to be true before the next card can happen at all?';
       }
