@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the hand test borrowed</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#1c2128; --muted:#4b5563; --line:#c9d1d9; --panel:#f4f6f8;
+  --accent:#0b57a4; --accent-ink:#ffffff; --accent-soft:#e6f0fa;
+  --ok:#176334; --ok-bg:#e7f4ec; --near:#7a4b00; --near-bg:#fcf1d9; --bad:#9a1c20; --bad-bg:#fbe9e9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:46rem;margin:0 auto;padding:1.25rem 1rem 2.5rem}
+h1{font-size:1.45rem;line-height:1.25;margin:0 0 .75rem}
+h2{font-size:1.1rem;margin:1.4rem 0 .35rem}
+p{margin:.5rem 0}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+fieldset.spans legend{font-weight:700;padding:0;margin-bottom:.4rem}
+.span-row{display:flex;align-items:flex-start;gap:.65rem;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:.6rem .8rem;margin:0 0 .5rem;cursor:pointer;min-height:2.75rem}
+.span-row input{accent-color:var(--accent);width:1.15rem;height:1.15rem;margin-top:.2rem;flex:none}
+.span-row:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.span-row:has(input:disabled){cursor:default}
+.sheet-wrap{margin:.8rem 0 1rem}
+table.sheet{width:100%;border-collapse:collapse;border:2px solid var(--accent);border-radius:10px;background:var(--bg)}
+table.sheet caption{text-align:left;font-weight:700;padding:0 0 .35rem}
+table.sheet th,table.sheet td{padding:.55rem .75rem;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+table.sheet tr:first-child th,table.sheet tr:first-child td{border-top:0}
+table.sheet th{width:42%;font-weight:600;background:var(--accent-soft)}
+.sheet-note{color:var(--muted);margin:.4rem 0 0}
+fieldset.cond{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:.7rem .85rem .8rem;margin:0 0 .65rem}
+fieldset.cond legend{font-weight:600;padding:0 .3rem}
+.choices{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.2rem}
+.choices label{display:inline-flex;align-items:center;gap:.45rem;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:.4rem .85rem;cursor:pointer;min-height:2.5rem}
+.choices input{accent-color:var(--accent);width:1.1rem;height:1.1rem}
+.choices label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.choices label:has(input:disabled){cursor:default}
+button{font:inherit;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:.6rem 1.1rem;min-height:2.75rem;cursor:pointer}
+button.secondary{background:var(--bg);color:var(--accent)}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin:.8rem 0 .4rem}
+[hidden]{display:none!important}
+.feedback{margin:.7rem 0;padding:.75rem 1rem;border-radius:10px;border:1px solid var(--line)}
+.feedback:empty{display:none}
+.feedback.correct{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.feedback.near{background:var(--near-bg);color:var(--near);border-color:var(--near)}
+.feedback.wrong{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.feedback.info{background:var(--panel);color:var(--ink)}
+.verdicts{list-style:none;margin:.8rem 0;padding:0;display:grid;gap:.55rem}
+.verdicts li{padding:.65rem .85rem;border-left:4px solid var(--accent);background:var(--panel);border-radius:0 8px 8px 0}
+.verdicts li.shown{border-left-color:var(--ok)}
+.verdicts li.unshown{border-left-color:var(--near)}
+.verdicts .v{font-weight:700}
+.closing{margin:1rem 0;padding:.8rem 1rem;border-radius:10px;background:var(--accent-soft)}
+@media (max-width:480px){
+  main{padding:1rem .85rem 2rem}
+  .choices{flex-direction:column}
+  .choices label{width:100%}
+  table.sheet,table.sheet tbody,table.sheet tr,table.sheet th,table.sheet td,table.sheet caption{display:block;width:100%}
+  table.sheet th{border-top:1px solid var(--line)}
+  table.sheet tr:first-child th{border-top:0}
+  table.sheet td{border-top:0;padding-top:.1rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>What the hand test borrowed</h1>
+<p>You tested a script by hand, and it worked. A scheduled job does not start from your session. The scheduler starts it from a stored definition, with nobody signed in, and the definition names the account the job runs as. Whatever your session supplied, that account may lack.</p>
+<p>One term first. The execution policy is a safety setting that some shells carry. It can refuse to run script files, and it applies by scope, so a setting made for one user covers that user.</p>
+<p>You will do two things. First you find what the test borrowed. Then you check each borrowed condition against a sheet for the account the job will use. Nothing here is scored.</p>
+
+<h2 id="h1">First, mark what your session supplied</h2>
+<p id="task1">A hand test borrows from you. Mark each sentence that names something your own session supplied and the job&rsquo;s account might not have. Leave the sentences that describe the script or the run.</p>
+<form id="spanform" novalidate>
+  <fieldset class="spans" id="spans"><legend>The hand test, in the tester&rsquo;s words</legend></fieldset>
+  <div class="actions"><button type="button" id="check1">Check my marks</button></div>
+</form>
+<div class="feedback" id="fb1" role="status" aria-live="polite"></div>
+
+<section id="step2" hidden aria-labelledby="h2">
+  <h2 id="h2" tabindex="-1">Next, check each one against the account</h2>
+  <p id="task2">Below is the sheet for the account the definition names. For each borrowed condition, decide whether the sheet shows that the job has it too. A condition is shown only when a line on the sheet states it.</p>
+  <div class="sheet-wrap">
+    <table class="sheet" id="sheet"><caption>Account sheet, supplied by this exercise</caption><tbody id="sheetbody"></tbody></table>
+  </div>
+  <form id="condform" novalidate>
+    <div id="conds"></div>
+    <div class="actions"><button type="button" id="check2">Check against the sheet</button></div>
+  </form>
+  <div class="feedback" id="fb2" role="status" aria-live="polite"></div>
+
+  <div id="result" hidden>
+    <ul class="verdicts" id="verdicts"></ul>
+    <p class="closing" id="closing"></p>
+    <div class="actions">
+      <button type="button" id="pass2">Change one assumption: run the job as the account used for the test</button>
+      <button type="button" id="restart" class="secondary">Start over</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+  // ---- Step 1: the hand test, in the tester's words. key = true when the sentence names a borrowed condition.
+  var SPANS = [
+    {id:'s1', key:true,  text:'I ran the script by hand, under my own account.'},
+    {id:'s2', key:true,  text:'I started it from the folder where I keep my scripts.'},
+    {id:'s3', key:false, text:'It measures the three shares and writes one line about them.'},
+    {id:'s4', key:true,  text:'It added its line to C:\\Ops\\Logs without asking me for anything.'},
+    {id:'s5', key:false, text:'The script is about forty lines long.'},
+    {id:'s6', key:true,  text:'Weeks ago I had set the execution policy for my own user so that script files may run.'},
+    {id:'s7', key:false, text:'The whole run took about two minutes.'},
+    {id:'s8', key:false, text:'The line it writes names the number of shares it measured.'}
+  ];
+
+  // ---- Step 2: the four borrowed conditions, in the order the sheet is read.
+  var CONDS = [
+    {id:'identity', name:'Running under my own account'},
+    {id:'rights',   name:'My right to add a line to C:\\Ops\\Logs'},
+    {id:'setting',  name:'The execution policy I set for my own user'},
+    {id:'folder',   name:'Starting from my scripts folder'}
+  ];
+
+  // 'yes' = the sheet shows the job has this condition; 'no' = the sheet does not show it.
+  var PASSES = [
+    {
+      sheet:[
+        ['The hand test ran as', 'the tester\u2019s own account'],
+        ['The definition runs the job as', 'svc-backup, an account with no interactive logon'],
+        ['Rights listed for that account', 'may read the shares under D:\\Shares']
+      ],
+      key:{identity:'no', rights:'no', setting:'no', folder:'no'},
+      why:{
+        identity:'The sheet says the hand test ran as the tester\u2019s own account and the job runs as svc-backup. The two differ, so the job does not run as the tester.',
+        rights:'The sheet lists a right to read the shares for svc-backup and no right to add lines to C:\\Ops\\Logs. The right the test used is not on the account\u2019s line.',
+        setting:'No line lists a setting for svc-backup. A setting made for one user covers that user, so yours covers you, and nothing on the sheet says it reaches this account. If the shell refuses a script under the job\u2019s account, the safety setting is working as designed.',
+        folder:'No line states a starting folder. Where you stood was a fact about your session, and the sheet gives the job nothing to match it.'
+      },
+      closing:'None of the four conditions is on the sheet. The test proved the script for one identity in one session, and the job runs as a different account.',
+      task:'Below is the sheet for the account the definition names. For each borrowed condition, decide whether the sheet shows that the job has it too. A condition is shown only when a line on the sheet states it.'
+    },
+    {
+      sheet:[
+        ['The hand test ran as', 'the tester\u2019s own account'],
+        ['The definition runs the job as', 'the tester\u2019s own account'],
+        ['Rights listed for that account', 'may read the shares under D:\\Shares; may add lines to C:\\Ops\\Logs']
+      ],
+      key:{identity:'yes', rights:'yes', setting:'no', folder:'no'},
+      why:{
+        identity:'The definition now names the account the hand test used, so the identity is the same.',
+        rights:'That account\u2019s line lists a right to add lines to C:\\Ops\\Logs, so the right the test used is on the sheet.',
+        setting:'Still no line. A setting made for one user covers that user, and this is the same user, but the sheet does not state the setting, so it does not show it. Check it on the job\u2019s account instead of assuming it.',
+        folder:'Still no line. Naming the same account did not bring the folder along, because where you stood was a fact about your session.'
+      },
+      closing:'Naming the account used for the test carried two conditions across, and the sheet shows both. The other two still have no line. Each one is a check to make on the job\u2019s account before its first night. After that, give the account only what the job needs.',
+      task:'Same four conditions, one change: the definition now runs the job as the account the hand test used. Check each condition against the new sheet.'
+    }
+  ];
+
+  var passIndex = 0;
+  var step1Done = false;
+
+  var spansEl = document.getElementById('spans');
+  var fb1 = document.getElementById('fb1');
+  var fb2 = document.getElementById('fb2');
+  var check1 = document.getElementById('check1');
+  var check2 = document.getElementById('check2');
+  var step2 = document.getElementById('step2');
+  var sheetBody = document.getElementById('sheetbody');
+  var condsEl = document.getElementById('conds');
+  var result = document.getElementById('result');
+  var verdicts = document.getElementById('verdicts');
+  var closing = document.getElementById('closing');
+  var pass2Btn = document.getElementById('pass2');
+
+  function quote(t){ return '\u201C' + t + '\u201D'; }
+  function nameOf(id){ for (var i = 0; i < CONDS.length; i++) if (CONDS[i].id === id) return CONDS[i].name; return id; }
+
+  function renderSpans(){
+    SPANS.forEach(function(s){
+      var lab = document.createElement('label');
+      lab.className = 'span-row';
+      var inp = document.createElement('input');
+      inp.type = 'checkbox'; inp.id = 'mark-' + s.id; inp.name = 'mark-' + s.id; inp.value = s.id;
+      lab.appendChild(inp);
+      var sp = document.createElement('span');
+      sp.textContent = s.text;
+      lab.appendChild(sp);
+      spansEl.appendChild(lab);
+    });
+  }
+
+  // Key check for step 1: compare marks with the key; report missing and extra sentences.
+  function evaluateSpans(marked){
+    var missing = SPANS.filter(function(s){ return s.key && !marked[s.id]; });
+    var extra = SPANS.filter(function(s){ return !s.key && marked[s.id]; });
+    var off = missing.length + extra.length;
+    return {state: off === 0 ? 'correct' : (off <= 2 ? 'near' : 'wrong'), missing: missing, extra: extra};
+  }
+
+  function readMarks(){
+    var m = {};
+    SPANS.forEach(function(s){ m[s.id] = document.getElementById('mark-' + s.id).checked; });
+    return m;
+  }
+
+  function doCheck1(){
+    var marks = readMarks();
+    var any = SPANS.some(function(s){ return marks[s.id]; });
+    if (!any){
+      fb1.className = 'feedback info';
+      fb1.textContent = 'Mark the sentences you think qualify, then check.';
+      return;
+    }
+    var r = evaluateSpans(marks);
+    if (r.state === 'correct'){
+      fb1.className = 'feedback correct';
+      fb1.textContent = 'Correct. The four marked sentences each name something your session supplied: an identity, a place to stand, a right to write, and a setting you made. The other four describe the script or the run.';
+      var boxes = spansEl.querySelectorAll('input');
+      for (var i = 0; i < boxes.length; i++) boxes[i].disabled = true;
+      check1.disabled = true;
+      step1Done = true;
+      step2.hidden = false;
+      renderPass();
+      document.getElementById('h2').scrollIntoView({block:'start'});
+    } else if (r.state === 'near'){
+      var parts = [];
+      r.missing.forEach(function(s){ parts.push(quote(s.text) + ' names something your session supplied and is not marked'); });
+      r.extra.forEach(function(s){ parts.push(quote(s.text) + ' describes the script or the run and should not be marked'); });
+      fb1.className = 'feedback near';
+      fb1.textContent = 'Close. The structure is right, but ' + parts.join(', and ') + '. Check again.';
+    } else {
+      fb1.className = 'feedback wrong';
+      fb1.textContent = 'Not yet. A borrowed condition is something your own session supplied that the job\u2019s account might not have. First move: take each sentence and ask what supplied the condition it names, the script or you. Mark the ones you supplied.';
+    }
+  }
+
+  function renderPass(){
+    var p = PASSES[passIndex];
+    sheetBody.textContent = '';
+    p.sheet.forEach(function(row){
+      var tr = document.createElement('tr');
+      var th = document.createElement('th'); th.scope = 'row'; th.textContent = row[0];
+      var td = document.createElement('td'); td.textContent = row[1];
+      tr.appendChild(th); tr.appendChild(td);
+      sheetBody.appendChild(tr);
+    });
+    condsEl.textContent = '';
+    CONDS.forEach(function(c){
+      var fs = document.createElement('fieldset');
+      fs.className = 'cond';
+      var lg = document.createElement('legend'); lg.textContent = c.name; fs.appendChild(lg);
+      var box = document.createElement('div'); box.className = 'choices';
+      [['yes','The sheet shows it'], ['no','The sheet does not show it']].forEach(function(o){
+        var lab = document.createElement('label');
+        var inp = document.createElement('input');
+        inp.type = 'radio'; inp.name = 'cond-' + c.id; inp.value = o[0];
+        lab.appendChild(inp);
+        lab.appendChild(document.createTextNode(o[1]));
+        box.appendChild(lab);
+      });
+      fs.appendChild(box);
+      condsEl.appendChild(fs);
+    });
+    document.getElementById('task2').textContent = p.task;
+    fb2.className = 'feedback'; fb2.textContent = '';
+    check2.disabled = false;
+    result.hidden = true;
+  }
+
+  function readAnswers(){
+    var a = {};
+    for (var i = 0; i < CONDS.length; i++){
+      var sel = document.querySelector('input[name="cond-' + CONDS[i].id + '"]:checked');
+      if (!sel) return null;
+      a[CONDS[i].id] = sel.value;
+    }
+    return a;
+  }
+
+  // Key check for step 2: the sheet shows a condition only when a line on it states it for the account named.
+  function evaluateSheet(answers, key){
+    var wrong = CONDS.filter(function(c){ return answers[c.id] !== key[c.id]; });
+    return {state: wrong.length === 0 ? 'correct' : (wrong.length === 1 ? 'near' : 'wrong'), wrong: wrong};
+  }
+
+  function doCheck2(){
+    var answers = readAnswers();
+    if (!answers){
+      fb2.className = 'feedback info';
+      fb2.textContent = 'Answer all four conditions first.';
+      return;
+    }
+    var p = PASSES[passIndex];
+    var r = evaluateSheet(answers, p.key);
+    if (r.state === 'correct'){
+      fb2.className = 'feedback correct';
+      fb2.textContent = 'Correct. Each answer matches what is written on the sheet.';
+      var radios = condsEl.querySelectorAll('input');
+      for (var i = 0; i < radios.length; i++) radios[i].disabled = true;
+      check2.disabled = true;
+      showResult();
+    } else if (r.state === 'near'){
+      fb2.className = 'feedback near';
+      fb2.textContent = 'Close. The structure is right, but your answer on ' + quote(r.wrong[0].name) + ' does not match the sheet. Look for a line that states it for the account the definition names.';
+    } else {
+      fb2.className = 'feedback wrong';
+      fb2.textContent = 'Not yet. The sheet shows a condition only when a line on it states that condition for the account the definition names. First move: read the sheet from the top, and for each condition look for the line that states it. If you find no line, the sheet does not show it.';
+    }
+  }
+
+  function showResult(){
+    var p = PASSES[passIndex];
+    verdicts.textContent = '';
+    CONDS.forEach(function(c){
+      var li = document.createElement('li');
+      var shown = p.key[c.id] === 'yes';
+      li.className = shown ? 'shown' : 'unshown';
+      var v = document.createElement('span'); v.className = 'v';
+      v.textContent = c.name + ': ' + (shown ? 'the sheet shows it.' : 'the sheet does not show it.');
+      li.appendChild(v);
+      li.appendChild(document.createTextNode(' ' + p.why[c.id]));
+      verdicts.appendChild(li);
+    });
+    closing.textContent = p.closing;
+    pass2Btn.hidden = (passIndex !== 0);
+    result.hidden = false;
+  }
+
+  function startPass2(){
+    passIndex = 1;
+    renderPass();
+    document.getElementById('h2').scrollIntoView({block:'start'});
+  }
+
+  function restart(){
+    passIndex = 0;
+    step1Done = false;
+    var boxes = spansEl.querySelectorAll('input');
+    for (var i = 0; i < boxes.length; i++){ boxes[i].disabled = false; boxes[i].checked = false; }
+    check1.disabled = false;
+    fb1.className = 'feedback'; fb1.textContent = '';
+    step2.hidden = true;
+    document.getElementById('h1').scrollIntoView({block:'start'});
+  }
+
+  renderSpans();
+  check1.addEventListener('click', doCheck1);
+  check2.addEventListener('click', doCheck2);
+  pass2Btn.addEventListener('click', startPass2);
+  document.getElementById('restart').addEventListener('click', restart);
+  document.getElementById('spanform').addEventListener('submit', function(e){ e.preventDefault(); });
+  document.getElementById('condform').addEventListener('submit', function(e){ e.preventDefault(); });
+})();
+</script>
+</body>
+</html>

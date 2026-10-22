@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Write the definition: three answers</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#1c2128; --muted:#4b5563; --line:#c9d1d9; --panel:#f4f6f8;
+  --accent:#0b57a4; --accent-ink:#ffffff; --accent-soft:#e6f0fa;
+  --ok:#176334; --ok-bg:#e7f4ec; --near:#7a4b00; --near-bg:#fcf1d9; --bad:#9a1c20; --bad-bg:#fbe9e9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:46rem;margin:0 auto;padding:1.25rem 1rem 2.5rem}
+h1{font-size:1.45rem;line-height:1.25;margin:0 0 .75rem}
+h2{font-size:1.05rem;margin:0 0 .4rem}
+p{margin:.5rem 0}
+.story{margin:.9rem 0;padding:.75rem 1rem;border-left:4px solid var(--accent);background:var(--panel);border-radius:0 8px 8px 0}
+.key3{display:grid;gap:.4rem;margin:.6rem 0 1rem;padding:0;list-style:none}
+.key3 li{padding:.45rem .7rem;background:var(--accent-soft);border-radius:8px}
+fieldset.frag{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:.7rem .85rem .8rem;margin:0 0 .65rem;min-width:0}
+fieldset.frag legend{font-weight:600;padding:0 .3rem}
+.choices{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-top:.2rem}
+.choices label{display:flex;align-items:center;gap:.4rem;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:.35rem .6rem;cursor:pointer;min-height:2.5rem;font-size:.95rem}
+.choices input{accent-color:var(--accent);width:1.05rem;height:1.05rem;flex:none}
+.choices label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.choices label:has(input:disabled){cursor:default}
+button{font:inherit;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:.6rem 1.1rem;min-height:2.75rem;cursor:pointer}
+button.secondary{background:var(--bg);color:var(--accent)}
+button[aria-pressed="true"]{background:var(--near-bg);color:var(--near);border-color:var(--near)}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin:.9rem 0 .4rem}
+.actions[hidden],.card[hidden],.note[hidden]{display:none}
+.feedback{margin:.7rem 0;padding:.75rem 1rem;border-radius:10px;border:1px solid var(--line);min-height:1rem}
+.feedback:empty{display:none}
+.feedback.correct{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.feedback.near{background:var(--near-bg);color:var(--near);border-color:var(--near)}
+.feedback.wrong{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.feedback.info{background:var(--panel);color:var(--ink)}
+.card{margin:1rem 0;border:2px solid var(--accent);border-radius:12px;padding:.9rem 1rem;background:var(--bg)}
+.slot{display:grid;grid-template-columns:9rem 1fr;gap:.6rem;align-items:start;padding:.55rem 0;border-top:1px solid var(--line)}
+.slot:first-of-type{border-top:0}
+.slot .name{font-weight:700}
+.slot .name small{display:block;font-weight:400;color:var(--muted)}
+.slot .gone{color:var(--bad);font-weight:600}
+.leave{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem}
+.note{margin-top:.8rem;padding:.7rem .9rem;background:var(--panel);border-radius:10px}
+@media (max-width:480px){
+  main{padding:1rem .85rem 2rem}
+  .choices{grid-template-columns:1fr 1fr}
+  .slot{grid-template-columns:1fr;gap:.2rem}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Write the definition: three answers</h1>
+<p>A scheduled job is work that a scheduler starts by itself from a stored definition, with nobody signed in. The definition stands in for you. It holds three answers:</p>
+<ul class="key3">
+  <li><strong>The trigger</strong> says when the job starts.</li>
+  <li><strong>The action</strong> says which command the scheduler starts.</li>
+  <li><strong>The run-as account</strong> says as whom the command runs.</li>
+</ul>
+<p>Here is a chore that someone does by hand every night.</p>
+<blockquote class="story" id="story"></blockquote>
+<p id="task">Sort the eight pieces of the story. Put each piece in the slot it answers, or mark it as none of the three. Nothing here is scored.</p>
+
+<form id="sorter" novalidate>
+  <div id="frags"></div>
+  <div class="actions">
+    <button type="button" id="check">Check my sort</button>
+  </div>
+</form>
+<div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+
+<section class="card" id="card" hidden aria-labelledby="card-h">
+  <h2 id="card-h">The definition card the scheduler holds</h2>
+  <p>The scheduler consults this card and nothing else. Whatever the card holds, the job has. Whatever it leaves out, the job lacks, because nobody is there to supply it. Try leaving a slot out.</p>
+  <div id="slots"></div>
+  <div class="leave" id="leave"></div>
+  <p class="note" id="asnote">At the keyboard, &ldquo;I sign in as myself&rdquo; answered &ldquo;as whom&rdquo; simply by being true. In a definition, that answer has to be written down as an account.</p>
+  <p class="note" id="platnote">Platforms write the same answers in different forms. Cron, the Linux scheduler, places five ordered time-and-date fields before the command. Task Scheduler, the Windows scheduler, attaches a trigger to a named task. You translate the answers from one platform to the other, and you never copy them.</p>
+  <div class="actions">
+    <button type="button" id="pass2">Change one assumption: start after another job</button>
+    <button type="button" id="restart" class="secondary">Start over</button>
+  </div>
+</section>
+</main>
+
+<script>
+(function(){
+  var BUCKETS = [
+    {id:'trigger', label:'When (trigger)'},
+    {id:'action',  label:'What (action)'},
+    {id:'runas',   label:'As whom (run-as account)'},
+    {id:'none',    label:'None of the three'}
+  ];
+  var SLOTS = [
+    {id:'trigger', name:'Trigger', sub:'when it starts', missing:'Missing at run time: when the job starts.'},
+    {id:'action',  name:'Action', sub:'which command runs', missing:'Missing at run time: which command to start.'},
+    {id:'runas',   name:'Run-as account', sub:'as whom it runs', missing:'Missing at run time: the account the command runs as.'}
+  ];
+  var STORY = 'Every night I compress the old log files. I sign in as myself, open a terminal, and run the compression command on the logs folder. It usually takes about two minutes.';
+  var COMMON = [
+    {id:'f3', text:'Compress only files older than seven days', key:'action'},
+    {id:'f7', text:'It usually takes about two minutes', key:'none'},
+    {id:'f5', text:'Use my own login’s permissions', key:'runas'},
+    {id:'f2', text:'Run the compression command on the logs folder', key:'action'},
+    {id:'f8', text:'The old logs filled the disk last winter', key:'none'},
+    {id:'f4', text:'Sign in as myself', key:'runas'}
+  ];
+  var PASSES = [
+    { first:{id:'f1', text:'Every night, at two in the morning', key:'trigger'},
+      second:{id:'f6', text:'Start at the same time even on weekends', key:'trigger'},
+      done:'The three answers are in place. Read the card below.' },
+    { first:{id:'f1', text:'As soon as the nightly archive finishes', key:'trigger'},
+      second:{id:'f6', text:'At whatever time that turns out to be', key:'trigger'},
+      done:'The trigger now names an event, not a time of day. The action and the run-as account did not change. A trigger can name a time of day, an interval, or an event.' }
+  ];
+
+  var passIndex = 0;
+  var fragments = [];
+  var fragsEl = document.getElementById('frags');
+  var feedback = document.getElementById('feedback');
+  var card = document.getElementById('card');
+  var checkBtn = document.getElementById('check');
+  var pass2Btn = document.getElementById('pass2');
+  var restartBtn = document.getElementById('restart');
+  var slotsEl = document.getElementById('slots');
+  var leaveEl = document.getElementById('leave');
+
+  document.getElementById('story').textContent = STORY;
+
+  function buildFragments(){
+    var p = PASSES[passIndex];
+    // fixed display order, mixed so no bucket is grouped
+    return [COMMON[0], p.first, COMMON[1], COMMON[2], p.second, COMMON[3], COMMON[4], COMMON[5]];
+  }
+
+  function render(){
+    fragments = buildFragments();
+    fragsEl.textContent = '';
+    fragments.forEach(function(f){
+      var fs = document.createElement('fieldset');
+      fs.className = 'frag';
+      var lg = document.createElement('legend');
+      lg.textContent = f.text;
+      fs.appendChild(lg);
+      var box = document.createElement('div');
+      box.className = 'choices';
+      BUCKETS.forEach(function(b){
+        var lab = document.createElement('label');
+        var inp = document.createElement('input');
+        inp.type = 'radio'; inp.name = 'frag-' + f.id; inp.value = b.id;
+        lab.appendChild(inp);
+        lab.appendChild(document.createTextNode(b.label));
+        box.appendChild(lab);
+      });
+      fs.appendChild(box);
+      fragsEl.appendChild(fs);
+    });
+    card.hidden = true;
+    feedback.className = 'feedback'; feedback.textContent = '';
+    checkBtn.disabled = false;
+    document.getElementById('task').textContent = passIndex === 0
+      ? 'Sort the eight pieces of the story. Put each piece in the slot it answers, or mark it as none of the three. Nothing here is scored.'
+      : 'Same chore, one change: the job should now start after another job finishes. Sort the eight pieces again.';
+  }
+
+  function readPlacement(){
+    var placement = {};
+    for (var i = 0; i < fragments.length; i++){
+      var sel = document.querySelector('input[name="frag-' + fragments[i].id + '"]:checked');
+      if (!sel) return null;
+      placement[fragments[i].id] = sel.value;
+    }
+    return placement;
+  }
+
+  // Key check. Returns {state, misplaced:[fragment]}.
+  function evaluate(frs, placement){
+    var misplaced = frs.filter(function(f){ return placement[f.id] !== f.key; });
+    var state = misplaced.length === 0 ? 'correct' : (misplaced.length <= 2 ? 'near' : 'wrong');
+    return {state:state, misplaced:misplaced};
+  }
+
+  function joined(key){
+    return fragments.filter(function(f){ return f.key === key; }).map(function(f){ return f.text; }).join('. ');
+  }
+
+  function showCard(){
+    slotsEl.textContent = '';
+    leaveEl.textContent = '';
+    SLOTS.forEach(function(s){
+      var row = document.createElement('div');
+      row.className = 'slot'; row.id = 'slot-' + s.id;
+      var nm = document.createElement('div'); nm.className = 'name';
+      nm.appendChild(document.createTextNode(s.name));
+      var sm = document.createElement('small'); sm.textContent = s.sub; nm.appendChild(sm);
+      var val = document.createElement('div'); val.className = 'val'; val.textContent = joined(s.id) + '.';
+      row.appendChild(nm); row.appendChild(val);
+      slotsEl.appendChild(row);
+
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'secondary';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = 'Leave out: ' + s.name.toLowerCase();
+      btn.addEventListener('click', function(){
+        var on = btn.getAttribute('aria-pressed') !== 'true';
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (on){ val.textContent = s.missing; val.className = 'val gone'; }
+        else { val.textContent = joined(s.id) + '.'; val.className = 'val'; }
+      });
+      leaveEl.appendChild(btn);
+    });
+    document.getElementById('asnote').hidden = (passIndex !== 0);
+    document.getElementById('platnote').hidden = (passIndex !== 0);
+    pass2Btn.hidden = (passIndex !== 0);
+    card.hidden = false;
+  }
+
+  function check(){
+    var placement = readPlacement();
+    if (!placement){
+      feedback.className = 'feedback info';
+      feedback.textContent = 'Place all eight pieces first.';
+      return;
+    }
+    var r = evaluate(fragments, placement);
+    if (r.state === 'correct'){
+      feedback.className = 'feedback correct';
+      feedback.textContent = 'Correct. ' + PASSES[passIndex].done + ' Each piece sits where the question it answers puts it, and the two left aside describe the chore, not the definition.';
+      var inputs = fragsEl.querySelectorAll('input');
+      for (var i = 0; i < inputs.length; i++) inputs[i].disabled = true;
+      checkBtn.disabled = true;
+      showCard();
+    } else if (r.state === 'near'){
+      var names = r.misplaced.map(function(f){ return '“' + f.text + '”'; }).join(' and ');
+      feedback.className = 'feedback near';
+      feedback.textContent = 'Close. The structure is right, but ' + names + (r.misplaced.length > 1 ? ' sit' : ' sits') + ' in the wrong place. Ask which question each one answers: when, what command, or as whom.';
+    } else {
+      feedback.className = 'feedback wrong';
+      feedback.textContent = 'Not yet. Each slot answers one question: when does the job start, which command does it run, as whom does it run. Start with the pieces that clearly answer one of those, and leave aside any piece that answers none.';
+    }
+  }
+
+  checkBtn.addEventListener('click', check);
+  pass2Btn.addEventListener('click', function(){ passIndex = 1; render(); document.getElementById('task').scrollIntoView({block:'start'}); });
+  restartBtn.addEventListener('click', function(){ passIndex = 0; render(); document.getElementById('task').scrollIntoView({block:'start'}); });
+  document.getElementById('sorter').addEventListener('submit', function(e){ e.preventDefault(); });
+  render();
+})();
+</script>
+</body>
+</html>

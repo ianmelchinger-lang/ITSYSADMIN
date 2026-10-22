@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read a week of the log</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#1c2128; --muted:#4b5563; --line:#c9d1d9; --panel:#f4f6f8;
+  --accent:#0b57a4; --accent-ink:#ffffff; --accent-soft:#e6f0fa;
+  --ok:#176334; --ok-bg:#e7f4ec; --near:#7a4b00; --near-bg:#fcf1d9; --bad:#9a1c20; --bad-bg:#fbe9e9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:46rem;margin:0 auto;padding:1.25rem 1rem 2.5rem}
+h1{font-size:1.45rem;line-height:1.25;margin:0 0 .75rem}
+h2{font-size:1.1rem;margin:1.5rem 0 .35rem}
+p{margin:.5rem 0}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+fieldset.night{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:.7rem .85rem .8rem;margin:0 0 .65rem}
+fieldset.night legend{font-weight:700;padding:0 .3rem}
+.ev{display:grid;grid-template-columns:11rem 1fr;gap:.2rem .7rem;margin:.1rem 0 .6rem}
+.ev dt{color:var(--muted)}
+.ev dd{margin:0}
+.ev dd.logline{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ev dd.noline{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;color:var(--muted);font-style:italic}
+.choices{display:flex;flex-wrap:wrap;gap:.5rem}
+.choices label{display:inline-flex;align-items:center;gap:.45rem;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:.4rem .85rem;cursor:pointer;min-height:2.5rem}
+.choices input{accent-color:var(--accent);width:1.1rem;height:1.1rem}
+.choices label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.choices label:has(input:disabled){cursor:default}
+button{font:inherit;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:.6rem 1.1rem;min-height:2.75rem;cursor:pointer}
+button.secondary{background:var(--bg);color:var(--accent)}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin:.8rem 0 .4rem}
+[hidden]{display:none!important}
+.feedback{margin:.7rem 0;padding:.75rem 1rem;border-radius:10px;border:1px solid var(--line)}
+.feedback:empty{display:none}
+.feedback.correct{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.feedback.near{background:var(--near-bg);color:var(--near);border-color:var(--near)}
+.feedback.wrong{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.feedback.info{background:var(--panel);color:var(--ink)}
+.cadence{margin:.8rem 0}
+.cadence legend{font-weight:700;padding:0;margin-bottom:.35rem}
+.cadence .choices{flex-direction:column;align-items:stretch}
+.out{margin:.9rem 0;padding:.8rem 1rem;border:2px solid var(--accent);border-radius:12px;background:var(--bg);font-variant-numeric:tabular-nums}
+.out ul{list-style:none;margin:0 0 .5rem;padding:0;display:grid;gap:.45rem}
+.out li{padding:.5rem .7rem;background:var(--panel);border-radius:8px}
+.out .total{font-weight:700;margin:.4rem 0 0}
+.closing{margin:1rem 0;padding:.8rem 1rem;border-radius:10px;background:var(--accent-soft)}
+@media (max-width:480px){
+  main{padding:1rem .85rem 2rem}
+  .ev{grid-template-columns:1fr;gap:0}
+  .ev dd{margin-bottom:.4rem}
+  .choices{flex-direction:column}
+  .choices label{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Read a week of the log</h1>
+<p>A completion record is a dated line that a job appends to its log when its work is finished. Here is a week of one. The job, <code>capacity-report</code>, runs at 02:00 on <code>hq-win-01</code> as <code>svc-backup</code>, and nobody is signed in. Each night it should measure 3 shares and append one line that says so. Beside each night&rsquo;s log you can see what the scheduler recorded, in plain words.</p>
+<p id="task">For each night, decide whether the log shows that the work was done, or whether the night is a finding to chase. The free-space figures are illustrative output of the job&rsquo;s own script. They claim nothing about a real system, and none of them decides a marking. Nothing here is scored.</p>
+
+<form id="nightsform" novalidate>
+  <div id="nights"></div>
+  <div class="actions"><button type="button" id="check">Check my readings</button></div>
+</form>
+<div class="feedback" id="fb" role="status" aria-live="polite"></div>
+
+<section id="after" hidden aria-labelledby="after-h">
+  <div class="closing" id="tally"></div>
+  <h2 id="after-h" tabindex="-1">Who reads this log, and how often?</h2>
+  <p>A named person reads the log on a stated cadence, compares the dated lines with what was expected, and treats a missing or mismatched line as a finding. The cadence decides how long a finding sits before anyone sees it. How often to read is the organization&rsquo;s choice, so there is no single right answer here. Choose a cadence and read what it costs.</p>
+  <form id="cadform" novalidate>
+    <fieldset class="cadence">
+      <legend>The reader opens the log</legend>
+      <div class="choices" id="cads"></div>
+    </fieldset>
+  </form>
+  <div class="out" id="out" role="status" aria-live="polite"></div>
+  <p id="why"></p>
+  <div class="actions"><button type="button" id="restart" class="secondary">Start over</button></div>
+</section>
+</main>
+
+<script>
+(function(){
+  var EXPECTED = 3;                 // shares the job should measure each night
+  var CADENCES = [
+    {k:1, label:'Every morning, after the 02:00 run'},
+    {k:3, label:'Every third morning'},
+    {k:7, label:'Once, on the morning after night 7'}
+  ];
+
+  // Seven nights ending with the most recent run. result = shares named on the line; null = no line was written.
+  // The free-space figures are illustrative and play no part in any key.
+  var NIGHTS = [
+    {n:1, time:'02:00:07', result:3,    free:41},
+    {n:2, time:'02:00:06', result:3,    free:41},
+    {n:3, time:null,       result:null, free:null},
+    {n:4, time:'02:00:08', result:3,    free:40},
+    {n:5, time:'02:00:05', result:2,    free:40},
+    {n:6, time:'02:00:06', result:3,    free:40},
+    {n:7, time:'02:00:07', result:3,    free:39}
+  ];
+
+  function pad(x){ return (x < 10 ? '0' : '') + x; }
+  function isoDate(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  var today = new Date();
+  NIGHTS.forEach(function(nt, i){
+    var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (NIGHTS.length - 1 - i));
+    nt.date = isoDate(d);
+    nt.line = nt.result === null ? null :
+      nt.date + ' ' + nt.time + ' finished — ' + nt.result + ' shares measured, D: ' + nt.free + '% free';
+  });
+
+  // The key. A night shows the work when the log holds a dated line for that night that states the expected result.
+  function showsWork(nt){ return nt.line !== null && nt.result === EXPECTED; }
+
+  var nightsEl = document.getElementById('nights');
+  var fb = document.getElementById('fb');
+  var checkBtn = document.getElementById('check');
+  var after = document.getElementById('after');
+  var tally = document.getElementById('tally');
+  var cadsEl = document.getElementById('cads');
+  var outEl = document.getElementById('out');
+  var whyEl = document.getElementById('why');
+
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  function describe(nt){
+    if (nt.line === null) return 'Night ' + nt.n + ' has no line dated ' + nt.date + '.';
+    if (nt.result !== EXPECTED) return 'Night ' + nt.n + ' has a dated line, and it states ' + nt.result + ' shares measured, not ' + EXPECTED + '.';
+    return 'Night ' + nt.n + ' has a dated line that states ' + EXPECTED + ' shares measured.';
+  }
+
+  function render(){
+    nightsEl.textContent = '';
+    NIGHTS.forEach(function(nt){
+      var fs = document.createElement('fieldset');
+      fs.className = 'night';
+      var lg = document.createElement('legend');
+      lg.textContent = 'Night ' + nt.n + ', ' + nt.date;
+      fs.appendChild(lg);
+      var dl = document.createElement('dl'); dl.className = 'ev';
+      var dt1 = document.createElement('dt'); dt1.textContent = 'Scheduler’s record';
+      var dd1 = document.createElement('dd'); dd1.textContent = 'Started 02:00, ended normally';
+      var dt2 = document.createElement('dt'); dt2.textContent = 'capacity-report.log';
+      var dd2 = document.createElement('dd');
+      if (nt.line === null){ dd2.className = 'noline'; dd2.textContent = 'No line dated ' + nt.date; }
+      else { dd2.className = 'logline'; dd2.textContent = nt.line; }
+      dl.appendChild(dt1); dl.appendChild(dd1); dl.appendChild(dt2); dl.appendChild(dd2);
+      fs.appendChild(dl);
+      var box = document.createElement('div'); box.className = 'choices';
+      [['shows','Shows the work'], ['finding','A finding']].forEach(function(o){
+        var lab = document.createElement('label');
+        var inp = document.createElement('input');
+        inp.type = 'radio'; inp.name = 'night-' + nt.n; inp.value = o[0];
+        lab.appendChild(inp);
+        lab.appendChild(document.createTextNode(o[1]));
+        box.appendChild(lab);
+      });
+      fs.appendChild(box);
+      nightsEl.appendChild(fs);
+    });
+    CADENCES.forEach(function(c, i){
+      var lab = document.createElement('label');
+      var inp = document.createElement('input');
+      inp.type = 'radio'; inp.name = 'cadence'; inp.value = String(c.k);
+      if (i === 0) inp.checked = true;
+      inp.addEventListener('change', updateOut);
+      lab.appendChild(inp);
+      lab.appendChild(document.createTextNode(c.label));
+      cadsEl.appendChild(lab);
+    });
+  }
+
+  function readMarks(){
+    var m = {};
+    for (var i = 0; i < NIGHTS.length; i++){
+      var sel = document.querySelector('input[name="night-' + NIGHTS[i].n + '"]:checked');
+      if (!sel) return null;
+      m[NIGHTS[i].n] = sel.value;
+    }
+    return m;
+  }
+
+  // Compare each marking with the key. Returns the nights marked against the key.
+  function evaluate(marks){
+    var off = NIGHTS.filter(function(nt){ return (marks[nt.n] === 'shows') !== showsWork(nt); });
+    var allShows = NIGHTS.every(function(nt){ return marks[nt.n] === 'shows'; });
+    var state = off.length === 0 ? 'correct' : ((off.length <= 2 && !allShows) ? 'near' : 'wrong');
+    return {state:state, off:off, allShows:allShows};
+  }
+
+  function check(){
+    var marks = readMarks();
+    if (!marks){
+      fb.className = 'feedback info';
+      fb.textContent = 'Mark all seven nights first.';
+      return;
+    }
+    var r = evaluate(marks);
+    if (r.state === 'correct'){
+      fb.className = 'feedback correct';
+      fb.textContent = 'Correct. A night shows the work when the log holds a dated line for it that states the expected result. A missing line and a line that states something else are both findings.';
+      var radios = nightsEl.querySelectorAll('input');
+      for (var i = 0; i < radios.length; i++) radios[i].disabled = true;
+      checkBtn.disabled = true;
+      showAfter();
+    } else if (r.state === 'near'){
+      fb.className = 'feedback near';
+      fb.textContent = 'Close. The structure is right, but ' + (r.off.length === 1 ? 'one reading does' : 'two readings do') + ' not match the log. ' + r.off.map(describe).join(' ') + ' Check again.';
+    } else if (r.allShows){
+      fb.className = 'feedback wrong';
+      fb.textContent = 'Not yet. Every night reads the same in the scheduler’s column, and it would read that way on a bad night too. First move: set that column aside, and read only the log, night by night, against what the job was expected to write.';
+    } else {
+      fb.className = 'feedback wrong';
+      fb.textContent = 'Not yet. A night shows the work when the log holds a dated line for that night that states the expected result, ' + EXPECTED + ' shares measured. First move: ignore the scheduler’s column, and for each night find the line dated that night and read what it states.';
+    }
+  }
+
+  function findings(){ return NIGHTS.filter(function(nt){ return !showsWork(nt); }); }
+
+  function showAfter(){
+    var good = NIGHTS.filter(showsWork).length;
+    var fnd = findings();
+    var parts = fnd.map(function(nt){
+      return nt.line === null ? 'night ' + nt.n + ' has no line' : 'night ' + nt.n + '’s line states ' + nt.result + ' shares measured, not ' + EXPECTED;
+    });
+    tally.textContent = fmt(good) + ' of the ' + fmt(NIGHTS.length) + ' nights show the work. ' + fmt(fnd.length) + ' are findings: ' + parts.join(', and ') + '. The scheduler’s record read the same on all ' + fmt(NIGHTS.length) + ' nights, so it could not have told you which ones.';
+    after.hidden = false;
+    updateOut();
+    document.getElementById('after-h').scrollIntoView({block:'start'});
+  }
+
+  // Cadence arithmetic. The reader opens the log on the morning after every k-th night, counting from night 1.
+  // A finding on night d is first read on the morning after night ceil(d / k) * k.
+  // Further runs before it is read = the nights that run after night d and before that reading.
+  function firstReadNight(d, k){ return Math.ceil(d / k) * k; }
+  function furtherRuns(d, k){ return firstReadNight(d, k) - d; }
+
+  function selectedK(){
+    var sel = document.querySelector('input[name="cadence"]:checked');
+    return sel ? parseInt(sel.value, 10) : 1;
+  }
+
+  function updateOut(){
+    var k = selectedK();
+    var fnd = findings();
+    outEl.textContent = '';
+    var ul = document.createElement('ul');
+    var total = 0;
+    fnd.forEach(function(nt){
+      var f = furtherRuns(nt.n, k);
+      total += f;
+      var li = document.createElement('li');
+      var what = nt.line === null ? 'no line' : 'a line that states ' + nt.result + ' shares measured';
+      var read = 'the morning after night ' + firstReadNight(nt.n, k);
+      var runs = f === 0 ? 'The job ran no further times before it was read.' : 'The job ran ' + fmt(f) + ' further ' + (f === 1 ? 'time' : 'times') + ' before it was read.';
+      li.textContent = 'Night ' + nt.n + ' (' + what + '): first read ' + read + '. ' + runs;
+      ul.appendChild(li);
+    });
+    outEl.appendChild(ul);
+    var tt = document.createElement('p'); tt.className = 'total';
+    tt.textContent = 'Together: ' + fmt(total) + ' further ' + (total === 1 ? 'run' : 'runs') + ' before both findings were read.';
+    outEl.appendChild(tt);
+    whyEl.textContent = 'A reader who opens the log sooner finds a gap sooner, and a reader who opens it later finds the same gap later. The log holds the same lines either way. Write down who reads this log and how often, because a cadence that nobody wrote down is not a cadence.';
+  }
+
+  function restart(){
+    after.hidden = true;
+    fb.className = 'feedback'; fb.textContent = '';
+    checkBtn.disabled = false;
+    cadsEl.textContent = '';
+    render();
+    document.getElementById('task').scrollIntoView({block:'start'});
+  }
+
+  document.getElementById('restart').addEventListener('click', restart);
+  checkBtn.addEventListener('click', check);
+  document.getElementById('nightsform').addEventListener('submit', function(e){ e.preventDefault(); });
+  document.getElementById('cadform').addEventListener('submit', function(e){ e.preventDefault(); });
+  render();
+})();
+</script>
+</body>
+</html>

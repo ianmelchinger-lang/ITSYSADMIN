@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assemble the process</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#1c2128; --muted:#4b5563; --line:#c9d1d9; --panel:#f4f6f8;
+  --accent:#0b57a4; --accent-ink:#ffffff; --accent-soft:#e6f0fa;
+  --ok:#176334; --ok-bg:#e7f4ec; --near:#7a4b00; --near-bg:#fcf1d9; --bad:#9a1c20; --bad-bg:#fbe9e9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:46rem;margin:0 auto;padding:1.25rem 1rem 2.5rem}
+h1{font-size:1.45rem;line-height:1.25;margin:0 0 .75rem}
+h2{font-size:1.1rem;margin:1.5rem 0 .35rem}
+p{margin:.5rem 0}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+fieldset legend{font-weight:700;padding:0;margin-bottom:.4rem}
+.opt{display:flex;align-items:flex-start;gap:.65rem;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:.6rem .8rem;margin:0 0 .5rem;cursor:pointer;min-height:2.75rem}
+.opt input{accent-color:var(--accent);width:1.15rem;height:1.15rem;margin-top:.2rem;flex:none}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt:has(input:disabled){cursor:default}
+ol.moves{list-style:decimal;margin:.4rem 0 .6rem;padding-left:1.6rem;display:grid;gap:.5rem}
+ol.moves li{padding-left:.2rem}
+ol.moves li::marker{font-weight:700;color:var(--accent)}
+.move{display:grid;grid-template-columns:1fr auto;gap:.6rem;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:.55rem .75rem}
+.move.added{border-color:var(--accent);background:var(--accent-soft)}
+.move .btns{display:flex;gap:.4rem}
+.move button{min-height:2.5rem;padding:.35rem .7rem}
+button{font:inherit;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:.6rem 1.1rem;min-height:2.75rem;cursor:pointer}
+button.secondary{background:var(--bg);color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin:.9rem 0 .4rem}
+[hidden]{display:none!important}
+.feedback{margin:.6rem 0;padding:.7rem 1rem;border-radius:10px;border:1px solid var(--line)}
+.feedback:empty{display:none}
+.feedback.correct{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.feedback.near{background:var(--near-bg);color:var(--near);border-color:var(--near)}
+.feedback.wrong{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.feedback.info{background:var(--panel);color:var(--ink)}
+.closing{margin:1rem 0;padding:.8rem 1rem;border-radius:10px;background:var(--accent-soft)}
+@media (max-width:480px){
+  main{padding:1rem .85rem 2rem}
+  .move{grid-template-columns:1fr}
+  .move .btns{justify-content:flex-start}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Assemble the process</h1>
+<p id="intro">A chore that someone does by hand every morning is to run by itself at 02:00, with nobody signed in. Assemble the whole path in three parts: the problem stated so that it can be checked, the moves in an order that holds, and the signal that says it worked. Check all three together. Nothing here is scored.</p>
+
+<h2 id="hA">The problem</h2>
+<form id="formA" novalidate>
+  <fieldset id="fsA"><legend>Which statement can you check by looking?</legend><div id="optsA"></div></fieldset>
+</form>
+<div class="feedback" id="fbA" role="status" aria-live="polite"></div>
+
+<h2 id="hB">The moves</h2>
+<p id="taskB">Put the moves in an order that holds. Use the buttons to move a card up or down. Several orders can hold.</p>
+<ol class="moves" id="moves"></ol>
+<div class="feedback" id="fbB" role="status" aria-live="polite"></div>
+
+<h2 id="hC">The signal</h2>
+<form id="formC" novalidate>
+  <fieldset id="fsC"><legend>Which signal says it worked?</legend><div id="optsC"></div></fieldset>
+</form>
+<div class="feedback" id="fbC" role="status" aria-live="polite"></div>
+
+<div class="actions"><button type="button" id="check">Check my process</button></div>
+
+<div class="closing" id="closing" hidden></div>
+<div class="actions" id="after" hidden>
+  <button type="button" id="pass2">Change one assumption: the job must also run on the other platform</button>
+  <button type="button" id="restart" class="secondary">Start over</button>
+</div>
+<div class="actions" id="after2" hidden>
+  <button type="button" id="restart2" class="secondary">Start over</button>
+</div>
+</main>
+
+<script>
+(function(){
+  // ---------- Moves ----------
+  var MOVES = {
+    D:{text:'Write the job’s definition: its trigger, its action, and the account it runs as.', short:'the definition'},
+    P:{text:'Write down what the hand test borrowed, the execution policy and its scope among it, and check each against the run-as account.', short:'the policy check'},
+    L:{text:'Add a last command to the script that appends a dated line stating what the work did.', short:'the dated line'},
+    R:{text:'Register the job with the scheduler, with that trigger, action, and account.', short:'the registration'},
+    U:{text:'Let the job run once at 02:00, with nobody signed in.', textTwo:'Let each job run once at 02:00, with nobody signed in.', short:'the run'},
+    W:{text:'In the morning, read the log against what was expected, and call the job done only if the line is there.', short:'the morning read'},
+    N:{text:'Name who reads the log and how often.', short:'the naming of the reader'},
+    X:{text:'Register the same job with the other platform’s scheduler, at the same cadence, written in that platform’s own form.', short:'the second registration'}
+  };
+
+  // Each dependency says: move a comes before move b.
+  function registrationDeps(id, noun){
+    return [
+      {a:'D', b:id, why:'The scheduler consults the definition and nothing else, so the definition has to exist before ' + noun + '.'},
+      {a:'P', b:id, why:'The execution policy is a safety setting that can refuse script files, and it applies by scope, so it is named, with its scope, before ' + noun + '.'},
+      {a:id, b:'U', why:'A job that is not registered is not started by anything, so ' + noun + ' before it runs.'}
+    ];
+  }
+  var BASE_DEPS = registrationDeps('R', 'the job is registered').concat([
+    {a:'L', b:'U', why:'A job can only write down what it did if the line is already in the script when it runs, so the dated line goes in before the run.'},
+    {a:'U', b:'W', why:'There is nothing to read until the job has run.'},
+    {a:'N', b:'W', why:'A reader and a cadence are named before the work is called done, so the reading is somebody’s duty and not an accident.'}
+  ]);
+  // The second platform brings no new rule: its registration takes exactly the rules the first registration has.
+  var SECOND_DEPS = registrationDeps('X', 'the same job is registered with the other platform’s scheduler');
+  function depsFor(p){ return p === 0 ? BASE_DEPS : BASE_DEPS.concat(SECOND_DEPS); }
+
+  var INITIAL = ['R','L','W','D','U','N','P'];
+
+  // ---------- The problem and the signal ----------
+  var PROBLEMS = [
+    {id:'a1', text:'Overnight jobs should be more dependable.', why:'That is an aim, and nothing in it can be looked at. An operational statement names what one record shows and what another record, or a person’s need, shows.'},
+    {id:'a2', key:true, text:'The report is missing, and the scheduler’s record shows that the job started and ended normally.'},
+    {id:'a3', text:'The scheduler is unreliable and does not start jobs when it should.', why:'That states a cause as fact. The scheduler’s record shows the job started, so nothing here has shown the scheduler failed.'},
+    {id:'a4', text:'The job needs an alert that fires when it fails.', why:'That is a remedy, and it assumes the failure is already known. The statement of a problem comes before the remedy.'}
+  ];
+  var PROBLEM_FIRST = 'First move: for each statement, ask what you would point at to show it is true.';
+  var SIGNALS = [
+    {id:'c1', text:'The scheduler’s record shows that the job ended normally.', why:'The scheduler’s record would read the same on a night the work was skipped. It speaks to the launch and the ending.'},
+    {id:'c2', key:true, text:'A line dated after everyone signed off, written by the job itself, states what the work did.'},
+    {id:'c3', text:'The script gave the right result when you ran it by hand.', why:'A hand test proves the script for one identity in one session. It does not say what happened at 02:00.'},
+    {id:'c4', text:'Nobody has reported a problem.', why:'A complaint needs a witness, and nobody was signed in. Silence looks the same whether the work was done or not.'}
+  ];
+  var SIGNAL_FIRST = 'First move: for each signal, ask whether it would read the same on a night the work was skipped. If it would, it cannot be the signal.';
+
+  // ---------- State ----------
+  var pass = 0;
+  var order = INITIAL.slice();
+  var done = {A:false, B:false, C:false};
+
+  var movesEl = document.getElementById('moves');
+  var fbA = document.getElementById('fbA'), fbB = document.getElementById('fbB'), fbC = document.getElementById('fbC');
+  var closing = document.getElementById('closing');
+  var after = document.getElementById('after'), after2 = document.getElementById('after2');
+  var checkBtn = document.getElementById('check');
+
+  function quote(t){ return '“' + t + '”'; }
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function clear(el){ el.className = 'feedback'; el.textContent = ''; }
+
+  function renderChoices(containerId, name, list, locked, chosen){
+    var box = document.getElementById(containerId);
+    box.textContent = '';
+    list.forEach(function(o){
+      var lab = document.createElement('label'); lab.className = 'opt';
+      var inp = document.createElement('input');
+      inp.type = 'radio'; inp.name = name; inp.value = o.id;
+      if (locked){ inp.disabled = true; if (o.id === chosen) inp.checked = true; }
+      lab.appendChild(inp);
+      var sp = document.createElement('span'); sp.textContent = o.text; lab.appendChild(sp);
+      box.appendChild(lab);
+    });
+  }
+
+  function renderMoves(focusId, focusDir){
+    movesEl.textContent = '';
+    order.forEach(function(id, i){
+      var li = document.createElement('li');
+      var card = document.createElement('div');
+      card.className = 'move' + (id === 'X' ? ' added' : '');
+      card.setAttribute('data-id', id);
+      var tx = document.createElement('span');
+      tx.textContent = (id === 'U' && pass === 1) ? MOVES.U.textTwo : MOVES[id].text;
+      card.appendChild(tx);
+      var bt = document.createElement('div'); bt.className = 'btns';
+      var up = document.createElement('button'); up.type = 'button'; up.className = 'secondary';
+      up.textContent = 'Move up'; up.setAttribute('aria-label', 'Move up: ' + MOVES[id].text);
+      up.disabled = done.B || i === 0;
+      up.addEventListener('click', function(){ move(id, -1); });
+      var dn = document.createElement('button'); dn.type = 'button'; dn.className = 'secondary';
+      dn.textContent = 'Move down'; dn.setAttribute('aria-label', 'Move down: ' + MOVES[id].text);
+      dn.disabled = done.B || i === order.length - 1;
+      dn.addEventListener('click', function(){ move(id, 1); });
+      up.setAttribute('data-act', 'up'); dn.setAttribute('data-act', 'down');
+      bt.appendChild(up); bt.appendChild(dn);
+      card.appendChild(bt);
+      li.appendChild(card);
+      movesEl.appendChild(li);
+    });
+    if (focusId){
+      var c = movesEl.querySelector('[data-id="' + focusId + '"]');
+      if (c){
+        var pref = c.querySelector('[data-act="' + (focusDir < 0 ? 'up' : 'down') + '"]');
+        var alt = c.querySelector('[data-act="' + (focusDir < 0 ? 'down' : 'up') + '"]');
+        if (pref && !pref.disabled) pref.focus(); else if (alt && !alt.disabled) alt.focus();
+      }
+    }
+  }
+
+  function move(id, dir){
+    var i = order.indexOf(id), j = i + dir;
+    if (j < 0 || j >= order.length) return;
+    var t = order[i]; order[i] = order[j]; order[j] = t;
+    renderMoves(id, dir);
+  }
+
+  // Violations of the stated dependencies in the current order.
+  function evaluateOrder(ord, deps){
+    var bad = deps.filter(function(d){ return ord.indexOf(d.a) > ord.indexOf(d.b); });
+    return {state: bad.length === 0 ? 'correct' : (bad.length <= 2 ? 'near' : 'wrong'), bad: bad};
+  }
+
+  function checkChoice(name, list, fb, zone, firstMove, okText){
+    if (done[zone]) return;
+    var sel = document.querySelector('input[name="' + name + '"]:checked');
+    if (!sel){ fb.className = 'feedback info'; fb.textContent = 'Choose one before you check.'; return; }
+    var opt = list.filter(function(o){ return o.id === sel.value; })[0];
+    if (opt.key){
+      fb.className = 'feedback correct'; fb.textContent = okText;
+      done[zone] = true;
+      var ins = document.querySelectorAll('input[name="' + name + '"]');
+      for (var i = 0; i < ins.length; i++) ins[i].disabled = true;
+    } else {
+      fb.className = 'feedback wrong'; fb.textContent = 'Not yet. ' + opt.why + ' ' + firstMove;
+    }
+  }
+
+  function checkOrder(){
+    if (done.B) return;
+    var r = evaluateOrder(order, depsFor(pass));
+    if (r.state === 'correct'){
+      fbB.className = 'feedback correct';
+      fbB.textContent = pass === 0
+        ? 'Correct. Every move sits after what it depends on. Other orders would hold too, such as naming the reader first.'
+        : 'Correct. The second registration obeys the same three rules as the first: after the definition, after the policy check, and before the run. No rule was added.';
+      done.B = true;
+      renderMoves();
+    } else if (r.state === 'near'){
+      var parts = r.bad.map(function(d, i){
+        var s = MOVES[d.a].short + ' comes after ' + MOVES[d.b].short + '. ' + d.why;
+        return i === 0 ? s : cap(s);
+      });
+      fbB.className = 'feedback near';
+      fbB.textContent = 'Close. The structure is right, but ' + parts.join(' ');
+    } else {
+      fbB.className = 'feedback wrong';
+      fbB.textContent = 'Not yet. Several moves sit ahead of something they depend on. Each move needs something earlier to exist. First move: start from the morning read, which needs a line to read, and ask what must already be true before the job runs at 02:00.';
+    }
+  }
+
+  function doCheck(){
+    if (pass === 0){
+      checkChoice('problem', PROBLEMS, fbA, 'A', PROBLEM_FIRST, 'Correct. Two things you can look at disagree: the report is missing, and the scheduler’s record shows a normal finish.');
+      checkOrder();
+      checkChoice('signal', SIGNALS, fbC, 'C', SIGNAL_FIRST, 'Correct. The job wrote that line itself, after everyone signed off, and it states a result. The scheduler did not write it, so it does not depend on the scheduler’s own account of the night.');
+    } else {
+      checkOrder();
+    }
+    if (done.A && done.B && done.C){
+      if (pass === 0){
+        closing.textContent = 'That is the whole path. The job is defined before it is registered, it carries its own dated line before it runs, a named person reads that line, and the signal that it worked comes from the line and never from the scheduler’s record.';
+        closing.hidden = false; after.hidden = false; after2.hidden = true;
+        checkBtn.disabled = true;
+      } else {
+        closing.textContent = 'The same path holds on both platforms. Only the form of the registration changes; the order of the moves does not.';
+        closing.hidden = false; after.hidden = true; after2.hidden = false;
+        checkBtn.disabled = true;
+      }
+    }
+  }
+
+  function startPass2(){
+    pass = 1;
+    order = order.concat(['X']);
+    done.B = false;
+    clear(fbB);
+    document.getElementById('taskB').textContent = 'Same process, one change: the job must now run on the other platform too. Place the new move where it belongs, then check. The problem and the signal stay as you set them.';
+    closing.hidden = true; after.hidden = true; after2.hidden = true;
+    checkBtn.disabled = false;
+    renderMoves();
+    document.getElementById('hB').scrollIntoView({block:'start'});
+  }
+
+  function restart(){
+    pass = 0; order = INITIAL.slice(); done = {A:false, B:false, C:false};
+    clear(fbA); clear(fbB); clear(fbC);
+    document.getElementById('taskB').textContent = 'Put the moves in an order that holds. Use the buttons to move a card up or down. Several orders can hold.';
+    renderChoices('optsA', 'problem', PROBLEMS, false);
+    renderChoices('optsC', 'signal', SIGNALS, false);
+    renderMoves();
+    closing.hidden = true; after.hidden = true; after2.hidden = true;
+    checkBtn.disabled = false;
+    document.getElementById('intro').scrollIntoView({block:'start'});
+  }
+
+  renderChoices('optsA', 'problem', PROBLEMS, false);
+  renderChoices('optsC', 'signal', SIGNALS, false);
+  renderMoves();
+  checkBtn.addEventListener('click', doCheck);
+  document.getElementById('pass2').addEventListener('click', startPass2);
+  document.getElementById('restart').addEventListener('click', restart);
+  document.getElementById('restart2').addEventListener('click', restart);
+  document.getElementById('formA').addEventListener('submit', function(e){ e.preventDefault(); });
+  document.getElementById('formC').addEventListener('submit', function(e){ e.preventDefault(); });
+})();
+</script>
+</body>
+</html>
