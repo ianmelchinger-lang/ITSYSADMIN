@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sort Each Ingredient Into What Actually Composes Access</title>
+<style>
+  :root {
+    --paper: #EFEBE0;
+    --paper-raised: #F8F5EC;
+    --ledger-line: #CFC6A8;
+    --ledger-line-strong: #A89968;
+    --ink: #1D2A2E;
+    --ink-soft: #52605E;
+    --ink-faint: #8A8A74;
+    --stamp: #2E4A56;
+    --stamp-soft: #D9E2E2;
+    --correct: #3F6B4A;
+    --correct-soft: #E1E9DD;
+    --near: #96602E;
+    --near-soft: #F4E7D8;
+    --wrong: #8A3A24;
+    --wrong-soft: #EEDCD2;
+    --focus: #1D4ED8;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.58;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  main { max-width: 700px; margin: 0 auto; padding: 52px 24px 80px; }
+  @media (max-width: 480px) { main { padding: 38px 16px 64px; } }
+
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-weight: 400;
+    font-size: clamp(24px, 4.6vw, 29px);
+    line-height: 1.28;
+    margin: 0 0 16px;
+    max-width: 23ch;
+  }
+
+  p { margin: 0 0 15px; max-width: 64ch; }
+  .lede { color: var(--ink-soft); }
+  .rule { border: 0; border-top: 1px solid var(--ledger-line); margin: 32px 0; }
+
+  .case {
+    background: var(--paper-raised);
+    border: 1px solid var(--ledger-line);
+    border-radius: 5px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+
+  .case-text { font-size: 16px; margin-bottom: 14px; }
+
+  .verdicts { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .verdict-btn {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1px solid var(--ledger-line-strong);
+    border-radius: 5px;
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  .verdict-btn:hover { border-color: var(--stamp); }
+  .verdict-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .verdict-btn.picked { background: var(--stamp); border-color: var(--stamp); color: var(--paper-raised); }
+
+  .case.graded.right { border-left: 4px solid var(--correct); }
+  .case.graded.miss { border-left: 4px solid var(--wrong); }
+
+  .explain {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--ledger-line);
+    font-size: 15px;
+  }
+  .case.graded .explain { display: block; }
+
+  .explain .tag { font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+  .case.graded.right .explain .tag { color: var(--correct); }
+  .case.graded.miss .explain .tag { color: var(--wrong); }
+
+  .controls { margin: 28px 0 0; }
+
+  button.primary {
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--paper-raised);
+    background: var(--stamp);
+    border: none;
+    border-radius: 6px;
+    padding: 13px 24px;
+    cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { background: #253B45; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  .summary {
+    display: none;
+    margin-top: 22px;
+    padding: 18px 20px;
+    border-radius: 5px;
+    border-left: 4px solid var(--ledger-line-strong);
+    background: var(--paper-raised);
+  }
+  .summary.show { display: block; }
+  .summary.level-correct { border-left-color: var(--correct); background: var(--correct-soft); }
+  .summary.level-near { border-left-color: var(--near); background: var(--near-soft); }
+  .summary.level-wrong { border-left-color: var(--wrong); background: var(--wrong-soft); }
+  .summary p { margin: 0; max-width: none; }
+
+  .second-pass { display: none; margin-top: 10px; }
+  .second-pass.show { display: block; }
+  .second-pass-note { font-size: 15px; color: var(--ink-soft); margin-bottom: 18px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+
+  <p class="lede" style="font-size:15px;color:var(--ink-faint);margin-bottom:10px;">Skill practice · locks: each platform composes effective access through its own machinery</p>
+
+  <h1>Sort Each Ingredient Into What Actually Composes Access</h1>
+
+  <p>Nine things below might matter when you're reading what an identity can reach. For each one, decide which bucket it belongs in: something that composes effective access on Linux, something that composes it on Windows, or something that was never part of the composition at all.</p>
+
+  <hr class="rule">
+
+  <div id="cases"></div>
+
+  <div class="controls">
+    <button type="button" class="primary" id="checkBtn" disabled>Check my sort</button>
+  </div>
+
+  <div class="summary" id="summary" role="status" aria-live="polite"></div>
+
+  <div class="second-pass" id="secondPass">
+    <hr class="rule">
+    <p style="font-size:15px;color:var(--ink-faint);margin-bottom:8px;">One assumption moves</p>
+    <p class="second-pass-note">Take the audit-log entry again. This time it's more alarming: it shows three failed attempts to open the finance share last night, from an account that shouldn't be anywhere near it. Does that change which bucket it belongs in?</p>
+    <div id="movedCase"></div>
+  </div>
+
+</main>
+
+<script>
+(function () {
+
+  var buckets = [
+    ['linux', 'Composes access \u2014 Linux'],
+    ['windows', 'Composes access \u2014 Windows'],
+    ['neither', 'Not part of composing access']
+  ];
+
+  var cases = [
+    {
+      text: 'Which groups the user belongs to.',
+      answer: 'linux',
+      why: {
+        right: 'Group membership is one of the three ingredients Linux composes effective access from.',
+        miss: 'This is one of Linux\u2019s three composing ingredients \u2014 which groups the user belongs to, alongside the file mode and any filesystem ACL.'
+      }
+    },
+    {
+      text: 'The file mode set directly on the object.',
+      answer: 'linux',
+      why: {
+        right: 'The mode bits set on the object itself are the second ingredient Linux composes from.',
+        miss: 'The mode set directly on the object is part of Linux\u2019s composition, alongside group membership and any ACL layered on top.'
+      }
+    },
+    {
+      text: 'A filesystem access-control list layered on top of the object.',
+      answer: 'linux',
+      why: {
+        right: 'An ACL layered over the mode is the third ingredient \u2014 it can override a permissive mode, or a restrictive one.',
+        miss: 'A filesystem ACL is Linux\u2019s third composing ingredient, able to override the mode underneath it in either direction.'
+      }
+    },
+    {
+      text: 'The share permission set where the folder is published to the network.',
+      answer: 'windows',
+      why: {
+        right: 'The share-level permission is one of the three things Windows composes from \u2014 and its label can be louder than what it actually grants.',
+        miss: 'The share permission is one of Windows\u2019s three ingredients, set where the folder meets the network, separate from the folder\u2019s own permission.'
+      }
+    },
+    {
+      text: 'The NTFS permission set on the folder itself.',
+      answer: 'windows',
+      why: {
+        right: 'The folder\u2019s own NTFS permission is the second ingredient, and it can narrow what the share\u2019s label seems to promise.',
+        miss: 'NTFS permission on the folder itself is Windows\u2019s second ingredient, intersected with the share permission above it.'
+      }
+    },
+    {
+      text: 'Nested group memberships that lead a user to that permission.',
+      answer: 'windows',
+      why: {
+        right: 'Windows groups can sit inside other groups several layers deep, so the chain that leads a user to a permission is the third ingredient.',
+        miss: 'Windows groups can nest inside each other, so the chain of membership \u2014 not just one group\u2014is the third ingredient composing access.'
+      }
+    },
+    {
+      text: 'An audit-log entry showing when the file was last opened.',
+      answer: 'neither',
+      why: {
+        right: 'A log entry is a record of something that already happened. Effective access is read from current configuration, not from history.',
+        miss: 'This records a past event, not a current grant or membership. It has nothing to intersect with \u2014 it doesn\u2019t compose access, it reports on what already used it.'
+      }
+    },
+    {
+      text: 'The file\u2019s creation timestamp.',
+      answer: 'neither',
+      why: {
+        right: 'A timestamp describes the object. It isn\u2019t a grant, a membership, or anything that intersects with either.',
+        miss: 'When the file was created says nothing about who can reach it now. It isn\u2019t a membership or a permission \u2014 it doesn\u2019t enter the composition at all.'
+      }
+    },
+    {
+      text: 'A description someone typed into the file\u2019s properties.',
+      answer: 'neither',
+      why: {
+        right: 'A free-text description is metadata about the file\u2019s purpose, not a layer that grants or restricts anything.',
+        miss: 'A typed description doesn\u2019t grant or restrict reach to anyone. It\u2019s metadata about the file, not a composing layer.'
+      }
+    }
+  ];
+
+  var casesEl = document.getElementById('cases');
+  var checkBtn = document.getElementById('checkBtn');
+  var summaryEl = document.getElementById('summary');
+  var secondPass = document.getElementById('secondPass');
+  var checked = false;
+
+  function renderCase(c, index) {
+    var wrap = document.createElement('div');
+    wrap.className = 'case';
+    wrap.id = 'case-' + index;
+
+    var textEl = document.createElement('div');
+    textEl.className = 'case-text';
+    textEl.textContent = c.text;
+    wrap.appendChild(textEl);
+
+    var verdicts = document.createElement('div');
+    verdicts.className = 'verdicts';
+
+    buckets.forEach(function (pair) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'verdict-btn';
+      btn.textContent = pair[1];
+      btn.dataset.value = pair[0];
+      btn.addEventListener('click', function () {
+        if (checked) return;
+        verdicts.querySelectorAll('.verdict-btn').forEach(function (b) { b.classList.remove('picked'); });
+        btn.classList.add('picked');
+        wrap.dataset.pick = pair[0];
+        updateCheckState();
+      });
+      verdicts.appendChild(btn);
+    });
+    wrap.appendChild(verdicts);
+
+    var explain = document.createElement('div');
+    explain.className = 'explain';
+    wrap.appendChild(explain);
+
+    casesEl.appendChild(wrap);
+  }
+
+  cases.forEach(renderCase);
+
+  function updateCheckState() {
+    var all = casesEl.querySelectorAll('.case');
+    var done = true;
+    all.forEach(function (c) { if (!c.dataset.pick) done = false; });
+    checkBtn.disabled = !done;
+  }
+
+  function grade() {
+    if (checked) return;
+    checked = true;
+    checkBtn.disabled = true;
+
+    var wrongCount = 0;
+    var all = casesEl.querySelectorAll('.case');
+
+    all.forEach(function (el, i) {
+      var c = cases[i];
+      var pick = el.dataset.pick;
+      var isRight = pick === c.answer;
+      el.classList.add('graded');
+      el.classList.add(isRight ? 'right' : 'miss');
+      if (!isRight) wrongCount++;
+
+      var explain = el.querySelector('.explain');
+      var tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.textContent = isRight ? 'Correctly placed' : 'Not quite';
+      var body = document.createElement('p');
+      body.style.margin = '0';
+      body.textContent = isRight ? c.why.right : c.why.miss;
+      explain.appendChild(tag);
+      explain.appendChild(body);
+
+      el.querySelectorAll('.verdict-btn').forEach(function (b) { b.disabled = true; });
+    });
+
+    summaryEl.classList.add('show');
+    var p = document.createElement('p');
+    if (wrongCount === 0) {
+      summaryEl.classList.add('level-correct');
+      p.textContent = 'All nine landed correctly. Linux and Windows each compose effective access from three ingredients of their own \u2014 the same move, run through different machinery \u2014 and neither list includes anything that merely describes the object rather than granting or restricting it.';
+    } else if (wrongCount <= 2) {
+      summaryEl.classList.add('level-near');
+      p.textContent = 'Close \u2014 ' + wrongCount + ' of nine landed in the wrong bucket. Each one marked above names which platform\u2019s machinery it belongs to, or why it never composes access at all.';
+    } else {
+      summaryEl.classList.add('level-wrong');
+      p.textContent = wrongCount + ' of nine landed in the wrong bucket. Before the next one, ask: does this grant or restrict reach to an object, or does it only describe the object or record something that already happened? Only the first kind composes access.';
+    }
+    summaryEl.appendChild(p);
+
+    secondPass.classList.add('show');
+    renderMovedCase();
+    if (typeof summaryEl.scrollIntoView === 'function') {
+      summaryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function renderMovedCase() {
+    var target = document.getElementById('movedCase');
+
+    var wrap = document.createElement('div');
+    wrap.className = 'case';
+
+    var textEl = document.createElement('div');
+    textEl.className = 'case-text';
+    textEl.textContent = 'An audit-log entry showing three failed attempts last night to open the finance share, from an account that shouldn\u2019t be anywhere near it.';
+    wrap.appendChild(textEl);
+
+    var verdicts = document.createElement('div');
+    verdicts.className = 'verdicts';
+    var movedPick = null;
+
+    buckets.forEach(function (pair) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'verdict-btn';
+      btn.textContent = pair[1];
+      btn.addEventListener('click', function () {
+        if (movedPick) return;
+        movedPick = pair[0];
+        verdicts.querySelectorAll('.verdict-btn').forEach(function (b) { b.disabled = true; });
+        btn.classList.add('picked');
+
+        var isRight = pair[0] === 'neither';
+        wrap.classList.add('graded', isRight ? 'right' : 'miss');
+
+        var explain = document.createElement('div');
+        explain.className = 'explain';
+        explain.style.display = 'block';
+        var tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = isRight ? 'Correctly placed' : 'Not quite';
+        var body = document.createElement('p');
+        body.style.margin = '0';
+        body.textContent = isRight
+          ? 'Same bucket as before, and for the same reason: however alarming the entry reads, it\u2019s still a record of an attempt, not a grant or a membership. What makes something worth worrying about and what makes it part of the composition are two different questions.'
+          : 'How alarming an entry reads doesn\u2019t move it into the composition. It still isn\u2019t a grant or a membership \u2014 it\u2019s a record of three attempts, which is a different kind of evidence entirely.';
+        explain.appendChild(tag);
+        explain.appendChild(body);
+        wrap.appendChild(explain);
+      });
+      verdicts.appendChild(btn);
+    });
+    wrap.appendChild(verdicts);
+
+    target.appendChild(wrap);
+  }
+
+  checkBtn.addEventListener('click', grade);
+
+})();
+</script>
+
+</body>
+</html>

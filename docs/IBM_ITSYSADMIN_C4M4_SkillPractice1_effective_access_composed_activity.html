@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sort Each Case by What It Actually Composes To</title>
+<style>
+  :root {
+    --paper: #EFEBE0;
+    --paper-raised: #F8F5EC;
+    --ledger-line: #CFC6A8;
+    --ledger-line-strong: #A89968;
+    --ink: #1D2A2E;
+    --ink-soft: #52605E;
+    --ink-faint: #8A8A74;
+    --stamp: #2E4A56;
+    --stamp-soft: #D9E2E2;
+    --correct: #3F6B4A;
+    --correct-soft: #E1E9DD;
+    --near: #96602E;
+    --near-soft: #F4E7D8;
+    --wrong: #8A3A24;
+    --wrong-soft: #EEDCD2;
+    --focus: #1D4ED8;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.58;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  main { max-width: 700px; margin: 0 auto; padding: 52px 24px 80px; }
+  @media (max-width: 480px) { main { padding: 38px 16px 64px; } }
+
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-weight: 400;
+    font-size: clamp(24px, 4.6vw, 29px);
+    line-height: 1.28;
+    margin: 0 0 16px;
+    max-width: 22ch;
+  }
+
+  p { margin: 0 0 15px; max-width: 64ch; }
+  .lede { color: var(--ink-soft); }
+
+  .rule { border: 0; border-top: 1px solid var(--ledger-line); margin: 32px 0; }
+
+  /* --- case cards --- */
+  .case {
+    background: var(--paper-raised);
+    border: 1px solid var(--ledger-line);
+    border-radius: 5px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+
+  .case-id {
+    font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+  }
+
+  .case-detail {
+    font-size: 15.5px;
+    margin-bottom: 14px;
+  }
+
+  .case-detail .who { color: var(--ink); font-weight: 600; }
+
+  .case-detail .line {
+    font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 14px;
+    color: var(--ink-soft);
+    display: block;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+
+  .verdicts {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .verdict-btn {
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1px solid var(--ledger-line-strong);
+    border-radius: 5px;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+
+  .verdict-btn:hover { border-color: var(--stamp); }
+  .verdict-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .verdict-btn.picked {
+    background: var(--stamp);
+    border-color: var(--stamp);
+    color: var(--paper-raised);
+  }
+
+  .case.graded.right { border-left: 4px solid var(--correct); }
+  .case.graded.miss { border-left: 4px solid var(--wrong); }
+
+  .explain {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--ledger-line);
+    font-size: 15px;
+  }
+  .case.graded .explain { display: block; }
+
+  .explain .tag {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+  }
+  .case.graded.right .explain .tag { color: var(--correct); }
+  .case.graded.miss .explain .tag { color: var(--wrong); }
+
+  /* --- controls + summary --- */
+  .controls { margin: 28px 0 0; }
+
+  button.primary {
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--paper-raised);
+    background: var(--stamp);
+    border: none;
+    border-radius: 6px;
+    padding: 13px 24px;
+    cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { background: #253B45; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  .summary {
+    display: none;
+    margin-top: 22px;
+    padding: 18px 20px;
+    border-radius: 5px;
+    border-left: 4px solid var(--ledger-line-strong);
+    background: var(--paper-raised);
+  }
+  .summary.show { display: block; }
+  .summary.level-correct { border-left-color: var(--correct); background: var(--correct-soft); }
+  .summary.level-near { border-left-color: var(--near); background: var(--near-soft); }
+  .summary.level-wrong { border-left-color: var(--wrong); background: var(--wrong-soft); }
+  .summary p { margin: 0; max-width: none; }
+  .summary p + p { margin-top: 8px; }
+
+  /* --- second pass --- */
+  .second-pass { display: none; margin-top: 10px; }
+  .second-pass.show { display: block; }
+
+  .second-pass-note {
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <p class="lede" style="font-size:15px;color:var(--ink-faint);margin-bottom:10px;">Skill practice · locks: effective access is composed, not declared</p>
+
+  <h1>Sort Each Case by What It Actually Composes To</h1>
+
+  <p>Each case names an identity, the group or groups it belongs to, and the permission entry on one object. Nothing here is hidden — read what's given and decide whether the identity reaches the object, or doesn't. Go only on what each case states.</p>
+
+  <hr class="rule">
+
+  <div id="cases"></div>
+
+  <div class="controls">
+    <button type="button" class="primary" id="checkBtn" disabled>Check my sort</button>
+  </div>
+
+  <div class="summary" id="summary" role="status" aria-live="polite"></div>
+
+  <div class="second-pass" id="secondPass">
+    <hr class="rule">
+    <p style="font-size:15px;color:var(--ink-faint);margin-bottom:8px;">One assumption moves</p>
+    <p class="second-pass-note">Case 4 and case 5 both carry the same loud label at the outer layer — <code>Everyone: Full Control</code> — and still came out differently, because the finer layer underneath decided it. Here, the finer layer on case 4 changes. Everything else about tech-04 and the Customer Records object stays exactly as it was.</p>
+    <div id="movedCase"></div>
+  </div>
+
+</main>
+
+<script>
+(function () {
+
+  var cases = [
+    {
+      id: 'contractor-02',
+      who: 'contractor-02',
+      lines: [
+        'Belongs to: grp-vendor-portal',
+        'Vendor Intake — permission entry: grp-vendor-portal, Read'
+      ],
+      answer: 'reaches',
+      why: {
+        right: 'One membership, one matching entry. The group is named on the object, contractor-02 is in the group, so the composition resolves to Read.',
+        miss: 'grp-vendor-portal is both the identity\u2019s membership and the object\u2019s only entry. That intersection is reach, not an absence of it.'
+      }
+    },
+    {
+      id: 'analyst-07',
+      who: 'analyst-07',
+      lines: [
+        'Belongs to: grp-forecast-temp (added for one forecast cycle, months ago; never removed)',
+        'Planning Workspace — permission entry: grp-forecast-temp, Modify'
+      ],
+      answer: 'reaches',
+      why: {
+        right: 'The membership is stale, not absent. A group added for a reason that lapsed still composes with whatever that group can reach, until someone revokes it \u2014 nobody has.',
+        miss: 'Age doesn\u2019t retire a membership. grp-forecast-temp still has Modify, and analyst-07 is still in it, so the reach is still live \u2014 unjustified is a different question from the one this case asks.'
+      }
+    },
+    {
+      id: 'operator-11',
+      who: 'operator-11',
+      lines: [
+        'Belongs to: grp-ops-floor (no mention anywhere on the object below)',
+        'Audit Archive — permission entries: grp-compliance, Read only'
+      ],
+      answer: 'no',
+      why: {
+        right: 'operator-11\u2019s only membership, grp-ops-floor, never appears on the object\u2019s own list. No group it belongs to intersects any entry, so there\u2019s nothing to compose.',
+        miss: 'grp-ops-floor isn\u2019t on Audit Archive\u2019s list at all, and grp-compliance isn\u2019t a group operator-11 belongs to. There\u2019s no membership-permission pair to compose here.'
+      }
+    },
+    {
+      id: 'tech-04',
+      who: 'tech-04',
+      lines: [
+        'Belongs to: grp-field-techs',
+        'Customer Records — share layer: Everyone, Full Control',
+        'Customer Records — finer layer beneath: grp-support only; grp-field-techs explicitly excluded'
+      ],
+      answer: 'no',
+      why: {
+        right: 'The louder label at the outer layer isn\u2019t the answer \u2014 the finer layer beneath it is, and it names grp-support alone. grp-field-techs doesn\u2019t compose a reach out of a label it isn\u2019t actually covered by underneath.',
+        miss: '"Everyone: Full Control" is the outer layer\u2019s label, not the effective result. The finer layer beneath restricts this specifically to grp-support, and tech-04 isn\u2019t in it.'
+      }
+    },
+    {
+      id: 'clerk-09',
+      who: 'clerk-09',
+      lines: [
+        'Belongs to: grp-receiving',
+        'Receiving Log — share layer: Everyone, Full Control',
+        'Receiving Log — finer layer beneath: grp-receiving, Modify; no exclusion'
+      ],
+      answer: 'reaches',
+      why: {
+        right: 'Same loud label as the case above, and this time it holds up \u2014 the finer layer grants grp-receiving Modify outright, with nothing underneath narrowing it back out.',
+        miss: 'The label matches case 4\u2019s, but the finer layer doesn\u2019t: here it grants grp-receiving Modify with no exclusion, so the composed result is reach.'
+      }
+    },
+    {
+      id: 'planner-02',
+      who: 'planner-02',
+      lines: [
+        'Belongs to: grp-regional, which is itself a member of grp-global',
+        'Global Dashboard — permission entry: grp-global, Read only'
+      ],
+      answer: 'reaches',
+      why: {
+        right: 'planner-02\u2019s own name is nowhere near this object, and neither is grp-regional\u2019s. The object only names grp-global \u2014 but grp-regional sits inside it, and planner-02 sits inside grp-regional, so the chain composes through two hops.',
+        miss: 'Nothing on Global Dashboard names grp-regional or planner-02 directly \u2014 but grp-regional is nested inside grp-global, which is named, so the reach composes through the nesting.'
+      }
+    },
+    {
+      id: 'auditor-03',
+      who: 'auditor-03',
+      lines: [
+        'Belongs to: grp-readonly (no entry anywhere on this object) and grp-finance-view',
+        'Finance Ledger — permission entry: grp-finance-view, Read'
+      ],
+      answer: 'reaches',
+      why: {
+        right: 'One of auditor-03\u2019s two memberships comes up empty on this object. The other, grp-finance-view, composes with the Read entry. One working route is enough \u2014 the empty one doesn\u2019t cancel it.',
+        miss: 'grp-readonly goes nowhere on this object, but grp-finance-view does \u2014 and auditor-03 holds both memberships at once. The successful route still composes, regardless of the one that didn\u2019t.'
+      }
+    },
+    {
+      id: 'lead-06',
+      who: 'lead-06',
+      lines: [
+        'No longer a member of grp-ops-lead (removed last quarter on a role change)',
+        'Incident Queue — permission entry: grp-ops-lead, Modify'
+      ],
+      answer: 'no',
+      why: {
+        right: 'The entry on Incident Queue is real, but lead-06 isn\u2019t in that group anymore. A permission that once would have composed does nothing once the membership side of it is gone.',
+        miss: 'grp-ops-lead does have Modify on Incident Queue \u2014 but lead-06 was removed from that group last quarter. Composition needs both sides live, and one of them no longer is.'
+      }
+    }
+  ];
+
+  var casesEl = document.getElementById('cases');
+  var checkBtn = document.getElementById('checkBtn');
+  var summaryEl = document.getElementById('summary');
+  var secondPass = document.getElementById('secondPass');
+  var checked = false;
+
+  function renderCase(c, index) {
+    var wrap = document.createElement('div');
+    wrap.className = 'case';
+    wrap.id = 'case-' + index;
+
+    var idEl = document.createElement('div');
+    idEl.className = 'case-id';
+    idEl.textContent = 'case ' + (index + 1);
+    wrap.appendChild(idEl);
+
+    var detail = document.createElement('div');
+    detail.className = 'case-detail';
+    var whoLine = document.createElement('span');
+    whoLine.className = 'who';
+    whoLine.textContent = c.who;
+    detail.appendChild(whoLine);
+    c.lines.forEach(function (line) {
+      var l = document.createElement('span');
+      l.className = 'line';
+      l.textContent = line;
+      detail.appendChild(l);
+    });
+    wrap.appendChild(detail);
+
+    var verdicts = document.createElement('div');
+    verdicts.className = 'verdicts';
+
+    ['reaches', 'no'].forEach(function (val) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'verdict-btn';
+      btn.textContent = val === 'reaches' ? 'Reaches the object' : 'Does not reach';
+      btn.dataset.value = val;
+      btn.addEventListener('click', function () {
+        if (checked) return;
+        verdicts.querySelectorAll('.verdict-btn').forEach(function (b) { b.classList.remove('picked'); });
+        btn.classList.add('picked');
+        wrap.dataset.pick = val;
+        updateCheckState();
+      });
+      verdicts.appendChild(btn);
+    });
+    wrap.appendChild(verdicts);
+
+    var explain = document.createElement('div');
+    explain.className = 'explain';
+    wrap.appendChild(explain);
+
+    casesEl.appendChild(wrap);
+  }
+
+  cases.forEach(renderCase);
+
+  function updateCheckState() {
+    var all = casesEl.querySelectorAll('.case');
+    var done = true;
+    all.forEach(function (c) { if (!c.dataset.pick) done = false; });
+    checkBtn.disabled = !done;
+  }
+
+  function grade() {
+    if (checked) return;
+    checked = true;
+    checkBtn.disabled = true;
+
+    var wrongCount = 0;
+    var all = casesEl.querySelectorAll('.case');
+
+    all.forEach(function (el, i) {
+      var c = cases[i];
+      var pick = el.dataset.pick;
+      var isRight = pick === c.answer;
+      el.classList.add('graded');
+      el.classList.add(isRight ? 'right' : 'miss');
+      if (!isRight) wrongCount++;
+
+      var explain = el.querySelector('.explain');
+      var tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.textContent = isRight ? 'Composed correctly' : 'Not quite';
+      var body = document.createElement('p');
+      body.style.margin = '0';
+      body.textContent = isRight ? c.why.right : c.why.miss;
+      explain.appendChild(tag);
+      explain.appendChild(body);
+
+      el.querySelectorAll('.verdict-btn').forEach(function (b) { b.disabled = true; });
+    });
+
+    summaryEl.classList.add('show');
+    var p = document.createElement('p');
+    if (wrongCount === 0) {
+      summaryEl.classList.add('level-correct');
+      p.textContent = 'All eight composed correctly. Every one of these turned on the same question: which memberships intersect which entries, right now \u2014 not which name sits on the object\u2019s own list, and not which label sits on the outer layer.';
+    } else if (wrongCount <= 2) {
+      summaryEl.classList.add('level-near');
+      p.textContent = 'Close \u2014 ' + wrongCount + ' of eight came out the other way. Each marked case above names exactly which membership or layer decided it; re-read those before moving on.';
+    } else {
+      summaryEl.classList.add('level-wrong');
+      p.textContent = wrongCount + ' of eight came out the other way. Before the next case, ask one question only: which groups does this identity currently belong to, and does any one of them have a live entry on this object \u2014 not whether the identity\u2019s own name appears anywhere.';
+    }
+    summaryEl.appendChild(p);
+
+    secondPass.classList.add('show');
+    renderMovedCase();
+    if (typeof summaryEl.scrollIntoView === 'function') {
+      summaryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function renderMovedCase() {
+    var target = document.getElementById('movedCase');
+    var moved = {
+      who: 'tech-04',
+      lines: [
+        'Belongs to: grp-field-techs',
+        'Customer Records — share layer: Everyone, Full Control',
+        'Customer Records — finer layer beneath: grp-field-techs, Read (the exclusion is gone)'
+      ]
+    };
+
+    var wrap = document.createElement('div');
+    wrap.className = 'case';
+
+    var detail = document.createElement('div');
+    detail.className = 'case-detail';
+    var whoLine = document.createElement('span');
+    whoLine.className = 'who';
+    whoLine.textContent = moved.who;
+    detail.appendChild(whoLine);
+    moved.lines.forEach(function (line) {
+      var l = document.createElement('span');
+      l.className = 'line';
+      l.textContent = line;
+      detail.appendChild(l);
+    });
+    wrap.appendChild(detail);
+
+    var verdicts = document.createElement('div');
+    verdicts.className = 'verdicts';
+    var movedPick = null;
+
+    ['reaches', 'no'].forEach(function (val) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'verdict-btn';
+      btn.textContent = val === 'reaches' ? 'Reaches the object' : 'Does not reach';
+      btn.addEventListener('click', function () {
+        if (movedPick) return;
+        movedPick = val;
+        verdicts.querySelectorAll('.verdict-btn').forEach(function (b) { b.disabled = true; });
+        btn.classList.add('picked');
+
+        var isRight = val === 'reaches';
+        wrap.classList.add('graded', isRight ? 'right' : 'miss');
+
+        var explain = document.createElement('div');
+        explain.className = 'explain';
+        explain.style.display = 'block';
+        var tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = isRight ? 'Composed correctly' : 'Not quite';
+        var body = document.createElement('p');
+        body.style.margin = '0';
+        body.textContent = isRight
+          ? 'The outer layer\u2019s label never changed. What changed is the finer layer underneath it \u2014 the same thing that decided the first pass now decides this one, in the other direction.'
+          : 'The finer layer now grants grp-field-techs Read, with the exclusion gone. The label at the outer layer was never what decided either pass \u2014 the layer beneath it always was.';
+        explain.appendChild(tag);
+        explain.appendChild(body);
+        wrap.appendChild(explain);
+      });
+      verdicts.appendChild(btn);
+    });
+    wrap.appendChild(verdicts);
+
+    target.appendChild(wrap);
+  }
+
+  checkBtn.addEventListener('click', grade);
+
+})();
+</script>
+
+</body>
+</html>

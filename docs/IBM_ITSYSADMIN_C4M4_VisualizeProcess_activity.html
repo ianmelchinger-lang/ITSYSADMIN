@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Assemble the Review, Start to Finish</title>
+<style>
+  :root {
+    --paper: #EFEBE0;
+    --paper-raised: #F8F5EC;
+    --ledger-line: #CFC6A8;
+    --ledger-line-strong: #A89968;
+    --ink: #1D2A2E;
+    --ink-soft: #52605E;
+    --ink-faint: #8A8A74;
+    --stamp: #2E4A56;
+    --stamp-soft: #D9E2E2;
+    --correct: #3F6B4A;
+    --correct-soft: #E1E9DD;
+    --near: #96602E;
+    --near-soft: #F4E7D8;
+    --wrong: #8A3A24;
+    --wrong-soft: #EEDCD2;
+    --focus: #1D4ED8;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.58;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  main { max-width: 700px; margin: 0 auto; padding: 52px 24px 80px; }
+  @media (max-width: 480px) { main { padding: 38px 16px 64px; } }
+
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-weight: 400;
+    font-size: clamp(24px, 4.6vw, 29px);
+    line-height: 1.28;
+    margin: 0 0 16px;
+    max-width: 24ch;
+  }
+
+  p { margin: 0 0 15px; max-width: 64ch; }
+  .lede { color: var(--ink-soft); }
+  .rule { border: 0; border-top: 1px solid var(--ledger-line); margin: 32px 0; }
+
+  h2.section {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-weight: 400;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 0 0 14px;
+  }
+
+  /* --- bank --- */
+  #bank { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+  #bank:empty::after {
+    content: "Every card has been placed in the sequence.";
+    font-size: 14.5px;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .bank-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: var(--paper-raised);
+    border: 1px solid var(--ledger-line);
+    border-radius: 5px;
+    padding: 13px 16px;
+  }
+
+  .bank-card span { font-size: 15.5px; }
+
+  .add-btn {
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--stamp);
+    background: var(--paper);
+    border: 1px solid var(--ledger-line-strong);
+    border-radius: 5px;
+    padding: 7px 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .add-btn:hover { background: var(--stamp-soft); }
+  .add-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* --- path --- */
+  #path { display: flex; flex-direction: column; gap: 10px; min-height: 52px; margin-bottom: 8px; }
+  #path:empty::after {
+    content: "Nothing in the sequence yet. Add cards from the bank above.";
+    font-size: 14.5px;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .path-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--paper-raised);
+    border: 1px solid var(--ledger-line);
+    border-radius: 5px;
+    padding: 13px 16px;
+  }
+
+  .path-card .num {
+    font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 14px;
+    color: var(--ink-faint);
+    min-width: 20px;
+  }
+
+  .path-card span.txt { flex: 1; font-size: 15.5px; }
+
+  .path-controls { display: flex; gap: 6px; }
+
+  .mini-btn {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1px solid var(--ledger-line-strong);
+    border-radius: 4px;
+    padding: 6px 9px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .mini-btn:hover:not(:disabled) { background: var(--stamp-soft); }
+  .mini-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .mini-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .path-card.flag-missing { border-left: 4px solid var(--near); }
+  .path-card.flag-distractor { border-left: 4px solid var(--wrong); background: var(--wrong-soft); }
+
+  /* --- controls + feedback --- */
+  .controls { margin: 28px 0 0; }
+
+  button.primary {
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--paper-raised);
+    background: var(--stamp);
+    border: none;
+    border-radius: 6px;
+    padding: 13px 24px;
+    cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { background: #253B45; }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  button.secondary {
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: transparent;
+    border: 1px solid var(--ledger-line-strong);
+    border-radius: 6px;
+    padding: 11px 18px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  button.secondary:hover { background: var(--paper-raised); }
+  button.secondary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  .feedback {
+    display: none;
+    margin-top: 22px;
+    padding: 18px 20px;
+    border-radius: 5px;
+    border-left: 4px solid var(--ledger-line-strong);
+    background: var(--paper-raised);
+  }
+  .feedback.show { display: block; }
+  .feedback.level-correct { border-left-color: var(--correct); background: var(--correct-soft); }
+  .feedback.level-near { border-left-color: var(--near); background: var(--near-soft); }
+  .feedback.level-wrong { border-left-color: var(--wrong); background: var(--wrong-soft); }
+
+  .feedback p { margin: 0 0 10px; max-width: none; }
+  .feedback p:last-child { margin-bottom: 0; }
+  .feedback .headline { font-weight: 600; }
+  .feedback ul { margin: 0 0 10px; padding-left: 20px; }
+  .feedback li { margin-bottom: 6px; font-size: 15px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+
+  <p class="lede" style="font-size:15px;color:var(--ink-faint);margin-bottom:10px;">Consolidation · assembles the module\u2019s whole path</p>
+
+  <h1>Assemble the Review, Start to Finish</h1>
+
+  <p>The bank below holds ten cards. Six of them are the review, in some order. The other four are moves that feel plausible but don\u2019t belong in this sequence at all. Build the path by adding only the cards that belong, in the order the review actually runs \u2014 then check it.</p>
+
+  <hr class="rule">
+
+  <h2 class="section">Bank</h2>
+  <div id="bank"></div>
+
+  <hr class="rule">
+
+  <h2 class="section">The sequence you\u2019re building</h2>
+  <div id="path"></div>
+
+  <div class="controls">
+    <button type="button" class="primary" id="checkBtn" disabled>Check my sequence</button>
+    <button type="button" class="secondary" id="resetBtn">Start over</button>
+  </div>
+
+  <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+
+</main>
+
+<script>
+(function () {
+
+  var required = [
+    { id: 'r0', text: 'Read the identity\u2019s effective access to the share from more than one source, on each platform.' },
+    { id: 'r1', text: 'Compare that reach against what the identity\u2019s role actually justifies.' },
+    { id: 'r2', text: 'Name the gap between effective access and role-justified access as a finding.' },
+    { id: 'r3', text: 'Write a recommended tightening into the finding record.' },
+    { id: 'r4', text: 'Route the finding and its recommendation to the share\u2019s resource owner.' },
+    { id: 'r5', text: 'Put a recurring date on the calendar to run this same review again.' }
+  ];
+
+  var distractors = [
+    {
+      id: 'd0',
+      text: 'Conclude the audit must be mistaken, since no permission names her by name.',
+      reason: 'An accurate permission list that never names her by name doesn\u2019t mean the audit is wrong \u2014 reach composes through groups, not individual grants. This is the trap, not a step in the review.'
+    },
+    {
+      id: 'd1',
+      text: 'Look for the one file permission that grants her access, and remove it.',
+      reason: 'There usually isn\u2019t a single file permission naming her to remove \u2014 her reach is composed from group memberships intersecting a share\u2019s permissions. This hunts the wrong layer entirely.'
+    },
+    {
+      id: 'd2',
+      text: 'Fix the one bad grant you found, and consider the matter closed.',
+      reason: 'Treating one fix as the end of it ignores that access re-accumulates through the next membership. The review\u2019s own job includes scheduling its return, not closing the book after one pass.'
+    },
+    {
+      id: 'd3',
+      text: 'Remove her from the finance group yourself, right now, before routing anything.',
+      reason: 'Making the change yourself is the one move explicitly outside the review\u2019s boundary. The review documents and recommends; the resource owner decides whether, when, and how to act.'
+    }
+  ];
+
+  var allCards = required.concat(distractors);
+
+  // shuffle deterministically-ish but varied per load
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  var bankEl = document.getElementById('bank');
+  var pathEl = document.getElementById('path');
+  var checkBtn = document.getElementById('checkBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var feedbackEl = document.getElementById('feedback');
+
+  var cardIndex = {};
+  allCards.forEach(function (c) { cardIndex[c.id] = c; });
+
+  var pathOrder = []; // array of ids, in order
+
+  function renderAll() {
+    bankEl.innerHTML = '';
+    pathEl.innerHTML = '';
+
+    var inPath = {};
+    pathOrder.forEach(function (id) { inPath[id] = true; });
+
+    shuffledBankIds.filter(function (id) { return !inPath[id]; }).forEach(function (id) {
+      var c = cardIndex[id];
+      var row = document.createElement('div');
+      row.className = 'bank-card';
+      var span = document.createElement('span');
+      span.textContent = c.text;
+      row.appendChild(span);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'add-btn';
+      btn.textContent = 'Add to sequence';
+      btn.addEventListener('click', function () {
+        pathOrder.push(id);
+        feedbackEl.classList.remove('show');
+        renderAll();
+      });
+      row.appendChild(btn);
+      bankEl.appendChild(row);
+    });
+
+    pathOrder.forEach(function (id, idx) {
+      var c = cardIndex[id];
+      var row = document.createElement('div');
+      row.className = 'path-card';
+
+      var num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = (idx + 1) + '.';
+      row.appendChild(num);
+
+      var span = document.createElement('span');
+      span.className = 'txt';
+      span.textContent = c.text;
+      row.appendChild(span);
+
+      var controls = document.createElement('div');
+      controls.className = 'path-controls';
+
+      var upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.className = 'mini-btn';
+      upBtn.setAttribute('aria-label', 'Move up');
+      upBtn.textContent = '\u2191';
+      upBtn.disabled = idx === 0;
+      upBtn.addEventListener('click', function () {
+        var tmp = pathOrder[idx - 1];
+        pathOrder[idx - 1] = pathOrder[idx];
+        pathOrder[idx] = tmp;
+        feedbackEl.classList.remove('show');
+        renderAll();
+      });
+      controls.appendChild(upBtn);
+
+      var downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.className = 'mini-btn';
+      downBtn.setAttribute('aria-label', 'Move down');
+      downBtn.textContent = '\u2193';
+      downBtn.disabled = idx === pathOrder.length - 1;
+      downBtn.addEventListener('click', function () {
+        var tmp = pathOrder[idx + 1];
+        pathOrder[idx + 1] = pathOrder[idx];
+        pathOrder[idx] = tmp;
+        feedbackEl.classList.remove('show');
+        renderAll();
+      });
+      controls.appendChild(downBtn);
+
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'mini-btn';
+      removeBtn.setAttribute('aria-label', 'Remove from sequence');
+      removeBtn.textContent = '\u2715';
+      removeBtn.addEventListener('click', function () {
+        pathOrder.splice(idx, 1);
+        feedbackEl.classList.remove('show');
+        renderAll();
+      });
+      controls.appendChild(removeBtn);
+
+      row.appendChild(controls);
+      pathEl.appendChild(row);
+    });
+
+    checkBtn.disabled = pathOrder.length === 0;
+  }
+
+  var shuffledBankIds = shuffle(allCards.map(function (c) { return c.id; }));
+
+  renderAll();
+
+  function check() {
+    var missing = required.filter(function (r) { return pathOrder.indexOf(r.id) === -1; });
+    var distractorsPresent = distractors.filter(function (d) { return pathOrder.indexOf(d.id) !== -1; });
+
+    feedbackEl.innerHTML = '';
+    feedbackEl.classList.add('show');
+    feedbackEl.classList.remove('level-correct', 'level-near', 'level-wrong');
+
+    if (missing.length > 0 || distractorsPresent.length > 0) {
+      feedbackEl.classList.add('level-wrong');
+
+      if (missing.length > 0) {
+        var mp = document.createElement('p');
+        mp.className = 'headline';
+        mp.textContent = missing.length === 1 ? 'One required step is missing:' : missing.length + ' required steps are missing:';
+        feedbackEl.appendChild(mp);
+        var mul = document.createElement('ul');
+        missing.forEach(function (r) {
+          var li = document.createElement('li');
+          li.textContent = r.text;
+          mul.appendChild(li);
+        });
+        feedbackEl.appendChild(mul);
+      }
+
+      if (distractorsPresent.length > 0) {
+        var dp = document.createElement('p');
+        dp.className = 'headline';
+        dp.textContent = distractorsPresent.length === 1 ? 'One card in your sequence doesn\u2019t belong:' : distractorsPresent.length + ' cards in your sequence don\u2019t belong:';
+        feedbackEl.appendChild(dp);
+        var dul = document.createElement('ul');
+        distractorsPresent.forEach(function (d) {
+          var li = document.createElement('li');
+          li.textContent = d.text + ' \u2014 ' + d.reason;
+          dul.appendChild(li);
+        });
+        feedbackEl.appendChild(dul);
+
+        pathOrder.forEach(function (id, idx) {
+          var el = pathEl.children[idx];
+          if (distractors.some(function (d) { return d.id === id; })) {
+            el.classList.add('flag-distractor');
+          }
+        });
+      }
+
+      var closing = document.createElement('p');
+      closing.textContent = 'Fix these first \u2014 order only gets checked once the right six cards, and only the right six, are in the sequence.';
+      feedbackEl.appendChild(closing);
+      return;
+    }
+
+    // All six required present, no distractors. Check order.
+    var seq = pathOrder.map(function (id) {
+      return required.findIndex(function (r) { return r.id === id; });
+    });
+
+    var mismatches = [];
+    seq.forEach(function (val, pos) { if (val !== pos) mismatches.push(pos); });
+
+    if (mismatches.length === 0) {
+      feedbackEl.classList.add('level-correct');
+      var p = document.createElement('p');
+      p.className = 'headline';
+      p.textContent = 'The whole chain is correct.';
+      feedbackEl.appendChild(p);
+      var p2 = document.createElement('p');
+      p2.textContent = 'Read, compare, name the gap, recommend, route, and schedule the return \u2014 in that order, with nothing that changes access anywhere in it. That\u2019s the review, start to finish.';
+      feedbackEl.appendChild(p2);
+      return;
+    }
+
+    var isSimpleSwap = mismatches.length === 2 &&
+      seq[mismatches[0]] === mismatches[1] &&
+      seq[mismatches[1]] === mismatches[0];
+
+    // find first violated precedence edge for the hint
+    var firstViolation = null;
+    for (var k = 1; k < required.length; k++) {
+      var predId = required[k - 1].id;
+      var stepId = required[k].id;
+      var predPos = pathOrder.indexOf(predId);
+      var stepPos = pathOrder.indexOf(stepId);
+      if (predPos > stepPos) {
+        firstViolation = { pred: required[k - 1], step: required[k] };
+        break;
+      }
+    }
+
+    if (isSimpleSwap) {
+      feedbackEl.classList.add('level-near');
+      var np = document.createElement('p');
+      np.className = 'headline';
+      np.textContent = 'Close \u2014 the right six cards, almost the right order.';
+      feedbackEl.appendChild(np);
+      var np2 = document.createElement('p');
+      if (firstViolation) {
+        np2.textContent = '\u201C' + firstViolation.step.text + '\u201D is sitting ahead of \u201C' + firstViolation.pred.text + '\u201D, which it depends on. Swap those two.';
+      } else {
+        np2.textContent = 'Two cards are swapped relative to each other. Check which one depends on the other.';
+      }
+      feedbackEl.appendChild(np2);
+    } else {
+      feedbackEl.classList.add('level-wrong');
+      var wp = document.createElement('p');
+      wp.className = 'headline';
+      wp.textContent = 'The right six cards, but the order isn\u2019t there yet.';
+      feedbackEl.appendChild(wp);
+      var wp2 = document.createElement('p');
+      if (firstViolation) {
+        wp2.textContent = 'Start here: \u201C' + firstViolation.step.text + '\u201D can\u2019t come before \u201C' + firstViolation.pred.text + '\u201D \u2014 one depends on the other. Fix that pair and check again.';
+      } else {
+        wp2.textContent = 'Work through the chain one dependency at a time: what has to be true before the next card can happen at all?';
+      }
+      feedbackEl.appendChild(wp2);
+    }
+  }
+
+  checkBtn.addEventListener('click', check);
+
+  resetBtn.addEventListener('click', function () {
+    pathOrder = [];
+    shuffledBankIds = shuffle(allCards.map(function (c) { return c.id; }));
+    feedbackEl.classList.remove('show');
+    renderAll();
+  });
+
+})();
+</script>
+
+</body>
+</html>
