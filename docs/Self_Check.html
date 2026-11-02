@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Summary Self-Check</title>
+<style>
+/* Layout: one reading column; two check groups, a live result strip, then the worked example. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #55625e;
+  --rule: #d6dedb;
+  --accent: #1d6a72;
+  --accent-soft: #e2eef0;
+  --strong: #2c7a4b;
+  --adequate: #9a6a0c;
+  --notyet: #a1432f;
+  --code-bg: #eef2f1;
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+    --code-bg: #222b29; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+  --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+  --code-bg: #222b29; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2rem 4rem;
+}
+.wrap { max-width: 44rem; margin: 0 auto; display: grid; gap: 2.25rem; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.25; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.9rem; font-weight: 600; }
+h2 { font-size: 1.3rem; font-weight: 600; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.4rem; }
+p { margin: 0; }
+.intro { display: grid; gap: 0.8rem; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; }
+.group { display: grid; gap: 1rem; }
+.group-head { display: grid; gap: 0.35rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.75rem; }
+.group-head p { color: var(--muted); }
+ol.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; counter-reset: chk; }
+ol.checks > li {
+  counter-increment: chk; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 1rem 1.1rem; display: grid; gap: 0.6rem;
+}
+.q { font-weight: 600; font-family: var(--font-display); font-size: 1rem; }
+.q::before { content: counter(chk) ". "; color: var(--accent); }
+.how { color: var(--muted); font-size: 0.95rem; }
+.how strong { color: var(--ink); font-weight: 600; }
+.choice { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice label {
+  font-family: var(--font-display); font-size: 0.9rem; padding: 0.35rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--rule); cursor: pointer; color: var(--muted); background: var(--bg);
+}
+.choice input:checked + label.yes { background: var(--strong); border-color: var(--strong); color: var(--surface); }
+.choice input:checked + label.no { background: var(--notyet); border-color: var(--notyet); color: var(--surface); }
+.choice input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.result {
+  background: var(--accent-soft); border-radius: 8px; padding: 1.25rem 1.3rem; display: grid; gap: 1rem;
+}
+.result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+.dim { display: grid; gap: 0.4rem; align-content: start; min-width: 0; }
+.dim h3 { font-size: 1rem; font-weight: 600; }
+.level { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.level[data-level="strong"] { color: var(--strong); }
+.level[data-level="adequate"] { color: var(--adequate); }
+.level[data-level="notyet"] { color: var(--notyet); }
+.level[data-level="pending"] { color: var(--muted); font-weight: 500; font-size: 1rem; }
+.dim ul { margin: 0; padding-left: 1.1rem; font-size: 0.95rem; }
+.rule-note { font-size: 0.9rem; color: var(--muted); }
+.actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+button {
+  font-family: var(--font-display); font-size: 0.95rem; padding: 0.55rem 1.1rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--surface);
+}
+button.quiet { background: transparent; color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.example { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem 1.3rem; display: grid; gap: 0.9rem; min-width: 0; }
+.example h1 { font-size: 1.35rem; }
+.example h2 { font-size: 1.2rem; }
+.example h3 { font-size: 1.05rem; margin-top: 0.6rem; }
+.example .tbl { overflow-x: auto; }
+.example table { border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; min-width: 34rem; }
+.example th, .example td { border-bottom: 1px solid var(--rule); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+.example th { font-family: var(--font-display); font-weight: 600; }
+.example p, .example li { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) { .level { transition: color 0.2s ease; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <p class="eyebrow">Configuration and access summary</p>
+    <h1>Check your summary</h1>
+    <p>Open your finished summary beside this page. For each question, look for the evidence in your own writing, then answer <em>Yes</em> or <em>Not yet</em>. Each question says how to tell. When you have answered them all, you will see where your summary stands on its two measures, and which questions to go back to.</p>
+    <p>Nothing here is recorded or sent anywhere. When you leave the page, your answers go with you.</p>
+  </header>
+
+  <section class="group" aria-labelledby="g1">
+    <div class="group-head">
+      <h2 id="g1">Configuration correctness</h2>
+      <p>Did you find every gap, fix each one exactly, and show that each statement now holds?</p>
+    </div>
+    <ol class="checks" data-dim="correct"></ol>
+  </section>
+
+  <section class="group" aria-labelledby="g2">
+    <div class="group-head">
+      <h2 id="g2">Sound operational practice</h2>
+      <p>Did you work in an order a careful administrator would, and leave a record someone else can trust?</p>
+    </div>
+    <ol class="checks" data-dim="practice"></ol>
+  </section>
+
+  <section class="result" aria-live="polite" aria-labelledby="g3">
+    <h2 id="g3">Where your summary stands</h2>
+    <div class="result-grid">
+      <div class="dim"><h3>Configuration correctness</h3><p class="level" id="lv-correct" data-level="pending"></p><ul id="rv-correct"></ul></div>
+      <div class="dim"><h3>Sound operational practice</h3><p class="level" id="lv-practice" data-level="pending"></p><ul id="rv-practice"></ul></div>
+    </div>
+    <p class="rule-note">Every question answered <em>Yes</em> is strong. One or two answered <em>Not yet</em> is adequate. Three or more means the summary is not yet ready to hand over: revise it and check again.</p>
+    <div class="actions">
+      <button type="button" id="show-example" aria-expanded="false" aria-controls="example">Compare with a worked example</button>
+      <button type="button" class="quiet" id="reset">Clear my answers</button>
+    </div>
+  </section>
+
+  <section class="example" id="example" hidden>
+    <p class="eyebrow">One strong answer</p>
+    <p>This example is one good way to write the summary. Yours does not need to match its wording or order. It is right if it closes the same statements, cites the same evidence and leaves nothing out.</p>
+    <h2>Worked example: configuration and access summary</h2>
+<h3>Scope and starting point</h3>
+<p>This summary covers the configuration and access state of the two servers in the estate, <code>cld-lnx-01</code> and <code>hq-win-01</code>, from the starting state to the state set out in the target specification. I read the before record for all twenty-nine statements and marked each one before planning any change, traced each false statement to its cause, planned one change for each cause, tried each change in the sandbox, and then compared my plan with the after records for all twenty-nine. I planned nothing the specification did not ask for. Where I saw something worth changing outside the specification, I recorded it under <em>Accepted and open items</em> instead.</p>
+<h3>Systems</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Host</th>
+<th>Address</th>
+<th>Platform</th>
+<th>Role</th>
+<th>Records taken as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cld-lnx-01</code></td>
+<td>192.168.56.20</td>
+<td>Red Hat Enterprise Linux 9</td>
+<td>Storefront web tier (nginx), finance working files</td>
+<td><code>rmensah</code>, with <code>sudo</code></td>
+</tr>
+<tr>
+<td><code>hq-win-01</code></td>
+<td>192.168.56.10</td>
+<td>Windows Server 2022, standalone server</td>
+<td>File server: <code>Finance$</code>, <code>Warehouse</code>, <code>Public</code></td>
+<td><code>r.mensah</code>, in PowerShell run as administrator</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each server reaches the other by name.</p>
+<h3>Findings against the specification</h3>
+<p>Eleven of the twenty-nine statements were false at the start. They came from eight causes, and four causes broke more than one statement, so I have grouped the findings by cause rather than by statement.</p>
+<p><strong>1. <code>jkim</code> is still in <code>finance-staff</code> on <code>cld-lnx-01</code> (A1 false, and with it B3).</strong> <code>A1-before.txt</code> shows <code>finance-staff:x:1002:dwhitfield,jkim,poyelaran</code>. The specification puts only the two finance accounts there. Because <code>budget.ods</code> is readable by its group, the membership alone lets <code>jkim</code> read the file: in <code>B3-before.txt</code>, <code>sudo -u jkim cat /srv/finance/budget.ods</code> prints the file's line.</p>
+<p><strong>2. <code>/srv/finance</code> is open to everyone (B1 false).</strong> <code>B1-before.txt</code> shows <code>drwxrwxrwx. 2 root finance-staff</code>. Any account on the server could enter the folder and create or delete files in it, and with the setgid bit missing, new files would not take the finance group.</p>
+<p><strong>3. nginx would not survive a restart (C2 false).</strong> In <code>C2-before.txt</code>, <code>systemctl is-active nginx</code> prints <code>active</code> but <code>systemctl is-enabled nginx</code> prints <code>disabled</code>. The storefront answers now and would stop answering after the next reboot.</p>
+<p><strong>4. The web console is listening on 9090 (C1 and D5 false).</strong> <code>C1-before.txt</code> lists <code>*:9090</code> beside <code>:22</code> and <code>:80</code>, and <code>D5-before.txt</code>, recorded from <code>hq-win-01</code>, ends <code>TcpTestSucceeded : True</code>. Nothing in the specification uses the web console, which on this server runs from <code>cockpit.socket</code>.</p>
+<p><strong>5. <code>j.kim</code> is still in <code>grp-finance-staff</code> on <code>hq-win-01</code> (A5 false).</strong> <code>A5-before.txt</code> lists <code>d.whitfield</code>, <code>j.kim</code> and <code>p.oyelaran</code>. This is the same lapsed cover assignment as finding 1, recorded on the other platform.</p>
+<p><strong>6. The warehouse group can change the finance folder (B5 false).</strong> <code>B5-before.txt</code> lists <code>HQ-WIN-01\grp-warehouse-ops</code> with <code>Modify, Synchronize</code>, not inherited.</p>
+<p><strong>Findings 5 and 6 together explain B9.</strong> <code>B9-before.txt</code> sets the Finance folder's permissions beside the two memberships: the folder grants Modify to both <code>grp-finance-staff</code> and <code>grp-warehouse-ops</code>, and <code>j.kim</code> is in both. She reaches the folder by two independent routes, so closing either one alone would leave B9 false. I traced this before planning the changes, so that I would plan both.</p>
+<p><strong>7. The Public share grants Everyone Full Control (B8 false).</strong> In <code>B8-before.txt</code>, <code>Get-SmbShareAccess -Name Public</code> returns a single entry, granting Everyone Full. The other two shares follow the house rule of Authenticated Users Change and Administrators Full. Effective access to Public is already governed by its folder permissions, which <code>B7-before.txt</code> shows grant Users Modify, so this is an exposure only if those permissions are ever loosened. I planned the change for consistency and defence in depth, and I do not claim it closes an open door.</p>
+<p><strong>8. <code>svc-backup</code> is an administrator (A9 false).</strong> In <code>A9-before.txt</code>, <code>net localgroup Administrators</code> lists <code>svc-backup</code> beside Administrator, <code>a.novak</code> and <code>r.mensah</code>, and <code>net localgroup "Backup Operators"</code> lists no members. A backup account needs to read files it does not own, which is what Backup Operators grants; it does not need to administer the server.</p>
+<p>The other eighteen statements were already true. I read and recorded their before records as well, because a statement I had not checked is one I could not vouch for.</p>
+<h3>Changes</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Change</th>
+<th>Command</th>
+<th>Closes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Remove <code>jkim</code> from <code>finance-staff</code></td>
+<td><code>sudo gpasswd -d jkim finance-staff</code></td>
+<td>A1, B3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Restore the finance folder's mode and setgid bit</td>
+<td><code>sudo chmod 2750 /srv/finance</code></td>
+<td>B1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Set nginx to start at boot</td>
+<td><code>sudo systemctl enable nginx</code></td>
+<td>C2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Stop the web console and keep it from starting</td>
+<td><code>sudo systemctl disable --now cockpit.socket</code></td>
+<td>C1, D5</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Remove <code>j.kim</code> from <code>grp-finance-staff</code></td>
+<td><code>net localgroup grp-finance-staff j.kim /delete</code></td>
+<td>A5, B9 with 6</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Remove the warehouse group's entry on the finance folder</td>
+<td><code>icacls D:\Shares\Finance /remove:g grp-warehouse-ops</code></td>
+<td>B5, B9 with 5</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Replace Everyone on Public with the house rule</td>
+<td><code>Grant-SmbShareAccess -Name Public -AccountName 'Authenticated Users' -AccessRight Change -Force</code> and <code>Grant-SmbShareAccess -Name Public -AccountName Administrators -AccessRight Full -Force</code>, then <code>Revoke-SmbShareAccess -Name Public -AccountName Everyone -Force</code>. In Server Manager, the same change is made in the share's properties, under Permissions.</td>
+<td>B8</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Move <code>svc-backup</code> from Administrators to Backup Operators</td>
+<td><code>Add-LocalGroupMember "Backup Operators" svc-backup</code>, then <code>Remove-LocalGroupMember Administrators svc-backup</code></td>
+<td>A9</td>
+</tr>
+</tbody>
+</table></div>
+<p>Changes 7 and 8 add the new grant or membership before removing the old, so the share and the account are never left with neither. In the sandbox I made changes 5 and 6 one at a time and read B9 after each, which confirmed that each route was real: after change 5 alone, <code>j.kim</code> still reached the folder with Modify through <code>grp-warehouse-ops</code>, and only after change 6 did she reach it not at all. The sandbox also showed that change 4 closes C1 and D5 together, because once nothing listens on 9090 there is nothing for the firewall to let through.</p>
+<h3>Verification</h3>
+<p>After the eight changes, every statement holds. The after records show it for every statement, read against the before records.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th></th>
+<th>Before</th>
+<th>After</th>
+<th>Record that shows it after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>false</td>
+<td>true</td>
+<td><code>A1-after.txt</code>: <code>finance-staff:x:1002:dwhitfield,poyelaran</code></td>
+</tr>
+<tr>
+<td>A2–A4, A6–A8</td>
+<td>true</td>
+<td>true</td>
+<td><code>A2-after.txt</code> to <code>A4-after.txt</code>, <code>A6-after.txt</code> to <code>A8-after.txt</code>: unchanged from before</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>false</td>
+<td>true</td>
+<td><code>A5-after.txt</code>: <code>d.whitfield</code>, <code>p.oyelaran</code></td>
+</tr>
+<tr>
+<td>A9</td>
+<td>false</td>
+<td>true</td>
+<td><code>A9-after.txt</code>: Administrators lists Administrator, <code>a.novak</code>, <code>r.mensah</code>; Backup Operators lists <code>svc-backup</code></td>
+</tr>
+<tr>
+<td>B1</td>
+<td>false</td>
+<td>true</td>
+<td><code>B1-after.txt</code>: <code>drwxr-s---. 2 root finance-staff</code></td>
+</tr>
+<tr>
+<td>B2, B4</td>
+<td>true</td>
+<td>true</td>
+<td><code>B2-after.txt</code>, <code>B4-after.txt</code>: unchanged</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>false</td>
+<td>true</td>
+<td><code>B3-after.txt</code>: <code>cat: /srv/finance/budget.ods: Permission denied</code> for <code>jkim</code>; the file's line for <code>poyelaran</code></td>
+</tr>
+<tr>
+<td>B5</td>
+<td>false</td>
+<td>true</td>
+<td><code>B5-after.txt</code>: entries for Administrators, SYSTEM and <code>grp-finance-staff</code> only; <code>AreAccessRulesProtected</code> is <code>True</code></td>
+</tr>
+<tr>
+<td>B6, B7</td>
+<td>true</td>
+<td>true</td>
+<td><code>B6-after.txt</code>, <code>B7-after.txt</code>: unchanged</td>
+</tr>
+<tr>
+<td>B8</td>
+<td>false</td>
+<td>true</td>
+<td><code>B8-after.txt</code>: all three shares grant Authenticated Users Change and Administrators Full, and none names Everyone</td>
+</tr>
+<tr>
+<td>B9</td>
+<td>false</td>
+<td>true</td>
+<td><code>B9-after.txt</code>: the folder grants Modify to <code>grp-finance-staff</code> alone, and <code>j.kim</code> is no longer in it</td>
+</tr>
+<tr>
+<td>C1</td>
+<td>false</td>
+<td>true</td>
+<td><code>C1-after.txt</code>: only <code>:22</code> and <code>:80</code> on non-loopback addresses</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>false</td>
+<td>true</td>
+<td><code>C2-after.txt</code>: <code>active</code>, <code>enabled</code></td>
+</tr>
+<tr>
+<td>C3, C5, C6</td>
+<td>true</td>
+<td>true</td>
+<td><code>C3-after.txt</code>, <code>C5-after.txt</code>, <code>C6-after.txt</code>: unchanged</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>true</td>
+<td>true</td>
+<td><code>C4-after.txt</code>: <code>active</code>; <code>D4-after.txt</code>: <code>TcpTestSucceeded : True</code></td>
+</tr>
+<tr>
+<td>D1–D4</td>
+<td>true</td>
+<td>true</td>
+<td><code>D1-after.txt</code>: <code>Connected</code>; <code>D2-after.txt</code>: <code>TIMEOUT</code>; <code>D3-after.txt</code>, <code>D4-after.txt</code>: <code>TcpTestSucceeded : True</code></td>
+</tr>
+<tr>
+<td>D5</td>
+<td>false</td>
+<td>true</td>
+<td><code>D5-after.txt</code>: <code>TcpTestSucceeded : False</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Every statement my plan expected to close is true in the after records, and every statement that was already true is still true. The after records showed nothing my plan did not predict.</p>
+<h3>Accepted and open items</h3>
+<p>These are things I noticed and did not change, because the specification did not ask for them. Each is routed to the person who owns the decision.</p>
+<p><code>D5-before.txt</code> shows the firewall on <code>cld-lnx-01</code> admitting connections to 9090 before the work, and change 4 stopped the listener without touching any firewall rule, so the rule that admits the web console most likely remains. Once nothing answers on 9090, nothing is reachable there, but the rule would let the console through again if anyone started it. The records do not show the firewall's rules, so I have routed it to the operations lead to confirm and remove.</p>
+<p>The finance owner should confirm that no warehouse process needed the Modify grant removed in change 6. The grant was made for speed during onboarding and nothing in the specification relies on it, but the owner knows the workflow and I do not.</p>
+<p>The backup job that <code>svc-backup</code> runs should be watched on its next run after change 8. If it needed more than Backup Operators grants, it will fail, and the owner of the job should know to expect that possibility.</p>
+<p>A group membership change reaches an account the next time it signs in, so an account already signed in keeps its old reach until then. The records do not show who was signed in when the changes were made. Before relying on changes 1 and 5, whoever makes them should confirm that <code>jkim</code> and <code>j.kim</code> are signed out, or have them sign out.</p>
+  </section>
+</div>
+
+<script>
+const CHECKS = {
+  correct: [
+    ["Your findings name every statement that was false at the start, each with the record that shows it.",
+     "The before records show <strong>eleven</strong> false statements: A1, A5, A9, B1, B3, B5, B8, B9, C1, C2 and D5."],
+    ["Each false statement is traced to the setting that causes it.",
+     "The eleven come from <strong>eight</strong> causes. If you planned eleven separate fixes, some of them share a cause."],
+    ["Every change is written as an exact command or console action someone could repeat.",
+     "“Fixed the folder permissions” is not yet. <code>sudo chmod 2750 /srv/finance</code> is."],
+    ["Every change says which statements it closes.",
+     "Some changes close two statements at once. Removing <code>jkim</code> from <code>finance-staff</code>, for example, closes both A1 and B3."],
+    ["Both of j.kim’s routes into the Windows finance folder have a change.",
+     "B9 is false for two reasons: <code>j.kim</code> is in <code>grp-finance-staff</code>, and <code>grp-warehouse-ops</code>, which she is also in, can change the folder. Closing only one leaves B9 false."],
+    ["No change alters something the statements did not ask for.",
+     "If you noticed something else worth changing, it belongs under <em>Accepted and open items</em>, not under <em>Changes</em>."],
+    ["Your verification shows all twenty-nine statements true after the work, each citing an after record.",
+     "A file name and what it shows counts as evidence. “Looks fine” does not."]
+  ],
+  practice: [
+    ["You checked every statement before planning, including the ones that were already true.",
+     "Eighteen statements were true at the start. Your verification should show each of them checked before and after."],
+    ["Your findings are grouped by cause, not listed statement by statement.",
+     "One paragraph per cause, naming the statements it made false, is easier for a colleague to act on."],
+    ["Where a change replaces one grant or membership with another, you add the new one before removing the old.",
+     "Two changes work this way: moving <code>svc-backup</code> into Backup Operators before removing it from Administrators (A9), and granting the Public share’s new entries before removing Everyone (B8)."],
+    ["You say whether the after records showed anything your plan did not predict.",
+     "A plain sentence is enough, even if the answer is that nothing surprised you."],
+    ["Under accepted and open items, you name at least one thing you left alone, why it matters, and who should decide.",
+     "For example: the firewall rule that still admits the web console’s port, or the next run of the backup job after its account changed groups."],
+    ["A colleague could open every record you cite and find what you say is there.",
+     "Quote each record by file name, and quote output exactly as it appears in the file."],
+    ["You present the records as records, never as your own run.",
+     "“<code>A1-before.txt</code> shows…” is right. “I ran the command and saw…” is not, because you did not run it."]
+  ]
+};
+
+const answers = {};
+
+function build() {
+  for (const [dim, list] of Object.entries(CHECKS)) {
+    const ol = document.querySelector(`ol[data-dim="${dim}"]`);
+    list.forEach(([q, how], i) => {
+      const id = `${dim}-${i}`;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <p class="q" id="q-${id}">${q}</p>
+        <p class="how"><strong>How to tell.</strong> ${how}</p>
+        <div class="choice" role="radiogroup" aria-labelledby="q-${id}">
+          <input type="radio" name="${id}" id="${id}-y" value="yes"><label class="yes" for="${id}-y">Yes</label>
+          <input type="radio" name="${id}" id="${id}-n" value="no"><label class="no" for="${id}-n">Not yet</label>
+        </div>`;
+      ol.appendChild(li);
+    });
+  }
+  document.addEventListener("change", (e) => {
+    if (e.target.matches('.choice input')) { answers[e.target.name] = e.target.value; render(); }
+  });
+}
+
+function levelFor(dim) {
+  const n = CHECKS[dim].length;
+  let answered = 0, misses = [];
+  for (let i = 0; i < n; i++) {
+    const a = answers[`${dim}-${i}`];
+    if (a) answered++;
+    if (a === "no") misses.push(i);
+  }
+  if (answered < n) return { level: "pending", text: `${answered} of ${n} answered`, misses };
+  if (misses.length === 0) return { level: "strong", text: "Strong", misses };
+  if (misses.length <= 2) return { level: "adequate", text: "Adequate", misses };
+  return { level: "notyet", text: "Not yet ready", misses };
+}
+
+function render() {
+  for (const dim of Object.keys(CHECKS)) {
+    const r = levelFor(dim);
+    const lv = document.getElementById(`lv-${dim}`);
+    lv.dataset.level = r.level;
+    lv.textContent = r.text;
+    const ul = document.getElementById(`rv-${dim}`);
+    ul.innerHTML = "";
+    r.misses.forEach((i) => {
+      const li = document.createElement("li");
+      li.textContent = `Revisit question ${i + 1}: ${CHECKS[dim][i][0]}`;
+      ul.appendChild(li);
+    });
+  }
+}
+
+document.getElementById("show-example").addEventListener("click", (e) => {
+  const ex = document.getElementById("example");
+  ex.hidden = !ex.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!ex.hidden));
+  e.currentTarget.textContent = ex.hidden ? "Compare with a worked example" : "Hide the worked example";
+  if (!ex.hidden) ex.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+document.getElementById("reset").addEventListener("click", () => {
+  for (const k of Object.keys(answers)) delete answers[k];
+  document.querySelectorAll(".choice input").forEach((i) => (i.checked = false));
+  render();
+});
+
+build();
+render();
+</script>
+</body>
+</html>

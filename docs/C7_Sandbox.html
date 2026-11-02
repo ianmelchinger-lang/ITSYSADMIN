@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estate Change Sandbox</title>
+<style>
+/* Layout: an intro band, then two columns — changes to apply on the left, the live statements on the right. One column on phones. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #55625e;
+  --rule: #d6dedb;
+  --accent: #1d6a72;
+  --accent-soft: #e2eef0;
+  --true: #2c7a4b;
+  --true-soft: #e3f1e8;
+  --false: #a1432f;
+  --false-soft: #f7e6e1;
+  --code-bg: #eef2f1;
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --true: #6cc48f; --true-soft: #1c3226;
+    --false: #ec8a72; --false-soft: #3a231d; --code-bg: #222b29; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+  --accent: #6cbac3; --accent-soft: #1d3135; --true: #6cc48f; --true-soft: #1c3226;
+  --false: #ec8a72; --false-soft: #3a231d; --code-bg: #222b29; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 1.75rem 3.5rem;
+}
+.page { max-width: 76rem; margin: 0 auto; display: grid; gap: 1.75rem; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.25; text-wrap: balance; margin: 0; font-weight: 600; }
+h1 { font-size: 1.85rem; }
+h2 { font-size: 1.2rem; }
+h3 { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+p { margin: 0; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
+.intro { display: grid; gap: 0.75rem; max-width: 46rem; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.target { background: var(--accent-soft); border-radius: 6px; padding: 0.9rem 1.1rem; font-family: var(--font-display); font-size: 0.98rem; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 1.75rem; align-items: start; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.col { display: grid; gap: 1rem; min-width: 0; }
+.col-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid var(--rule); padding-bottom: 0.6rem; }
+.server { display: grid; gap: 0.6rem; }
+.change {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 0.85rem 1rem; display: grid; gap: 0.5rem; min-width: 0;
+}
+.change[data-on="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.change-top { display: flex; justify-content: space-between; gap: 0.75rem; align-items: start; }
+.change-title { font-family: var(--font-display); font-weight: 600; font-size: 0.98rem; }
+.change pre { margin: 0; font-family: var(--font-mono); font-size: 0.82rem; background: var(--code-bg); padding: 0.45rem 0.6rem; border-radius: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.order { font-family: var(--font-display); font-size: 0.8rem; color: var(--accent); }
+button {
+  font-family: var(--font-display); font-size: 0.88rem; padding: 0.4rem 0.95rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--surface); white-space: nowrap;
+}
+button[aria-pressed="true"], button.quiet { background: transparent; color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.count { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-size: 0.95rem; color: var(--muted); }
+.count strong { color: var(--ink); font-size: 1.1rem; }
+.last { font-family: var(--font-display); font-size: 0.9rem; color: var(--muted); min-height: 1.4em; }
+.group { display: grid; gap: 0.4rem; }
+ul.stmts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.stmt {
+  display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; gap: 0.6rem; align-items: start;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 0.55rem 0.7rem; font-size: 0.93rem;
+}
+.stmt .id { font-family: var(--font-mono); font-weight: 600; font-size: 0.85rem; padding-top: 0.1rem; }
+.stmt .why { grid-column: 2 / 4; font-size: 0.88rem; color: var(--false); }
+.stmt .moved { grid-column: 2 / 4; font-family: var(--font-display); font-size: 0.8rem; font-weight: 600; }
+.stmt[data-state="false"] { background: var(--false-soft); border-color: transparent; }
+.chip { font-family: var(--font-display); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.15rem 0.55rem; border-radius: 999px; }
+.chip[data-v="true"] { color: var(--true); background: var(--true-soft); }
+.chip[data-v="false"] { color: var(--false); background: var(--surface); }
+.moved[data-dir="true"] { color: var(--true); }
+.moved[data-dir="false"] { color: var(--false); }
+.done { font-family: var(--font-display); color: var(--true); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) { .stmt { transition: background-color 0.25s ease; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Configure and secure</p>
+    <h1>Try each change and watch the statements</h1>
+    <p>Both servers start in the state the before records show. On the left are twelve changes an administrator might plan. Some close gaps exactly. Some close the wrong thing, reach further than the statements ask, or change a setting that does not decide the outcome. Apply a change and the statements on the right update at once. Undo it and they go back.</p>
+    <p class="target">Bring every statement to true. The estate starts with several false; nothing is hidden, and the before records show each one.</p>
+  </header>
+
+  <div class="cols">
+    <section class="col" aria-labelledby="ch-h">
+      <div class="col-head">
+        <h2 id="ch-h">Changes</h2>
+        <button type="button" class="quiet" id="reset">Start over</button>
+      </div>
+      <div class="server"><h3>On cld-lnx-01, the Linux server</h3><div id="list-lnx" class="server"></div></div>
+      <div class="server"><h3>On hq-win-01, the Windows server</h3><div id="list-win" class="server"></div></div>
+    </section>
+
+    <section class="col" aria-labelledby="st-h">
+      <div class="col-head">
+        <h2 id="st-h">Statements</h2>
+        <p class="count" aria-live="polite"><strong id="n-true">0</strong> of 29 true</p>
+      </div>
+      <p class="last" id="last" aria-live="polite">No changes applied yet.</p>
+      <div id="groups"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+// Estate model and statement evaluation for the configure-and-secure sandbox.
+// Pure functions only, so the same code runs in the page and in tests.
+
+const RANK = { none: 0, read: 1, change: 2, full: 3 };
+const HOUSE = { Administrators: "full", "Authenticated Users": "change" };
+
+function startState() {
+  return {
+    lgroups: { "finance-staff": ["dwhitfield", "jkim", "poyelaran"], "warehouse-ops": ["jkim"],
+               itops: ["anovak", "rmensah"], storefront: ["shaddad"] },
+    paths: { "/srv/finance": ["root", "finance-staff", 0o777],
+             "/srv/finance/budget.ods": ["dwhitfield", "finance-staff", 0o640],
+             "/srv/storefront": ["root", "storefront", 0o2775] },
+    svc: { nginx: [true, false], sshd: [true, true], "cockpit.socket": [true, true] },
+    fwLnx: [22, 80, 9090],
+    wgroups: { "grp-finance-staff": ["d.whitfield", "j.kim", "p.oyelaran"],
+               "grp-warehouse-ops": ["b.iqbal", "j.kim", "m.torres"],
+               "grp-it-operations": ["a.novak", "r.mensah"], "grp-helpdesk": ["l.chen", "r.mensah"],
+               "grp-finance-managers": ["d.whitfield"], "grp-storefront-app": ["s.haddad"],
+               Administrators: ["Administrator", "a.novak", "r.mensah", "svc-backup"],
+               "Backup Operators": [] },
+    ntfs: { Finance: { Administrators: "full", SYSTEM: "full", "grp-finance-staff": "change", "grp-warehouse-ops": "change" },
+            Warehouse: { Administrators: "full", SYSTEM: "full", "grp-warehouse-ops": "change" },
+            Public: { Administrators: "full", SYSTEM: "full", Users: "change" } },
+    protectedAcl: { Finance: true, Warehouse: true, Public: true },
+    shares: { "Finance$": { ...HOUSE }, Warehouse: { ...HOUSE }, Public: { Everyone: "full" } },
+    winListen: [445], fwWin: [445]
+  };
+}
+
+const without = (arr, x) => arr.filter((v) => v !== x);
+const withItem = (arr, x) => (arr.includes(x) ? arr : [...arr, x]);
+
+// The twelve changes a learner can apply. Each returns a new state.
+const CHANGES = {
+  c1: { server: "cld-lnx-01", title: "Remove jkim from finance-staff", cmd: "sudo gpasswd -d jkim finance-staff",
+        apply: (s) => { s.lgroups["finance-staff"] = without(s.lgroups["finance-staff"], "jkim"); } },
+  c2: { server: "cld-lnx-01", title: "Restore the finance folder's mode to 2750", cmd: "sudo chmod 2750 /srv/finance",
+        apply: (s) => { s.paths["/srv/finance"] = ["root", "finance-staff", 0o2750]; } },
+  w4: { server: "cld-lnx-01", title: "Set the finance folder's mode to 770", cmd: "sudo chmod 770 /srv/finance",
+        apply: (s) => { s.paths["/srv/finance"] = ["root", "finance-staff", 0o770]; } },
+  c3: { server: "cld-lnx-01", title: "Set nginx to start at boot", cmd: "sudo systemctl enable nginx",
+        apply: (s) => { s.svc.nginx = [s.svc.nginx[0], true]; } },
+  c4: { server: "cld-lnx-01", title: "Stop the web console and keep it stopped", cmd: "sudo systemctl disable --now cockpit.socket",
+        apply: (s) => { s.svc["cockpit.socket"] = [false, false]; } },
+  w2: { server: "cld-lnx-01", title: "Close port 9090 in the firewall", cmd: "sudo firewall-cmd --permanent --remove-service=cockpit, then sudo firewall-cmd --reload",
+        apply: (s) => { s.fwLnx = without(s.fwLnx, 9090); } },
+  c5: { server: "hq-win-01", title: "Remove j.kim from grp-finance-staff", cmd: "net localgroup grp-finance-staff j.kim /delete",
+        apply: (s) => { s.wgroups["grp-finance-staff"] = without(s.wgroups["grp-finance-staff"], "j.kim"); } },
+  w1: { server: "hq-win-01", title: "Remove j.kim from grp-warehouse-ops", cmd: "net localgroup grp-warehouse-ops j.kim /delete",
+        apply: (s) => { s.wgroups["grp-warehouse-ops"] = without(s.wgroups["grp-warehouse-ops"], "j.kim"); } },
+  c6: { server: "hq-win-01", title: "Remove the warehouse group's entry from the finance folder", cmd: "icacls D:\\Shares\\Finance /remove:g grp-warehouse-ops",
+        apply: (s) => { delete s.ntfs.Finance["grp-warehouse-ops"]; } },
+  c7: { server: "hq-win-01", title: "Give the Public share the house rule, then remove Everyone",
+        cmd: "Grant-SmbShareAccess -Name Public -AccountName 'Authenticated Users' -AccessRight Change -Force; Grant-SmbShareAccess -Name Public -AccountName Administrators -AccessRight Full -Force; Revoke-SmbShareAccess -Name Public -AccountName Everyone -Force",
+        apply: (s) => { s.shares.Public = { ...HOUSE }; } },
+  w3: { server: "hq-win-01", title: "Remove Authenticated Users from the Finance$ share", cmd: "Revoke-SmbShareAccess -Name 'Finance$' -AccountName 'Authenticated Users' -Force",
+        apply: (s) => { s.shares["Finance$"] = { Administrators: "full" }; } },
+  c8: { server: "hq-win-01", title: "Move svc-backup into Backup Operators, then out of Administrators",
+        cmd: "Add-LocalGroupMember \"Backup Operators\" svc-backup; Remove-LocalGroupMember Administrators svc-backup",
+        apply: (s) => { s.wgroups["Backup Operators"] = withItem(s.wgroups["Backup Operators"], "svc-backup");
+                        s.wgroups.Administrators = without(s.wgroups.Administrators, "svc-backup"); } }
+};
+
+function stateFrom(applied) {
+  const s = startState();
+  for (const id of applied) CHANGES[id].apply(s);
+  return s;
+}
+
+// ---- Rules ---------------------------------------------------------------
+function lnxClass(s, user, path) {
+  const [owner, group, mode] = s.paths[path];
+  if (user === owner) return (mode >> 6) & 7;
+  if ((s.lgroups[group] || []).includes(user)) return (mode >> 3) & 7;
+  return mode & 7;
+}
+function lnxCanRead(s, user) {
+  return (lnxClass(s, user, "/srv/finance") & 1) && (lnxClass(s, user, "/srv/finance/budget.ods") & 4) ? true : false;
+}
+function winIds(s, user) {
+  const ids = new Set([user, "Users", "Authenticated Users", "Everyone"]);
+  for (const [g, m] of Object.entries(s.wgroups)) if (m.includes(user)) ids.add(g);
+  return ids;
+}
+// Routes by which a user reaches a folder, and the highest right reached.
+function folderRoutes(s, user, folder) {
+  const ids = winIds(s, user);
+  const routes = [];
+  let best = "none";
+  for (const [who, right] of Object.entries(s.ntfs[folder])) {
+    if ((who === "Administrators" || who === "SYSTEM") && !ids.has("Administrators")) continue;
+    if (ids.has(who)) { routes.push([who, right]); if (RANK[right] > RANK[best]) best = right; }
+  }
+  return { best, routes };
+}
+const lnxListen = (s) => [["sshd", 22], ["nginx", 80], ["cockpit.socket", 9090]].filter(([n]) => s.svc[n][0]).map(([, p]) => p);
+const toLnx = (s, p) => lnxListen(s).includes(p) && s.fwLnx.includes(p);
+const toWin = (s, p) => s.winListen.includes(p) && s.fwWin.includes(p);
+const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
+const modeStr = (m) => {
+  const bits = "rwxrwxrwx".split("").map((c, i) => ((m >> (8 - i)) & 1 ? c : "-"));
+  if (m & 0o2000) bits[5] = bits[5] === "x" ? "s" : "S";
+  return bits.join("");
+};
+const octal = (m) => m.toString(8).padStart(m > 0o777 ? 4 : 3, "0");
+const rightName = { full: "Full", change: "Change", read: "Read" };
+const ntfsName = { full: "Full Control", change: "Modify", read: "Read" };
+
+function membership(group, actual, wanted) {
+  if (sameSet(actual, wanted)) return null;
+  const extra = actual.filter((x) => !wanted.includes(x));
+  const missing = wanted.filter((x) => !actual.includes(x));
+  const parts = [];
+  if (extra.length) parts.push(`${extra.join(", ")} ${extra.length > 1 ? "are" : "is"} in ${group} but should not be`);
+  if (missing.length) parts.push(`${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} missing from ${group}`);
+  return parts.join("; ") + ".";
+}
+function modeCheck(s, path, want) {
+  const [o, g, m] = s.paths[path];
+  const [wo, wg, wm] = want;
+  if (o === wo && g === wg && m === wm) return null;
+  return `${path} has mode ${octal(m)} (${modeStr(m)}); the statement asks for ${octal(wm)} (${modeStr(wm)}).`;
+}
+
+// Each statement returns null when true, or a sentence saying what keeps it false.
+const STATEMENT_RULES = {
+  A1: (s) => membership("finance-staff", s.lgroups["finance-staff"], ["dwhitfield", "poyelaran"]),
+  A2: (s) => membership("warehouse-ops", s.lgroups["warehouse-ops"], ["jkim"]),
+  A3: (s) => membership("itops", s.lgroups.itops, ["anovak", "rmensah"]),
+  A4: (s) => membership("storefront", s.lgroups.storefront, ["shaddad"]),
+  A5: (s) => membership("grp-finance-staff", s.wgroups["grp-finance-staff"], ["d.whitfield", "p.oyelaran"]),
+  A6: (s) => membership("grp-warehouse-ops", s.wgroups["grp-warehouse-ops"], ["b.iqbal", "j.kim", "m.torres"]),
+  A7: (s) => membership("grp-it-operations", s.wgroups["grp-it-operations"], ["a.novak", "r.mensah"]),
+  A8: (s) => membership("grp-storefront-app", s.wgroups["grp-storefront-app"], ["s.haddad"]),
+  A9: (s) => {
+    const p = [];
+    if (s.wgroups.Administrators.includes("svc-backup")) p.push("svc-backup is in Administrators");
+    if (!s.wgroups["Backup Operators"].includes("svc-backup")) p.push("svc-backup is not in Backup Operators");
+    return p.length ? p.join("; ") + "." : null;
+  },
+  B1: (s) => modeCheck(s, "/srv/finance", ["root", "finance-staff", 0o2750]),
+  B2: (s) => modeCheck(s, "/srv/finance/budget.ods", ["dwhitfield", "finance-staff", 0o640]),
+  B3: (s) => {
+    const p = [];
+    if (lnxCanRead(s, "jkim")) p.push(s.lgroups["finance-staff"].includes("jkim")
+      ? "jkim can read budget.ods, because jkim is in finance-staff and the file's group may read it"
+      : "jkim can read budget.ods");
+    if (!lnxCanRead(s, "poyelaran")) p.push("poyelaran cannot read budget.ods");
+    return p.length ? p.join("; ") + "." : null;
+  },
+  B4: (s) => modeCheck(s, "/srv/storefront", ["root", "storefront", 0o2775]),
+  B5: (s) => {
+    const a = s.ntfs.Finance, p = [];
+    if (a["grp-warehouse-ops"]) p.push(`grp-warehouse-ops has ${ntfsName[a["grp-warehouse-ops"]]} on the folder`);
+    if (a["grp-finance-staff"] !== "change") p.push("grp-finance-staff does not have Modify");
+    return p.length ? p.join("; ") + "." : null;
+  },
+  B6: (s) => (s.ntfs.Warehouse["grp-warehouse-ops"] === "change" && !s.ntfs.Warehouse["grp-finance-staff"]) ? null : "The Warehouse folder's entries do not match the statement.",
+  B7: (s) => (s.ntfs.Public.Users === "change" ? null : "Users does not have Modify on the Public folder."),
+  B8: (s) => {
+    const bad = Object.entries(s.shares).filter(([, a]) => JSON.stringify(Object.entries(a).sort()) !== JSON.stringify(Object.entries(HOUSE).sort()));
+    if (!bad.length) return null;
+    return bad.map(([n, a]) => `The ${n} share grants ${Object.entries(a).map(([w, r]) => `${w} ${rightName[r]}`).join(" and ")}`).join("; ") + ".";
+  },
+  B9: (s) => {
+    const jk = folderRoutes(s, "j.kim", "Finance"), po = folderRoutes(s, "p.oyelaran", "Finance"), p = [];
+    if (jk.best !== "none") p.push(`j.kim reaches the folder through ${jk.routes.map(([w, r]) => `${w} (${ntfsName[r]})`).join(" and ")}`);
+    if (po.best !== "change") p.push("p.oyelaran does not have Modify on the folder");
+    return p.length ? p.join("; ") + "." : null;
+  },
+  C1: (s) => {
+    const ports = lnxListen(s);
+    if (sameSet(ports, [22, 80])) return null;
+    const extra = ports.filter((x) => x !== 22 && x !== 80);
+    const missing = [22, 80].filter((x) => !ports.includes(x));
+    const p = [];
+    if (extra.includes(9090)) p.push("cld-lnx-01 listens on 9090, because cockpit.socket is running. A firewall rule does not change what listens");
+    if (missing.length) p.push(`nothing listens on ${missing.join(" and ")}`);
+    return p.join("; ") + ".";
+  },
+  C2: (s) => {
+    const [run, boot] = s.svc.nginx;
+    if (run && boot) return null;
+    return `nginx is ${run ? "running" : "not running"} and ${boot ? "set" : "not set"} to start at boot.`;
+  },
+  C3: (s) => (s.svc.sshd[0] && s.svc.sshd[1] ? null : "sshd is not both running and set to start at boot."),
+  C4: (s) => (s.svc.nginx[0] && toLnx(s, 80) ? null : "The storefront page does not answer on port 80."),
+  C5: (s) => (s.winListen.includes(445) ? null : "Nothing listens on 445."),
+  C6: (s) => (s.winListen.includes(3389) ? "Remote Desktop listens on 3389." : null),
+  D1: (s) => (toWin(s, 445) ? null : "The connection to 445 is refused."),
+  D2: (s) => (toWin(s, 3389) ? "The connection to 3389 is permitted." : null),
+  D3: (s) => (toLnx(s, 22) ? null : "The connection to 22 is refused."),
+  D4: (s) => (toLnx(s, 80) ? null : "The connection to 80 is refused."),
+  D5: (s) => (toLnx(s, 9090) ? "The connection to 9090 is permitted, because cockpit.socket listens there and the firewall lets it through." : null)
+};
+
+function evaluate(s) {
+  const out = {};
+  for (const [id, rule] of Object.entries(STATEMENT_RULES)) out[id] = rule(s);
+  return out;  // id -> null (true) or reason (false)
+}
+
+if (typeof module !== "undefined") module.exports = { startState, CHANGES, stateFrom, evaluate };
+
+
+const STATEMENTS = {"A1": "On `cld-lnx-01`, `finance-staff` contains exactly `dwhitfield` and `poyelaran`.", "A2": "On `cld-lnx-01`, `warehouse-ops` contains exactly `jkim`.", "A3": "On `cld-lnx-01`, `itops` contains exactly `anovak` and `rmensah`.", "A4": "On `cld-lnx-01`, `storefront` contains exactly `shaddad`.", "A5": "On `hq-win-01`, `grp-finance-staff` contains exactly `d.whitfield` and `p.oyelaran`.", "A6": "On `hq-win-01`, `grp-warehouse-ops` contains exactly `b.iqbal`, `j.kim` and `m.torres`.", "A7": "On `hq-win-01`, `grp-it-operations` contains exactly `a.novak` and `r.mensah`.", "A8": "On `hq-win-01`, `grp-storefront-app` contains exactly `s.haddad`.", "A9": "On `hq-win-01`, `svc-backup` is a member of Backup Operators and is not a member of Administrators.", "B1": "`/srv/finance` is owned by `root`, belongs to group `finance-staff`, and has mode 2750: its group can read it, no one else can enter it, and new files inherit its group.", "B2": "`/srv/finance/budget.ods` is owned by `dwhitfield`, belongs to `finance-staff`, and has mode 640.", "B3": "`jkim` cannot read `budget.ods`; `poyelaran` can.", "B4": "`/srv/storefront` is owned by `root`, belongs to `storefront`, and has mode 2775.", "B5": "On `D:\\Shares\\Finance`, `grp-finance-staff` holds Modify, `grp-warehouse-ops` holds nothing, and the folder does not inherit permissions from its parent. Administrators and SYSTEM hold Full Control.", "B6": "On `D:\\Shares\\Warehouse`, `grp-warehouse-ops` holds Modify and `grp-finance-staff` holds nothing.", "B7": "On `D:\\Shares\\Public`, Users holds Modify.", "B8": "Each of the three shares, `Finance$`, `Warehouse` and `Public`, grants Change to Authenticated Users and Full to Administrators at the share level, and none grants anything to Everyone. The folder permissions underneath decide who actually gets in.", "B9": "`j.kim` has no effective access to `D:\\Shares\\Finance`; `p.oyelaran` has Modify.", "C1": "From the network, `cld-lnx-01` answers TCP on ports 22 and 80 and on no other port.", "C2": "`nginx` is running and is set to start at boot.", "C3": "`sshd` is running and is set to start at boot.", "C4": "The storefront page answers on port 80.", "C5": "`hq-win-01` answers file sharing (SMB) on TCP 445.", "C6": "`hq-win-01` does not answer Remote Desktop on TCP 3389.", "D1": "From `cld-lnx-01`, a connection to `hq-win-01` on TCP 445 is permitted.", "D2": "From `cld-lnx-01`, a connection to `hq-win-01` on TCP 3389 is refused.", "D3": "From `hq-win-01`, a connection to `cld-lnx-01` on TCP 22 is permitted.", "D4": "From `hq-win-01`, a connection to `cld-lnx-01` on TCP 80 is permitted.", "D5": "From `hq-win-01`, a connection to `cld-lnx-01` on TCP 9090 is refused."};
+const GROUPS = [["A", "Who belongs to which group"], ["B", "Who can read and change which folders and shares"],
+                ["C", "Which ports each server answers on"], ["D", "Which connections between the servers are permitted"]];
+const ORDER = { lnx: ["c1", "c2", "w4", "c3", "c4", "w2"], win: ["c5", "w1", "c6", "c7", "w3", "c8"] };
+
+let applied = [];
+let previous = evaluate(stateFrom([]));
+let lastMoves = {};
+
+const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const withCode = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>");
+
+function buildChanges() {
+  for (const [key, ids] of Object.entries(ORDER)) {
+    const box = document.getElementById(`list-${key}`);
+    for (const id of ids) {
+      const c = CHANGES[id];
+      const el = document.createElement("article");
+      el.className = "change"; el.dataset.id = id; el.dataset.on = "false";
+      el.innerHTML = `
+        <div class="change-top">
+          <p class="change-title" id="t-${id}">${esc(c.title)}</p>
+          <button type="button" id="b-${id}" aria-pressed="false" aria-describedby="t-${id}">Apply</button>
+        </div>
+        <pre>${esc(c.cmd.replace(/; /g, "\n").replace(/, then /g, "\n"))}</pre>
+        <p class="order" id="o-${id}" hidden></p>`;
+      box.appendChild(el);
+      el.querySelector("button").addEventListener("click", () => toggle(id));
+    }
+  }
+}
+
+function buildStatements() {
+  const root = document.getElementById("groups");
+  for (const [letter, title] of GROUPS) {
+    const g = document.createElement("div");
+    g.className = "group";
+    g.innerHTML = `<h3>${letter}. ${title}</h3><ul class="stmts" id="g-${letter}"></ul>`;
+    root.appendChild(g);
+    const ul = g.querySelector("ul");
+    for (const [id, text] of Object.entries(STATEMENTS)) {
+      if (id[0] !== letter) continue;
+      const li = document.createElement("li");
+      li.className = "stmt"; li.id = `s-${id}`;
+      li.innerHTML = `<span class="id">${id}</span><span>${withCode(text)}</span><span class="chip"></span>
+        <span class="why" hidden></span><span class="moved" hidden></span>`;
+      ul.appendChild(li);
+    }
+  }
+}
+
+function toggle(id) {
+  const name = CHANGES[id].title;
+  applied = applied.includes(id) ? applied.filter((x) => x !== id) : [...applied, id];
+  const verb = applied.includes(id) ? "Applied" : "Undid";
+  const now = evaluate(stateFrom(applied));
+  lastMoves = {};
+  for (const k of Object.keys(now)) {
+    const was = previous[k] === null, is = now[k] === null;
+    if (was !== is) lastMoves[k] = is;
+  }
+  previous = now;
+  const turnedTrue = Object.keys(lastMoves).filter((k) => lastMoves[k]);
+  const turnedFalse = Object.keys(lastMoves).filter((k) => !lastMoves[k]);
+  const parts = [];
+  if (turnedTrue.length) parts.push(`${turnedTrue.join(", ")} turned true`);
+  if (turnedFalse.length) parts.push(`${turnedFalse.join(", ")} turned false`);
+  document.getElementById("last").textContent =
+    `${verb}: ${name}. ${parts.length ? parts.join("; ") + "." : "No statement changed."}`;
+  render(now);
+}
+
+function render(now) {
+  let trueCount = 0;
+  for (const [id, reason] of Object.entries(now)) {
+    const li = document.getElementById(`s-${id}`);
+    const ok = reason === null;
+    if (ok) trueCount++;
+    li.dataset.state = String(ok);
+    const chip = li.querySelector(".chip");
+    chip.dataset.v = String(ok);
+    chip.textContent = ok ? "True" : "False";
+    const why = li.querySelector(".why");
+    why.hidden = ok; why.textContent = ok ? "" : reason;
+    const moved = li.querySelector(".moved");
+    if (id in lastMoves) {
+      moved.hidden = false; moved.dataset.dir = String(lastMoves[id]);
+      moved.textContent = lastMoves[id] ? "Just turned true" : "Just turned false";
+    } else { moved.hidden = true; }
+  }
+  for (const id of Object.keys(CHANGES)) {
+    const on = applied.includes(id);
+    const card = document.querySelector(`.change[data-id="${id}"]`);
+    card.dataset.on = String(on);
+    const b = document.getElementById(`b-${id}`);
+    b.setAttribute("aria-pressed", String(on));
+    b.textContent = on ? "Undo" : "Apply";
+    const o = document.getElementById(`o-${id}`);
+    o.hidden = !on;
+    o.textContent = on ? `Applied, ${ordinal(applied.indexOf(id) + 1)} in order` : "";
+  }
+  const count = document.querySelector(".count");
+  count.innerHTML = trueCount === 29
+    ? `<span class="done">All 29 statements true</span>`
+    : `<strong id="n-true">${trueCount}</strong> of 29 true`;
+}
+
+const ordinal = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+
+document.getElementById("reset").addEventListener("click", () => {
+  applied = []; previous = evaluate(stateFrom([])); lastMoves = {};
+  document.getElementById("last").textContent = "Back to the starting state. No changes applied.";
+  render(previous);
+});
+
+buildChanges();
+buildStatements();
+render(previous);
+</script>
+</body>
+</html>
