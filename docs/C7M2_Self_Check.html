@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evidence Self-Check</title>
+<style>
+/* Layout: one reading column; one check group, a live result strip, then the worked example. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #55625e;
+  --rule: #d6dedb;
+  --accent: #1d6a72;
+  --accent-soft: #e2eef0;
+  --strong: #2c7a4b;
+  --adequate: #9a6a0c;
+  --notyet: #a1432f;
+  --code-bg: #eef2f1;
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+    --code-bg: #222b29; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+  --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+  --code-bg: #222b29; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2rem 4rem;
+}
+.wrap { max-width: 44rem; margin: 0 auto; display: grid; gap: 2.25rem; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.25; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.9rem; font-weight: 600; }
+h2 { font-size: 1.3rem; font-weight: 600; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.4rem; }
+p { margin: 0; }
+.intro { display: grid; gap: 0.8rem; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
+.group { display: grid; gap: 1rem; }
+.group-head { display: grid; gap: 0.35rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.75rem; }
+.group-head p { color: var(--muted); }
+ol.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; counter-reset: chk; }
+ol.checks > li {
+  counter-increment: chk; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 1rem 1.1rem; display: grid; gap: 0.6rem; min-width: 0;
+}
+.q { font-weight: 600; font-family: var(--font-display); font-size: 1rem; }
+.q::before { content: counter(chk) ". "; color: var(--accent); }
+.how { color: var(--muted); font-size: 0.95rem; }
+.how strong { color: var(--ink); font-weight: 600; }
+.choice { display: flex; gap: 0.5rem; flex-wrap: wrap; position: relative; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice label {
+  font-family: var(--font-display); font-size: 0.9rem; padding: 0.35rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--rule); cursor: pointer; color: var(--muted); background: var(--bg);
+}
+.choice input:checked + label.yes { background: var(--strong); border-color: var(--strong); color: var(--surface); }
+.choice input:checked + label.no { background: var(--notyet); border-color: var(--notyet); color: var(--surface); }
+.choice input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.result { background: var(--accent-soft); border-radius: 8px; padding: 1.25rem 1.3rem; display: grid; gap: 1rem; }
+.dim { display: grid; gap: 0.4rem; align-content: start; min-width: 0; }
+.dim h3 { font-size: 1rem; font-weight: 600; }
+.level { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.level[data-level="strong"] { color: var(--strong); }
+.level[data-level="adequate"] { color: var(--adequate); }
+.level[data-level="notyet"] { color: var(--notyet); }
+.level[data-level="pending"] { color: var(--muted); font-weight: 500; font-size: 1rem; }
+.dim ul { margin: 0; padding-left: 1.1rem; font-size: 0.95rem; }
+.rule-note, .gate { font-size: 0.9rem; color: var(--muted); }
+.actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+button {
+  font-family: var(--font-display); font-size: 0.95rem; padding: 0.55rem 1.1rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--surface);
+}
+button.quiet { background: transparent; color: var(--accent); }
+button:disabled { cursor: not-allowed; background: transparent; color: var(--muted); border-color: var(--rule); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.example { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem 1.3rem; display: grid; gap: 0.9rem; min-width: 0; }
+.example h2 { font-size: 1.2rem; }
+.example h3 { font-size: 1.05rem; margin-top: 0.6rem; }
+.example .tbl { overflow-x: auto; }
+.example table { border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; min-width: 34rem; }
+.example th, .example td { border-bottom: 1px solid var(--rule); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+.example th { font-family: var(--font-display); font-weight: 600; }
+.example p { overflow-wrap: anywhere; }
+.example pre { margin: 0; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; background: var(--code-bg); padding: 0.7rem 0.8rem; border-radius: 4px; overflow-x: auto; }
+@media (prefers-reduced-motion: no-preference) { .level { transition: color 0.2s ease; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <p class="eyebrow">Monitoring and automation evidence</p>
+    <h1>Check your evidence</h1>
+    <p>Open your finished document beside this page. For each question, look for the evidence in your own writing, then answer <em>Yes</em> or <em>Not yet</em>. Each question says how to tell. When you have answered them all, you will see where your document stands and which questions to go back to, and you can compare it with a worked example.</p>
+    <p>Nothing here is recorded or sent anywhere. When you leave the page, your answers go with you.</p>
+  </header>
+
+  <section class="group" aria-labelledby="g1">
+    <div class="group-head">
+      <h2 id="g1">Quality of monitoring and automation</h2>
+      <p>Would the next operator hear about the one unusual hour and not about the ordinary ones, and can they trust the nightly job to stop, repeat safely and leave a record?</p>
+    </div>
+    <ol class="checks" data-dim="quality"></ol>
+  </section>
+
+  <section class="result" aria-live="polite" aria-labelledby="g3">
+    <h2 id="g3">Where your document stands</h2>
+    <div class="dim"><h3>Quality of monitoring and automation</h3><p class="level" id="lv-quality" data-level="pending"></p><ul id="rv-quality"></ul></div>
+    <p class="rule-note">Every question answered <em>Yes</em> is strong. One or two answered <em>Not yet</em> is adequate. Three or more means the document is not yet ready to hand over: revise it and check again.</p>
+    <p class="gate" id="gate">Answer every question to compare with the worked example.</p>
+    <div class="actions">
+      <button type="button" id="show-example" aria-expanded="false" aria-controls="example" aria-describedby="gate" disabled>Compare with a worked example</button>
+      <button type="button" class="quiet" id="reset">Clear my answers</button>
+    </div>
+  </section>
+
+  <section class="example" id="example" hidden>
+    <p class="eyebrow">One strong answer</p>
+    <p>This example is one good way to write the document. Yours does not need to match its wording, its order or its exact lines. It is right if it states the same normal, finds the same window, writes an alert that fires on that window and on none of the ordinary nights, and changes the job so that it stops at a failed step, repeats safely and leaves a dated record someone reads.</p>
+    <h2>Worked example: monitoring and automation evidence</h2>
+<h3>Scope</h3>
+<p>This document covers how the storefront server, <code>cld-lnx-01</code>, is watched and how its one nightly job runs, ahead of the handover. I read one week of the server's processor readings and the storefront log for the same week, stated what normal looks like, found the one window that departs from it and wrote one alert. I then read the nightly archive script, its scheduler entry and three nights of records, and wrote the changes that make the job stop at a failed step, repeat safely and leave a dated record. Every finding cites the record that shows it. I changed nothing the records did not call for, and I list what I noticed beyond that under <em>Accepted and open items</em>.</p>
+
+<h3>What normal looks like</h3>
+<p><code>P0</code> shows the collector, <code>sysstat</code>, active and enabled, so the week in <code>P1</code> to <code>P7</code> is complete. The collector takes one reading an hour, and each line covers the hour that ends at its stamp. I read the busy share as 100 minus <code>%idle</code>.</p>
+<div class="tbl"><table>
+<thead><tr><th>Hour (line stamp)</th><th>Usual reading, busy share</th><th>Records that show it</th></tr></thead>
+<tbody>
+<tr><td><code>02:00:01</code>, covering 01:00 to 02:00</td><td>83 to 87 percent, every night</td><td><code>P1</code> to <code>P7</code>: <code>%idle</code> between 13.42 and 16.73</td></tr>
+<tr><td><code>14:00:01</code>, covering 13:00 to 14:00</td><td>18 to 23 percent</td><td><code>P1</code>, <code>P3</code> to <code>P7</code>: <code>%idle</code> between 77.12 and 82.41</td></tr>
+<tr><td>Every other hour</td><td>17 to 24 percent</td><td><code>P1</code> to <code>P7</code></td></tr>
+</tbody></table></div>
+<p>The 02:00 hour is busy every night of the week, so it is this host's normal and not a sign of trouble. The one window that departs from normal is Tuesday 10 November, 13:00 to 14:00. <code>P2</code> shows the line stamped <code>14:00:01</code> with <code>%idle</code> at 38.63, a busy share of about 61 percent, against 18 to 23 percent for the same hour on the other six days.</p>
+<p>The storefront log for the same hour agrees. <code>L2</code> counts 139 completed checkouts between 13:00 and 14:00 on Tuesday and lists 17 checkouts that timed out, the first at 13:09:41 and the last at 13:52:48. <code>L1</code>, the same hour on Monday, counts 214 completed checkouts and lists none that timed out. <code>L3</code>, Tuesday's busy hour from 01:00 to 02:00, counts 11 completed checkouts and none timed out, which fits a nightly busy hour that customers do not feel. These records say what happened on Tuesday afternoon and not why.</p>
+
+<h3>The alert</h3>
+<div class="tbl"><table>
+<thead><tr><th>Part</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td>Server and reading</td><td><code>cld-lnx-01</code>, processor busy share (100 minus <code>%idle</code>)</td></tr>
+<tr><td>Threshold</td><td>20 points or more above this host's usual reading for that hour. Usual is 85 percent for the line stamped 02:00:01 and 20 percent for every other line.</td></tr>
+<tr><td>Duration</td><td>One full hourly reading. The collector takes one reading an hour, so anything shorter is averaged into its hour.</td></tr>
+<tr><td>Recipient</td><td><code>anovak</code>, the IT operations lead</td></tr>
+</tbody></table></div>
+<p>The threshold comes from the week itself: the 02:00 line never passed 87 percent and no other line passed 24, so a reading 20 points above usual is well clear of anything ordinary. Against the recorded week the rule fires once, for Tuesday's line stamped 14:00:01 at 61 percent against a usual 20. It does not fire on any of the seven nights at 02:00. A fixed line at 80 percent would have done the reverse: seven alerts, every one for an ordinary 02:00, and silence on Tuesday afternoon.</p>
+
+<h3>The nightly job as found</h3>
+<p><code>S1</code> shows <code>/opt/ops/scripts/archive-logs.sh</code>: one line of three commands separated by semicolons. It makes today's folder in <code>/data/archive</code>, archives yesterday's storefront log into it with <code>tar</code>, and deletes the original with <code>rm -f</code>. It has no stop after a failed step, no record of its own, and both paths are written into the commands. <code>S2</code> shows cron running it as root at 03:00 every night, with <code>&gt;/dev/null 2&gt;&amp;1</code>, so anything it prints, errors included, goes nowhere.</p>
+<div class="tbl"><table>
+<thead><tr><th>Night</th><th>Scheduler's own record</th><th>What the morning check shows</th><th>Was the work done?</th></tr></thead>
+<tbody>
+<tr><td>1, 03:00 Wed 11 Nov</td><td><code>N1-cron</code>: one <code>CMD</code> line at 03:00:01</td><td><code>N1-morning</code>: a 407889920-byte archive, yesterday's log gone, the archive disk 96 percent full with 427M free</td><td>Yes</td></tr>
+<tr><td>2, 03:00 Thu 12 Nov, then by hand at 08:20</td><td><code>N2-cron</code>: one <code>CMD</code> line at 03:00:01</td><td><code>N2-check</code>: a 421642240-byte archive. <code>N2-rerun</code>: <code>mkdir</code> and <code>tar</code> errors, then exit status <code>0</code>. <code>N2-after</code>: the archive is 10240 bytes and <code>tar -tf</code> lists nothing</td><td>Yes at 03:00, then undone by the second run</td></tr>
+<tr><td>3, 03:00 Fri 13 Nov</td><td><code>N3-cron</code>: one <code>CMD</code> line at 03:00:01</td><td><code>N3-evening</code>: a 451936871-byte log against 427M free. <code>N3-morning</code>: the disk is full, the archive stops with <code>Unexpected EOF</code>, and the original log is gone</td><td>No: part of 12 November's log is lost</td></tr>
+</tbody></table></div>
+<p>Three things follow. The scheduler's record reads the same on all three nights, so it shows only that the job started. The script runs every step whatever the step before reported, so on night 3 it deleted the original after <code>tar</code> had failed. And a second run is unsafe: on night 2 it replaced the good archive with an empty one, because <code>tar -cf</code> recreates the archive before it finds the log is gone, and the script still reported <code>0</code>, the status of <code>rm -f</code>, its last command.</p>
+
+<h3>Changes to the job</h3>
+<p>The new <code>/opt/ops/scripts/archive-logs.sh</code>, with every change marked:</p>
+<pre>#!/bin/bash
+# Stop at the first failed step (answers night 3)
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# Name each path once
+SRC=/var/log/storefront
+DEST=/data/archive/$(date +%F)
+FILE=storefront-$(date -d yesterday +%Y%m%d).log
+RUNLOG=/var/log/archive-logs.log
+
+# Dated line at the start of each run
+echo "$(date '+%F %T') archive-logs started: $FILE" &gt;&gt; "$RUNLOG"
+
+# Check before repeating: if yesterday's log is already gone, do nothing (answers night 2)
+if [ ! -e "$SRC/$FILE" ]; then
+  echo "$(date '+%F %T') archive-logs finished: $FILE not present, nothing to do" &gt;&gt; "$RUNLOG"
+  exit 0
+fi
+
+mkdir -p "$DEST"
+tar -cf "$DEST/storefront-logs.tar" -C "$SRC" "$FILE"
+rm "$SRC/$FILE"
+
+# Dated line at the end, reached only if every step succeeded
+echo "$(date '+%F %T') archive-logs finished: $FILE archived to $DEST" &gt;&gt; "$RUNLOG"</pre>
+<p>The new crontab line, replacing the one in <code>S2</code>, keeps what the job prints in the same record instead of discarding it:</p>
+<pre>0 3 * * * /opt/ops/scripts/archive-logs.sh &gt;&gt; /var/log/archive-logs.log 2&gt;&amp;1</pre>
+<p>On night 3 the run would stop at the failed <code>tar</code>, the original log would stay on the server, and the record would hold a started line, the error, and no finished line. On a second run like night 2's, the check finds yesterday's log already gone, writes one line and exits, so the 03:00 archive is left alone. The check says the log is not present rather than archived, because a missing log may also mean it was never written. The script now exits non-zero when a step fails, and <code>rm</code> without <code>-f</code> fails if the file is unexpectedly missing. <code>mkdir -p</code> does nothing when the folder exists. <code>/var/log/archive-logs.log</code> is a new file that this change creates.</p>
+
+<h3>How the next run will be confirmed</h3>
+<p>Each run will leave two dated lines in <code>/var/log/archive-logs.log</code>: one when it starts and one when it finishes. Every morning by 08:30, the operator on duty, working as <code>rmensah</code>, reads the last lines of that file with <code>sudo tail -n 5 /var/log/archive-logs.log</code> and expects a started line and a finished line dated that morning, shortly after 03:00. A started line with no finished line, an error between them, or no line at all for that morning is a finding. The operator tells <code>anovak</code>, the IT operations lead, the same morning, and frees space or reruns the job that day. The scheduler's record in <code>/var/log/cron</code> is not enough on its own, because <code>N1-cron</code> and <code>N3-cron</code> read the same on a good night and a bad one.</p>
+
+<h3>Accepted and open items</h3>
+<p>The archive disk will stop the job again. <code>N3-evening</code> shows it 96 percent full with 427M free before a 431M log, and nothing in the script removes old archives. With the changes, the next night will stop safely and keep the log on the server, but it will keep stopping until there is room. How long archives must be kept is for the storefront application owner, <code>shaddad</code>, to decide; a second alert on free space in <code>/data/archive</code> is for the operations lead to decide.</p>
+<p>Two days of logs are not fully archived. The archive of 11 November's log, in the folder <code>2026-11-12</code>, is empty after the second run on night 2, as <code>N2-after</code> shows, and night 3 kept only part of 12 November's, as <code>N3-morning</code> shows. Both originals are gone. The storefront application owner should know, in case anyone asks for either day.</p>
+<p>After a stopped run, freeing space and running the new script again the same day finishes the job, because the check finds yesterday's log still there. If the fix waits past the next night, that night archives only its own yesterday, and the older log stays on the server until someone archives it by hand. The operator on duty should know both.</p>
+<p>The cause of Tuesday afternoon's slow hour is not known. The records show when it happened and that checkouts timed out, not why, and that question belongs to whoever troubleshoots the storefront next.</p>
+
+  </section>
+</div>
+
+<script>
+const CHECKS = {
+  quality: [
+    ["Your normal gives a figure or range for at least two hours, including the 02:00 hour, each citing the processor records by label.",
+     "The line stamped <code>02:00:01</code> is about 83 to 87 percent busy every night in <code>P1</code> to <code>P7</code>, and most other hours sit between 17 and 24 percent. Busy is 100 minus <code>%idle</code>."],
+    ["You name the one window that departs from normal, and set the log for that window beside the same hour on an ordinary day.",
+     "Tuesday’s line stamped <code>14:00:01</code>, covering 13:00 to 14:00, is about 61 percent busy in <code>P2</code>. <code>L2</code> lists 17 timed-out checkouts in that hour; <code>L1</code>, Monday’s same hour, lists none."],
+    ["Your alert’s threshold is drawn from this host’s own normal, and it would have fired on Tuesday afternoon and on none of the seven nights at 02:00.",
+     "Count the hours it fires on across the week. A fixed line at 80 percent fires seven times, every one an ordinary 02:00, and misses Tuesday."],
+    ["Your alert names a duration and a recipient.",
+     "“For one full hourly reading” and “<code>anovak</code>, the IT operations lead” count. “Alert the team when it is high” is not yet."],
+    ["You show that the scheduler’s record cannot tell a good night from a bad one, and that the script reports success after a failed step.",
+     "<code>N1-cron</code> and <code>N3-cron</code> read the same. <code>N2-rerun</code> prints errors and then exit status <code>0</code>, and <code>N3-morning</code> shows the original log deleted although the archive is cut short."],
+    ["Your changes make the script stop at the first failed step, written as the exact lines you would add.",
+     "<code>set -o errexit</code> near the top is the line that stops this run; <code>nounset</code> and <code>pipefail</code> are good company but not required here. On night 3 the run would then stop at the failed <code>tar</code>, and the original log would stay."],
+    ["Your changes make a second run safe, written as the exact lines you would add.",
+     "A second run like night 2’s must leave the 03:00 archive alone. Checking that yesterday’s log is still there before archiving it does that. <code>mkdir -p</code> alone does not, because <code>tar -cf</code> would still empty the archive."],
+    ["Each run writes a dated line, and you say where, who reads it, when, and what counts as a finding.",
+     "A started line and a finished line each night, read each morning by a named person. A missing finished line is a finding. The crontab no longer sends the job’s output to <code>/dev/null</code>."]
+  ]
+};
+
+const answers = {};
+
+function build() {
+  for (const [dim, list] of Object.entries(CHECKS)) {
+    const ol = document.querySelector(`ol[data-dim="${dim}"]`);
+    list.forEach(([q, how], i) => {
+      const id = `${dim}-${i}`;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <p class="q" id="q-${id}">${q}</p>
+        <p class="how"><strong>How to tell.</strong> ${how}</p>
+        <div class="choice" role="radiogroup" aria-labelledby="q-${id}">
+          <input type="radio" name="${id}" id="${id}-y" value="yes"><label class="yes" for="${id}-y">Yes</label>
+          <input type="radio" name="${id}" id="${id}-n" value="no"><label class="no" for="${id}-n">Not yet</label>
+        </div>`;
+      ol.appendChild(li);
+    });
+  }
+  document.addEventListener("change", (e) => {
+    if (e.target.matches(".choice input")) { answers[e.target.name] = e.target.value; render(); }
+  });
+}
+
+function levelFor(dim) {
+  const n = CHECKS[dim].length;
+  let answered = 0; const misses = [];
+  for (let i = 0; i < n; i++) {
+    const a = answers[`${dim}-${i}`];
+    if (a) answered++;
+    if (a === "no") misses.push(i);
+  }
+  if (answered < n) return { level: "pending", text: `${answered} of ${n} answered`, misses, done: false };
+  if (misses.length === 0) return { level: "strong", text: "Strong", misses, done: true };
+  if (misses.length <= 2) return { level: "adequate", text: "Adequate", misses, done: true };
+  return { level: "notyet", text: "Not yet ready", misses, done: true };
+}
+
+function render() {
+  let allDone = true;
+  for (const dim of Object.keys(CHECKS)) {
+    const r = levelFor(dim);
+    if (!r.done) allDone = false;
+    const lv = document.getElementById(`lv-${dim}`);
+    lv.dataset.level = r.level;
+    lv.textContent = r.text;
+    const ul = document.getElementById(`rv-${dim}`);
+    ul.innerHTML = "";
+    r.misses.forEach((i) => {
+      const li = document.createElement("li");
+      li.textContent = `Revisit question ${i + 1}: ${CHECKS[dim][i][0]}`;
+      ul.appendChild(li);
+    });
+  }
+  const btn = document.getElementById("show-example");
+  btn.disabled = !allDone;
+  document.getElementById("gate").hidden = allDone;
+  if (!allDone) {
+    document.getElementById("example").hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    btn.textContent = "Compare with a worked example";
+  }
+}
+
+document.getElementById("show-example").addEventListener("click", (e) => {
+  const ex = document.getElementById("example");
+  ex.hidden = !ex.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!ex.hidden));
+  e.currentTarget.textContent = ex.hidden ? "Compare with a worked example" : "Hide the worked example";
+  if (!ex.hidden) ex.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+document.getElementById("reset").addEventListener("click", () => {
+  for (const k of Object.keys(answers)) delete answers[k];
+  document.querySelectorAll(".choice input").forEach((i) => (i.checked = false));
+  render();
+});
+
+build();
+render();
+</script>
+</body>
+</html>

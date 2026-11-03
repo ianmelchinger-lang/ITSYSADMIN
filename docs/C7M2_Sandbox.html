@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoring and Automation Sandbox</title>
+<style>
+/* Layout: an intro band, then two panels stacked. Panel 1 is a week grid (hours down, days across) with a two-position switch. Panel 2 is a three-step run with an on/off switch. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #55625e;
+  --rule: #d6dedb;
+  --accent: #1d6a72;
+  --accent-soft: #e2eef0;
+  --ok: #2c7a4b;
+  --ok-soft: #e3f1e8;
+  --alert: #a1432f;
+  --alert-soft: #f7e6e1;
+  --code-bg: #eef2f1;
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --ok: #6cc48f; --ok-soft: #1c3226;
+    --alert: #ec8a72; --alert-soft: #3a231d; --code-bg: #222b29; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+  --accent: #6cbac3; --accent-soft: #1d3135; --ok: #6cc48f; --ok-soft: #1c3226;
+  --alert: #ec8a72; --alert-soft: #3a231d; --code-bg: #222b29; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 1.75rem 3.5rem;
+}
+.page { max-width: 52rem; margin: 0 auto; display: grid; gap: 2.5rem; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.25; text-wrap: balance; margin: 0; font-weight: 600; }
+h1 { font-size: 1.85rem; }
+h2 { font-size: 1.3rem; }
+p { margin: 0; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
+.intro { display: grid; gap: 0.75rem; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.panel { display: grid; gap: 1rem; min-width: 0; }
+.panel-head { display: grid; gap: 0.35rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.6rem; }
+.target { background: var(--accent-soft); border-radius: 6px; padding: 0.9rem 1.1rem; font-family: var(--font-display); font-size: 0.96rem; }
+.switch { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.switch-label { font-family: var(--font-display); font-size: 0.9rem; color: var(--muted); margin-right: 0.25rem; }
+button {
+  font-family: var(--font-display); font-size: 0.92rem; padding: 0.45rem 1rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+}
+button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.caption { font-family: var(--font-display); font-size: 0.85rem; color: var(--muted); }
+.rule { font-family: var(--font-display); font-size: 0.95rem; }
+.status { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.85rem 1rem; display: grid; gap: 0.35rem; }
+.status .big { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; }
+.status p { font-size: 0.95rem; }
+.grid-wrap { overflow-x: auto; }
+table.week { border-collapse: separate; border-spacing: 2px; width: 100%; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 0.8rem; }
+table.week th { font-family: var(--font-display); font-weight: 600; font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.3rem; text-align: center; }
+table.week th[scope="row"] { text-align: right; white-space: nowrap; }
+table.week td { text-align: center; padding: 0.22rem 0.1rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; min-width: 2.2rem; }
+table.week td.on { background: var(--alert-soft); border-color: var(--alert); color: var(--alert); font-weight: 700; }
+table.week td.on::after { content: " !"; }
+.legend { font-family: var(--font-display); font-size: 0.85rem; color: var(--muted); }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+ol.steps li { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.7rem 0.9rem; display: grid; gap: 0.2rem; }
+ol.steps li[data-state="failed"] { border-color: var(--alert); box-shadow: inset 3px 0 0 var(--alert); }
+ol.steps li[data-state="skipped"] { opacity: 0.75; border-style: dashed; }
+.step-title { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; overflow-wrap: anywhere; }
+.step-result { font-size: 0.93rem; }
+.step-result[data-v="ok"] { color: var(--ok); }
+.step-result[data-v="failed"] { color: var(--alert); }
+.step-result[data-v="skipped"] { color: var(--muted); }
+.header-line { font-family: var(--font-mono); font-size: 0.85rem; background: var(--code-bg); padding: 0.5rem 0.7rem; border-radius: 4px; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) {
+  table.week td, ol.steps li { transition: background-color 0.25s ease, border-color 0.25s ease; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Monitoring and automation</p>
+    <h1>Change what you compare with, and change where the job stops</h1>
+    <p>Two panels, each about one switch on the storefront server, <code>cld-lnx-01</code>. The first holds the week of processor readings from the monitoring records. The second holds the nightly archive script on night 3 from the automation records. Each switch changes one thing, and you can flip it as often as you like. Nothing here is scored, and nothing here touches a real server.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="p1-h">
+    <div class="panel-head">
+      <h2 id="p1-h">Which hours of this week tell the person on call?</h2>
+    </div>
+    <p class="target">This panel shows the week of hourly processor readings for the storefront server <code>cld-lnx-01</code>, from records <code>P1</code> to <code>P7</code>, as the share of each hour the processor was busy. The host is busy at 02:00 every night, and that is its normal. On Tuesday at 14:00 it is busier than it usually is at that hour. You are told both now, and nothing is hidden. The switch changes only what each reading is compared with: a fixed line at 80%, or this host's own usual reading for the same hour. The fixed line will alert on every ordinary night and stay silent on Tuesday afternoon. The host's own normal will do the reverse.</p>
+    <div class="switch" role="group" aria-labelledby="sw1-l">
+      <span class="switch-label" id="sw1-l">Compare each reading with:</span>
+      <button type="button" id="cmp-fixed" aria-pressed="true">a fixed line</button>
+      <button type="button" id="cmp-own" aria-pressed="false">this host's own normal</button>
+    </div>
+    <p class="rule" id="p1-rule"></p>
+    <div class="status" aria-live="polite">
+      <p class="big" id="p1-count"></p>
+      <p id="p1-a"></p>
+      <p id="p1-b"></p>
+    </div>
+    <p class="legend">Each cell is the busy share for the hour that ends at the time on the left. Cells marked with <strong>!</strong> are hours that would tell someone.</p>
+    <div class="grid-wrap"><table class="week" id="week" aria-describedby="p1-rule"></table></div>
+  </section>
+
+  <section class="panel" aria-labelledby="p2-h">
+    <div class="panel-head">
+      <h2 id="p2-h">When the middle step fails, which later steps run, and what does the script report?</h2>
+    </div>
+    <p class="target">This is the log-archive script <code>archive-logs.sh</code> on the storefront server <code>cld-lnx-01</code>, as night 3 in the automation records found it. It has three steps: make today's folder in <code>/data/archive</code>, archive yesterday's log into it, and delete the original. In this run the archive step will fail, because the archive disk fills part-way through. That is given, not hidden. With the switch off, you will see the script delete the original anyway and report success. With the switch on, you will see the run stop at the failed step and report failure. The stop is a safety control doing its job, not an error for you to fix.</p>
+    <p class="header-line">archive-logs.sh on cld-lnx-01 — in this run step 2 fails: the archive disk fills during the copy</p>
+    <div class="switch" role="group" aria-labelledby="sw2-l">
+      <span class="switch-label" id="sw2-l">Stop at the first failed step:</span>
+      <button type="button" id="stop-off" aria-pressed="true">off</button>
+      <button type="button" id="stop-on" aria-pressed="false">on</button>
+    </div>
+    <p class="caption">In Bash this setting is named <code>errexit</code>.</p>
+    <ol class="steps" id="steps"></ol>
+    <div class="status" aria-live="polite">
+      <p class="big" id="p2-exit"></p>
+      <p id="p2-files"></p>
+    </div>
+  </section>
+</div>
+
+<script>
+// Pure model for both panels, so the same code runs in the page and in tests.
+const WEEK = {"days":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"hours":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],"busy":[[18.33,83.87,18.47,21.47,19.58,21.79,18.16,21.34,18.36,21.2,22.6,21.49,22.18,18.33,23.53,17.84,20.33,22.21,20.46,22.79,22.09,21.44,17.66],[18.47,83.27,23.39,18.2,19.45,18.69,21.32,23.71,21.21,22.42,22.94,19.23,22.89,61.37,22.82,19.4,22.53,20.66,23.69,18.13,22.42,23.28,22.43],[19.72,86.58,20.46,20.37,20.88,23.13,19.91,17.14,21.44,22.49,23.0,23.61,21.74,22.88,23.55,19.3,19.42,18.44,19.49,17.98,17.25,19.18,21.37],[19.3,83.89,21.73,22.02,18.84,22.98,20.5,20.28,21.78,20.44,19.98,23.3,19.34,18.93,21.97,23.42,19.75,18.41,20.97,17.75,20.28,18.54,17.88],[18.16,85.92,21.96,23.74,19.81,20.72,18.45,22.89,18.36,23.33,17.35,17.63,18.92,17.59,23.08,22.31,17.6,18.98,21.97,19.77,20.59,21.67,19.44],[22.84,84.27,20.24,23.28,19.75,17.39,22.75,21.84,18.56,18.58,22.87,18.01,20.89,22.23,17.22,23.27,20.25,18.61,17.64,22.32,19.79,21.19,17.43],[19.64,86.12,18.46,19.59,18.0,20.9,17.18,19.14,22.28,22.23,18.49,23.5,18.73,17.94,17.73,19.06,22.83,18.0,23.47,23.49,23.49,18.34,17.99]]};
+
+const usualFor = (hour) => (hour === 2 ? 85 : 20);
+
+function alerts(mode) {
+  const out = [];
+  WEEK.busy.forEach((row, d) => row.forEach((v, i) => {
+    const h = WEEK.hours[i];
+    const on = mode === "fixed" ? v > 80 : v - usualFor(h) >= 20;
+    if (on) out.push([d, h]);
+  }));
+  return out;
+}
+
+const PANEL1 = {
+  fixed: {
+    rule: "Rule: alert when a reading is above 80%.",
+    a: "Every one is 02:00 at about 85%, which is this host's ordinary 02:00.",
+    b: "Tuesday 14:00 at 61%: no alert, because 61 is under the line."
+  },
+  own: {
+    rule: "Rule: alert when a reading is 20 points or more above this host's usual reading for that hour. Usual is 85% for 02:00 and 20% for every other hour, as the other days of the week show.",
+    a: "Tuesday 14:00 at 61%: usual for 14:00 is 20%.",
+    b: "02:00 each night at about 85%: no alert, because usual for 02:00 is 85%."
+  }
+};
+
+const STEPS = [
+  "Step 1 — make today's folder in /data/archive",
+  "Step 2 — archive yesterday's log from /var/log/storefront into it",
+  "Step 3 — delete the original from /var/log/storefront"
+];
+
+function run(stopOn) {
+  const results = [];
+  let status = 0, stopped = false;
+  const outcome = [true, false, true];
+  STEPS.forEach((title, i) => {
+    if (stopped) { results.push({ title, state: "skipped", text: "did not run" }); return; }
+    const ok = outcome[i];
+    status = ok ? 0 : 2;
+    let text = ok ? "ran, succeeded" : "ran, failed";
+    if (!ok && stopOn) { stopped = true; text += ". The run stops here."; }
+    results.push({ title, state: ok ? "ok" : "failed", text });
+  });
+  const lastRan = results.map((r) => r.state).lastIndexOf(stopOn ? "failed" : "ok");
+  return {
+    results,
+    reportsSuccess: status === 0,
+    exit: status === 0 ? `Exit status the script reports: 0, success. It is step ${lastRan + 1}'s.`
+                       : `Exit status the script reports: not 0, failure. It is step ${lastRan + 1}'s.`,
+    files: results[2].state === "ok" ? "Original: deleted. Archive copy: incomplete."
+                                     : "Original: still on the server. Archive copy: incomplete."
+  };
+}
+
+if (typeof module !== "undefined") module.exports = { WEEK, alerts, run, PANEL1 };
+
+// ---- Page ----------------------------------------------------------------
+if (typeof document !== "undefined") {
+  let mode = "fixed";
+  let stopOn = false;
+
+  function buildWeek() {
+    const t = document.getElementById("week");
+    const cap = document.createElement("caption");
+    cap.className = "legend"; cap.style.textAlign = "left"; cap.style.paddingBottom = "0.4rem";
+    cap.textContent = "Processor busy share, percent, Monday 9 to Sunday 15 November";
+    t.appendChild(cap);
+    const head = document.createElement("tr");
+    head.innerHTML = `<th scope="col">Hour ending</th>` + WEEK.days.map((d) => `<th scope="col">${d}</th>`).join("");
+    const thead = document.createElement("thead"); thead.appendChild(head); t.appendChild(thead);
+    const tb = document.createElement("tbody");
+    WEEK.hours.forEach((h, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<th scope="row">${String(h).padStart(2, "0")}:00</th>` +
+        WEEK.busy.map((row, d) => `<td id="c-${d}-${h}">${Math.round(row[i])}</td>`).join("");
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+  }
+
+  function renderWeek() {
+    const on = alerts(mode);
+    const set = new Set(on.map(([d, h]) => `${d}-${h}`));
+    WEEK.busy.forEach((row, d) => WEEK.hours.forEach((h) => {
+      const c = document.getElementById(`c-${d}-${h}`);
+      const hit = set.has(`${d}-${h}`);
+      c.classList.toggle("on", hit);
+      c.setAttribute("aria-label", `${WEEK.days[d]} ${String(h).padStart(2, "0")}:00, ${c.textContent.replace(" !", "")} percent${hit ? ", alerts" : ""}`);
+    }));
+    document.getElementById("p1-rule").textContent = PANEL1[mode].rule;
+    document.getElementById("p1-count").textContent = `Alerts this week: ${on.length}`;
+    document.getElementById("p1-a").textContent = PANEL1[mode].a;
+    document.getElementById("p1-b").textContent = PANEL1[mode].b;
+    document.getElementById("cmp-fixed").setAttribute("aria-pressed", String(mode === "fixed"));
+    document.getElementById("cmp-own").setAttribute("aria-pressed", String(mode === "own"));
+  }
+
+  function renderRun() {
+    const r = run(stopOn);
+    const ol = document.getElementById("steps");
+    ol.innerHTML = "";
+    r.results.forEach((s) => {
+      const li = document.createElement("li");
+      li.dataset.state = s.state;
+      const v = s.state === "ok" ? "ok" : s.state;
+      li.innerHTML = `<span class="step-title"></span><span class="step-result" data-v="${v}"></span>`;
+      li.querySelector(".step-title").textContent = s.title;
+      li.querySelector(".step-result").textContent = s.text;
+      ol.appendChild(li);
+    });
+    document.getElementById("p2-exit").textContent = r.exit;
+    document.getElementById("p2-files").textContent = r.files;
+    document.getElementById("stop-off").setAttribute("aria-pressed", String(!stopOn));
+    document.getElementById("stop-on").setAttribute("aria-pressed", String(stopOn));
+  }
+
+  document.getElementById("cmp-fixed").addEventListener("click", () => { mode = "fixed"; renderWeek(); });
+  document.getElementById("cmp-own").addEventListener("click", () => { mode = "own"; renderWeek(); });
+  document.getElementById("stop-off").addEventListener("click", () => { stopOn = false; renderRun(); });
+  document.getElementById("stop-on").addEventListener("click", () => { stopOn = true; renderRun(); });
+
+  buildWeek();
+  renderWeek();
+  renderRun();
+}
+</script>
+</body>
+</html>
