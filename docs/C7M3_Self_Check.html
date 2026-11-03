@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handoff Pack Self-Check</title>
+<style>
+/* Layout: one reading column; one check group, a live result strip, then the worked example with an inline diagram. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #55625e;
+  --rule: #d6dedb;
+  --accent: #1d6a72;
+  --accent-soft: #e2eef0;
+  --strong: #2c7a4b;
+  --adequate: #9a6a0c;
+  --notyet: #a1432f;
+  --ok: #2c7a4b;
+  --ok-soft: #e3f1e8;
+  --alert: #a1432f;
+  --alert-soft: #f7e6e1;
+  --code-bg: #eef2f1;
+  --d-ground: #ffffff;
+  --d-ink: #161616;
+  --d-secondary: #525252;
+  --d-muted: #6f6f6f;
+  --d-line: #8d8d8d;
+  --d-node-fill: #f4f4f4;
+  --d-node-stroke: #a8a8a8;
+  --d-accent: #0f62fe;
+  --d-permit: #198038;
+  --d-refuse: #da1e28;
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-diagram: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-diagram-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+    --ok: #6cc48f; --ok-soft: #1c3226; --alert: #ec8a72; --alert-soft: #3a231d; --code-bg: #222b29;
+    --d-ground: #1a2220; --d-ink: #e4ebe8; --d-secondary: #b9c4c0; --d-muted: #9aa8a3; --d-line: #7d8a86;
+    --d-node-fill: #222b29; --d-node-stroke: #5a6864; --d-accent: #78a9ff; --d-permit: #42be65; --d-refuse: #ff8389;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+    --ok: #6cc48f; --ok-soft: #1c3226; --alert: #ec8a72; --alert-soft: #3a231d; --code-bg: #222b29;
+    --d-ground: #1a2220; --d-ink: #e4ebe8; --d-secondary: #b9c4c0; --d-muted: #9aa8a3; --d-line: #7d8a86;
+    --d-node-fill: #222b29; --d-node-stroke: #5a6864; --d-accent: #78a9ff; --d-permit: #42be65; --d-refuse: #ff8389;
+    color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2rem 4rem;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.25; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.9rem; font-weight: 600; }
+h2 { font-size: 1.3rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.4rem; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
+.intro { display: grid; gap: 0.8rem; }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.wrap { max-width: 44rem; margin: 0 auto; display: grid; gap: 2.25rem; }
+.group { display: grid; gap: 1rem; }
+.group-head { display: grid; gap: 0.35rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.75rem; }
+.group-head p { color: var(--muted); }
+ol.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; counter-reset: chk; }
+ol.checks > li {
+  counter-increment: chk; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 1rem 1.1rem; display: grid; gap: 0.6rem; min-width: 0;
+}
+.q { font-weight: 600; font-family: var(--font-display); font-size: 1rem; }
+.q::before { content: counter(chk) ". "; color: var(--accent); }
+.how { color: var(--muted); font-size: 0.95rem; }
+.how strong { color: var(--ink); font-weight: 600; }
+.choice { display: flex; gap: 0.5rem; flex-wrap: wrap; position: relative; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice label {
+  font-family: var(--font-display); font-size: 0.9rem; padding: 0.35rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--rule); cursor: pointer; color: var(--muted); background: var(--bg);
+}
+.choice input:checked + label.yes { background: var(--strong); border-color: var(--strong); color: var(--surface); }
+.choice input:checked + label.no { background: var(--notyet); border-color: var(--notyet); color: var(--surface); }
+.choice input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.result { background: var(--accent-soft); border-radius: 8px; padding: 1.25rem 1.3rem; display: grid; gap: 1rem; }
+.dim { display: grid; gap: 0.4rem; align-content: start; min-width: 0; }
+.dim h3 { font-size: 1rem; font-weight: 600; }
+.level { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.level[data-level="strong"] { color: var(--strong); }
+.level[data-level="adequate"] { color: var(--adequate); }
+.level[data-level="notyet"] { color: var(--notyet); }
+.level[data-level="pending"] { color: var(--muted); font-weight: 500; font-size: 1rem; }
+.dim ul { margin: 0; padding-left: 1.1rem; font-size: 0.95rem; }
+.rule-note, .gate { font-size: 0.9rem; color: var(--muted); }
+.actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+button {
+  font-family: var(--font-display); font-size: 0.95rem; padding: 0.55rem 1.1rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--surface);
+}
+button.quiet { background: transparent; color: var(--accent); }
+button:disabled { cursor: not-allowed; background: transparent; color: var(--muted); border-color: var(--rule); }
+.example { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem 1.3rem; display: grid; gap: 0.9rem; min-width: 0; }
+.example h2 { font-size: 1.2rem; margin-top: 0.8rem; }
+.example h3 { font-size: 1.05rem; margin-top: 0.6rem; }
+.example .tbl { overflow-x: auto; }
+.example table { border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; min-width: 36rem; }
+.example th, .example td { border-bottom: 1px solid var(--rule); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+.example th { font-family: var(--font-display); font-weight: 600; }
+.example p { overflow-wrap: anywhere; }
+.example pre { margin: 0; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; background: var(--code-bg); padding: 0.7rem 0.8rem; border-radius: 4px; overflow-x: auto; }
+.fig { overflow-x: auto; background: var(--d-ground); border: 1px solid var(--rule); border-radius: 4px; }
+.fig svg { display: block; width: 100%; min-width: 600px; height: auto; }
+.fig text { font-family: var(--font-diagram); font-size: 11px; fill: var(--d-ink); }
+.fig .d-title { font-size: 17px; font-weight: 700; }
+.fig .d-note { font-size: 11px; fill: var(--d-muted); }
+.fig .d-mono { font-family: var(--font-diagram-mono); font-size: 10.5px; }
+.fig .d-strong { font-weight: 700; font-size: 12px; }
+.fig .d-field { font-family: var(--font-diagram-mono); font-size: 10px; fill: var(--d-secondary); }
+.fig .d-label { font-size: 10.5px; }
+.fig .d-route { font-size: 10px; font-style: italic; fill: var(--d-muted); }
+.fig .d-accent-text { fill: var(--d-accent); font-weight: 700; }
+.fig .d-node { fill: var(--d-node-fill); stroke: var(--d-node-stroke); stroke-width: 1; }
+.fig .d-inner { fill: var(--d-ground); stroke: var(--d-node-stroke); stroke-width: 1; }
+.fig .d-band { fill: none; stroke: var(--d-accent); stroke-width: 2; }
+.fig .d-mask { fill: var(--d-ground); }
+.fig .d-ok { stroke: var(--d-permit); stroke-width: 1.5; }
+.fig .d-no { stroke: var(--d-refuse); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.fig .mk-ok { fill: var(--d-permit); }
+.fig .mk-no { stroke: var(--d-refuse); stroke-width: 2.5; fill: none; }
+@media (prefers-reduced-motion: no-preference) { .level { transition: color 0.2s ease; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <p class="eyebrow">Operations Handoff Pack</p>
+    <h1>Check your pack</h1>
+    <p>Open your four finished files beside this page. For each question, look for the evidence in your own pack, then answer <em>Yes</em> or <em>Not yet</em>. Each question says how to tell. When you have answered them all, you will see where your pack stands and which questions to go back to, and you can compare your diagram and runbook with a worked example.</p>
+    <p>Nothing here is recorded or sent anywhere. When you leave the page, your answers go with you.</p>
+  </header>
+
+  <section class="group" aria-labelledby="g1">
+    <div class="group-head">
+      <h2 id="g1">Clarity of documentation</h2>
+      <p>Could a colleague who has never seen the estate pick it up tomorrow from your pack alone, and check every claim in it?</p>
+    </div>
+    <ol class="checks" data-dim="clarity"></ol>
+  </section>
+
+  <section class="result" aria-live="polite" aria-labelledby="g3">
+    <h2 id="g3">Where your pack stands</h2>
+    <div class="dim"><h3>Clarity of documentation</h3><p class="level" id="lv-clarity" data-level="pending"></p><ul id="rv-clarity"></ul></div>
+    <p class="rule-note">Every question answered <em>Yes</em> is strong. One or two answered <em>Not yet</em> is adequate. Three or more means the pack is not yet ready to hand over: revise it and check again.</p>
+    <p class="gate" id="gate">Answer every question to compare with the worked example.</p>
+    <div class="actions">
+      <button type="button" id="show-example" aria-expanded="false" aria-controls="example" aria-describedby="gate" disabled>Compare with a worked example</button>
+      <button type="button" class="quiet" id="reset">Clear my answers</button>
+    </div>
+  </section>
+
+  <section class="example" id="example" hidden>
+    <p class="eyebrow">One strong answer</p>
+    <p>This example shows one good way to write the two new files in the pack, the architecture diagram and the troubleshooting runbook. Yours does not need to match its drawing, wording or order. It is right if it shows the same servers, network, services and connections, locates the same two causes from the same records, makes the same changes, and names who decides each item that remains.</p>
+<h2>Worked example: architecture diagram</h2>
+<h3>OHP-1 Architecture Diagram</h3>
+<div class="fig">
+<svg viewBox="0 0 720 440" role="img" aria-labelledby="dg-t dg-d" xmlns="http://www.w3.org/2000/svg">
+<title id="dg-t">The estate as handed over, 16 November 2026</title>
+<desc id="dg-d">Two servers on one private network, 192.168.56.0/24, with no gateway between them. On the left, hq-win-01 at 192.168.56.10, Windows Server 2022, a standalone file server that answers on TCP 445 and not on TCP 3389, sharing Finance$, Warehouse and Public. On the right, cld-lnx-01 at 192.168.56.20, Red Hat Enterprise Linux 9, the storefront web server, answering on TCP 22 and TCP 80 and not on TCP 9090, holding the archive disk mounted at /data/archive, the nightly job archive-logs.sh at 03:00, and the sysstat collector. From cld-lnx-01 to hq-win-01, TCP 445 is permitted and TCP 3389 is refused. From hq-win-01 to cld-lnx-01, TCP 22 and TCP 80 are permitted and TCP 9090 is refused. Each server finds the other by name through its own hosts file.</desc>
+<defs>
+<marker id="m-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-ok" fill="#198038" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="m-no" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path class="mk-no" fill="none" stroke="#da1e28" stroke-width="2.5" d="M5,0 L5,10" /></marker>
+</defs>
+<rect class="d-mask" fill="#ffffff" x="0" y="0" width="720" height="440"/>
+<text class="d-title" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="700" x="24" y="32">The estate as handed over, 16 November 2026</text>
+<text class="d-note" fill="#6f6f6f" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" x="24" y="54">Each arrow starts at the server that opens the connection. Solid and arrowed: permitted. Dashed and barred: refused.</text>
+
+<rect class="d-band" fill="none" stroke="#0f62fe" stroke-width="2" x="262" y="72" width="196" height="356"/>
+<text class="d-mono d-accent-text" fill="#0f62fe" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" font-weight="700" x="360" y="94" text-anchor="middle">192.168.56.0/24</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="360" y="110" text-anchor="middle">one private network</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="360" y="125" text-anchor="middle">no gateway between the servers</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="360" y="400" text-anchor="middle">each server finds the other by name</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="360" y="415" text-anchor="middle">through its own hosts file</text>
+
+<rect class="d-node" fill="#f4f4f4" stroke="#a8a8a8" stroke-width="1" x="24" y="72" width="226" height="356"/>
+<text class="d-mono d-strong" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="700" x="36" y="94">hq-win-01</text>
+<text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="36" y="110">192.168.56.10</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="36" y="126">Windows Server 2022, standalone</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="36" y="141">file server</text>
+<text class="d-field" fill="#525252" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10" x="36" y="163">answers: TCP 445 file sharing</text>
+<text class="d-field" fill="#525252" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10" x="36" y="178">not: TCP 3389, Remote Desktop off</text>
+<g>
+<rect class="d-inner" fill="#ffffff" stroke="#a8a8a8" stroke-width="1" x="34" y="306" width="206" height="36"/><text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="44" y="320">Finance$</text><text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="44" y="335">shares D:\Shares\Finance</text>
+<rect class="d-inner" fill="#ffffff" stroke="#a8a8a8" stroke-width="1" x="34" y="346" width="206" height="36"/><text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="44" y="360">Warehouse</text><text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="44" y="375">shares D:\Shares\Warehouse</text>
+<rect class="d-inner" fill="#ffffff" stroke="#a8a8a8" stroke-width="1" x="34" y="386" width="206" height="36"/><text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="44" y="400">Public</text><text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="44" y="415">shares D:\Shares\Public</text>
+</g>
+
+<rect class="d-node" fill="#f4f4f4" stroke="#a8a8a8" stroke-width="1" x="470" y="72" width="226" height="356"/>
+<text class="d-mono d-strong" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="12" font-weight="700" x="482" y="94">cld-lnx-01</text>
+<text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="482" y="110">192.168.56.20</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="482" y="126">Red Hat Enterprise Linux 9</text>
+<text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="482" y="141">storefront web server</text>
+<text class="d-field" fill="#525252" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10" x="482" y="163">answers: TCP 22 sshd, TCP 80 nginx</text>
+<text class="d-field" fill="#525252" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10" x="482" y="178">not: TCP 9090, console stopped</text>
+<g>
+<rect class="d-inner" fill="#ffffff" stroke="#a8a8a8" stroke-width="1" x="480" y="306" width="206" height="36"/><text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="490" y="320">/data/archive</text><text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="490" y="335">its own 10 GB disk, /dev/sdb1</text>
+<rect class="d-inner" fill="#ffffff" stroke="#a8a8a8" stroke-width="1" x="480" y="346" width="206" height="36"/><text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="490" y="360">archive-logs.sh</text><text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="490" y="375">03:00 nightly, writes a run log</text>
+<rect class="d-inner" fill="#ffffff" stroke="#a8a8a8" stroke-width="1" x="480" y="386" width="206" height="36"/><text class="d-mono" fill="#161616" font-family="IBM Plex Mono, SF Mono, Menlo, Consolas, monospace" font-size="10.5" x="490" y="400">sysstat</text><text class="d-label" fill="#161616" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10.5" x="490" y="415">collector, one reading an hour</text>
+</g>
+
+<line class="d-ok" stroke="#198038" stroke-width="1.5" x1="470" y1="204" x2="252" y2="204" marker-end="url(#m-ok)"/>
+<rect class="d-mask" fill="#ffffff" x="296" y="196" width="128" height="15"/><text class="d-route" fill="#6f6f6f" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10" font-style="italic" x="360" y="207" text-anchor="middle">TCP 445 · permitted</text>
+<line class="d-no" stroke="#da1e28" stroke-width="1.5" stroke-dasharray="5 4" x1="470" y1="228" x2="254" y2="228" marker-end="url(#m-no)"/>
+<rect class="d-mask" fill="#ffffff" x="296" y="220" width="128" height="15"/><text class="d-route" fill="#6f6f6f" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10" font-style="italic" x="360" y="231" text-anchor="middle">TCP 3389 · refused</text>
+<line class="d-ok" stroke="#198038" stroke-width="1.5" x1="250" y1="252" x2="468" y2="252" marker-end="url(#m-ok)"/>
+<rect class="d-mask" fill="#ffffff" x="296" y="244" width="128" height="15"/><text class="d-route" fill="#6f6f6f" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10" font-style="italic" x="360" y="255" text-anchor="middle">TCP 22 · permitted</text>
+<line class="d-ok" stroke="#198038" stroke-width="1.5" x1="250" y1="276" x2="468" y2="276" marker-end="url(#m-ok)"/>
+<rect class="d-mask" fill="#ffffff" x="296" y="268" width="128" height="15"/><text class="d-route" fill="#6f6f6f" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10" font-style="italic" x="360" y="279" text-anchor="middle">TCP 80 · permitted</text>
+<line class="d-no" stroke="#da1e28" stroke-width="1.5" stroke-dasharray="5 4" x1="250" y1="300" x2="466" y2="300" marker-end="url(#m-no)"/>
+<rect class="d-mask" fill="#ffffff" x="296" y="292" width="128" height="15"/><text class="d-route" fill="#6f6f6f" font-family="IBM Plex Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="10" font-style="italic" x="360" y="303" text-anchor="middle">TCP 9090 · refused</text>
+</svg>
+</div>
+
+<h3>Servers</h3>
+<div class="tbl"><table>
+<thead><tr><th>Server</th><th>Address</th><th>Platform</th><th>Role</th><th>Answers on</th><th>Does not answer on</th></tr></thead>
+<tbody>
+<tr><td><code>cld-lnx-01</code></td><td>192.168.56.20</td><td>Red Hat Enterprise Linux 9</td><td>Storefront web tier (nginx), finance working files</td><td>TCP 22, <code>sshd</code>; TCP 80, <code>nginx</code></td><td>TCP 9090: the web console is stopped and kept from starting</td></tr>
+<tr><td><code>hq-win-01</code></td><td>192.168.56.10</td><td>Windows Server 2022, standalone</td><td>File server</td><td>TCP 445, file sharing</td><td>TCP 3389: Remote Desktop is off</td></tr>
+</tbody></table></div>
+<p>Both servers sit on one private network, 192.168.56.0/24, with no gateway between them. Each finds the other by name through its own hosts file; the line for <code>hq-win-01</code> on <code>cld-lnx-01</code> was corrected on 16 November, as <code>FA7</code> shows. Each server also has a separate connection for software updates, <code>enp0s3</code> in <code>FA2</code>, which none of the estate's own connections use.</p>
+
+<h3>Connections</h3>
+<div class="tbl"><table>
+<thead><tr><th>From</th><th>To</th><th>Port and service</th><th>Permitted or refused</th><th>What decides it</th><th>Record that shows it</th></tr></thead>
+<tbody>
+<tr><td><code>cld-lnx-01</code></td><td><code>hq-win-01</code></td><td>TCP 445, file sharing</td><td>Permitted</td><td>File sharing listens on 445 (<code>C5-after</code>), and the name now gives 192.168.56.10</td><td><code>FA8</code>: <code>Connected to 192.168.56.10:445</code></td></tr>
+<tr><td><code>cld-lnx-01</code></td><td><code>hq-win-01</code></td><td>TCP 3389, Remote Desktop</td><td>Refused</td><td>Nothing listens on 3389 (<code>C6-after</code>)</td><td><code>D2-after</code>: <code>TIMEOUT</code></td></tr>
+<tr><td><code>hq-win-01</code></td><td><code>cld-lnx-01</code></td><td>TCP 22, SSH</td><td>Permitted</td><td><code>sshd</code> listens on 22 and starts at boot (<code>C1-after</code>, <code>C3-after</code>)</td><td><code>D3-after</code>: <code>TcpTestSucceeded : True</code></td></tr>
+<tr><td><code>hq-win-01</code></td><td><code>cld-lnx-01</code></td><td>TCP 80, the storefront page</td><td>Permitted</td><td><code>nginx</code> listens on 80 and starts at boot (<code>C1-after</code>, <code>C2-after</code>)</td><td><code>D4-after</code>: <code>TcpTestSucceeded : True</code></td></tr>
+<tr><td><code>hq-win-01</code></td><td><code>cld-lnx-01</code></td><td>TCP 9090, web console</td><td>Refused</td><td>Nothing listens on 9090 (<code>C1-after</code>); the firewall rule that admitted it may remain, and OHP-2 routes it to the operations lead</td><td><code>D5-after</code>: <code>TcpTestSucceeded : False</code></td></tr>
+</tbody></table></div>
+<p>The three connections from <code>hq-win-01</code> were last checked at the configuration work. They go by name through <code>hq-win-01</code>'s own hosts file, which this morning's fault did not touch and nobody has checked since; entry 1 in OHP-4 routes that.</p>
+
+<h3>On each server</h3>
+<p><code>hq-win-01</code> shares three folders on its second disk: <code>Finance$</code> shares <code>D:\Shares\Finance</code>, <code>Warehouse</code> shares <code>D:\Shares\Warehouse</code>, and <code>Public</code> shares <code>D:\Shares\Public</code>. Each share grants Authenticated Users Change and Administrators Full, and the folder permissions underneath decide who gets in, as OHP-2 records.</p>
+<p>On <code>cld-lnx-01</code>, <code>/data/archive</code> is its own 10 GB disk, <code>/dev/sdb1</code>, kept to 14 days of archives from 16 November. The nightly job, <code>/opt/ops/scripts/archive-logs.sh</code>, runs from root's crontab at 03:00, archives yesterday's storefront log from <code>/var/log/storefront</code> into a dated folder, and writes a started and a finished line to <code>/var/log/archive-logs.log</code>. The collector, <code>sysstat</code>, takes one processor reading an hour. OHP-3 holds the details of all three.</p>
+
+<h2>Worked example: troubleshooting runbook</h2>
+<h3>OHP-4 Troubleshooting Runbook</h3>
+<h3>How to use this runbook</h3>
+<p>This runbook holds one entry for each fault diagnosed on the estate, in the order the records give them. Every entry runs in the same order: the report as it arrived, the report restated as one exact check, the tests and what each reached, the last test that passed and the first that failed, the located cause, the one change made, the original check repeated, and what remains. To find an entry, compare the check in front of you with each entry's restated check. To add one, copy the headings, cite every record by its label, and change nothing until the cause is located.</p>
+
+<h3>Entry 1: <code>cld-lnx-01</code> cannot reach file sharing on <code>hq-win-01</code> by name</h3>
+<p><strong>Report as received.</strong> At 09:12 on Monday 16 November, the configuration check for the connection from <code>cld-lnx-01</code> to <code>hq-win-01</code> on TCP 445 printed <code>Ncat: TIMEOUT.</code>, as <code>FA1</code> shows. The same check connected at the configuration work, as <code>D1-after</code> shows.</p>
+<p><strong>Report restated as one check.</strong> On <code>cld-lnx-01</code>, working as <code>rmensah</code>, <code>nc -zv -w 3 hq-win-01 445</code> does not connect within three seconds. It connected at the configuration work and fails from at least 09:12 on 16 November.</p>
+<p><strong>Tests.</strong> All five were run on <code>cld-lnx-01</code>, as <code>rmensah</code>.</p>
+<div class="tbl"><table>
+<thead><tr><th>Test</th><th>What it reaches</th><th>Record</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>This server's own address</td><td><code>FA2</code></td><td>Passes: <code>enp0s8</code> is up with 192.168.56.20/24</td></tr>
+<tr><td>2</td><td><code>hq-win-01</code> by its address</td><td><code>FA3</code></td><td>Passes: 3 of 3 echo replies from 192.168.56.10</td></tr>
+<tr><td>3</td><td>File sharing on <code>hq-win-01</code>, by address</td><td><code>FA4</code></td><td>Passes: <code>Connected to 192.168.56.10:445</code></td></tr>
+<tr><td>4</td><td>The name <code>hq-win-01</code>, looked up on this server</td><td><code>FA5</code></td><td>Fails: the name gives 192.168.56.11, not 192.168.56.10, the address that answers in tests 2 and 3</td></tr>
+<tr><td>5</td><td>File sharing by name: the original check</td><td><code>FA1</code></td><td>Fails: <code>Ncat: TIMEOUT.</code></td></tr>
+</tbody></table></div>
+<p>The usual pattern tests a gateway between the two ends. Both servers sit on one network, 192.168.56.0/24, with no gateway between them, so there is nothing for such a test to cross, and the name lookup takes its place.</p>
+<p><strong>Last test that passed, and first that failed.</strong> Test 3 is the last to pass and test 4 the first to fail. Tests 1 to 3 pass, so this server's address, the way to <code>hq-win-01</code> and file sharing all hold. Tests 4 and 5 fail, and the one link both of them cross that no passing test does is the name.</p>
+<p><strong>Located cause.</strong> <code>FA6</code> shows the line <code>192.168.56.11 hq-win-01</code> in <code>cld-lnx-01</code>'s <code>/etc/hosts</code>. This server finds <code>hq-win-01</code> only through that file, so every connection by name goes to 192.168.56.11, where nothing answers.</p>
+<p><strong>The one change made.</strong> The file written again with that one line corrected and the other two lines unchanged, as <code>FA7</code> shows. Because the command replaces the whole file, <code>FA7</code> also reads it back, and the two unchanged lines match <code>FA6</code>:</p>
+<pre>sudo tee /etc/hosts &gt; /dev/null &lt;&lt; 'EOF'
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.56.10 hq-win-01
+EOF</pre>
+<p><strong>The original check, repeated.</strong> In <code>FA8</code>, <code>getent hosts hq-win-01</code> now gives 192.168.56.10, and <code>nc -zv -w 3 hq-win-01 445</code> prints <code>Connected to 192.168.56.10:445</code>.</p>
+<p><strong>What remains.</strong> The records show that the line was wrong, not how it came to be wrong. The operations lead, <code>anovak</code>, should decide whether to find out who changed <code>/etc/hosts</code> and when. The connections from <code>hq-win-01</code> to <code>cld-lnx-01</code> use <code>hq-win-01</code>'s own hosts file, which was not checked this morning; the operator on duty should repeat those checks before the handover.</p>
+
+<h3>Entry 2: the nightly archive job on <code>cld-lnx-01</code> stops</h3>
+<p><strong>Report as received.</strong> At 08:30 on Monday 16 November, the morning read of the job's own record shows a started line at 03:00:01 for <code>storefront-20261115.log</code>, two <code>tar</code> errors, and no finished line, as <code>FB1</code> shows.</p>
+<p><strong>Report restated as one check.</strong> On <code>cld-lnx-01</code>, working as <code>rmensah</code>, <code>sudo tail -n 5 /var/log/archive-logs.log</code> shows that the 03:00 run of <code>/opt/ops/scripts/archive-logs.sh</code> on 16 November started and did not finish. It is the first run under the job's changes, so no earlier run under them can be compared.</p>
+<p><strong>Tests.</strong> All were run on <code>cld-lnx-01</code>, as <code>rmensah</code>. A stopped job is located by checks that each settle one question, rather than by tests that each reach one link further.</p>
+<div class="tbl"><table>
+<thead><tr><th>Check</th><th>What it settles</th><th>Record</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Where the run stopped</td><td><code>FB1</code></td><td>At <code>tar</code>: <code>Cannot write: No space left on device</code>, then no finished line</td></tr>
+<tr><td>2</td><td>Whether the archive disk has room</td><td><code>FB2</code></td><td>No: <code>/dev/sdb1</code> is 100 percent used with 0 free</td></tr>
+<tr><td>3</td><td>What fills it</td><td><code>FB3</code></td><td>31 dated folders, back to <code>2026-10-15</code>; this morning's archive is 0 bytes</td></tr>
+<tr><td>4</td><td>Whether yesterday's log survived</td><td><code>FB4</code></td><td>Yes: <code>storefront-20261115.log</code> is still there, 403117286 bytes</td></tr>
+</tbody></table></div>
+<p><strong>Last test that passed, and first that failed.</strong> Check 2, <code>FB2</code>, settles the cause: the disk the archive step writes to has no room.</p>
+<p><strong>Located cause.</strong> The archive disk is full, and nothing removes old archives, so it holds every night back to 15 October. The stop worked as intended: <code>tar</code> failed, the run ended before the step that deletes the log, and yesterday's log stayed on the server. <code>FB4</code> also lists the logs of 13 and 14 November, because the job did not run on those nights while its changes were made.</p>
+<p><strong>Decision this repair depends on.</strong> The storefront application owner, <code>shaddad</code>, has decided that archives are kept for 14 days, counting today. On 16 November that keeps every folder dated 3 November or later and allows every folder dated 2 November or earlier to be removed.</p>
+<p><strong>The one change made.</strong> The folders past the 14 days, listed first in <code>FB5</code> (19 folders, <code>2026-10-15</code> to <code>2026-11-02</code>), then removed and listed again in <code>FB6</code>:</p>
+<pre>find /data/archive -maxdepth 1 -mtime +13
+sudo rm -r /data/archive/2026-10-* /data/archive/2026-11-01 /data/archive/2026-11-02
+find /data/archive -maxdepth 1 -mtime +13</pre>
+<p>The second <code>find</code> prints nothing, and <code>FB6</code> shows the disk at 36 percent with 6.5G free. To finish the night's work the same morning, the job was run again by hand, as <code>FB7</code> shows: <code>sudo /opt/ops/scripts/archive-logs.sh</code>, exit status <code>0</code>.</p>
+<p><strong>The original check, repeated.</strong> In <code>FB8</code>, the last lines of <code>/var/log/archive-logs.log</code> now end with a started line at 08:52:07 and a finished line at 08:52:49: <code>storefront-20261115.log archived to /data/archive/2026-11-16</code>. <code>FB9</code> shows the disk at 40 percent with 6.1G free, twelve folders from <code>2026-11-03</code>, a 403128320-byte archive in <code>2026-11-16</code>, and <code>storefront-20261115.log</code> gone from the server.</p>
+<p><strong>What remains.</strong> Nothing in the job removes folders past the 14 days, so at about 400 megabytes a night the 6.1G free fills again in about two weeks. Whether the removal in <code>FB5</code> and <code>FB6</code> becomes a step of the job or a scheduled task of its own, and whether to add an alert on free space in <code>/data/archive</code>, is for the operations lead, <code>anovak</code>, to decide.</p>
+<p>The logs of 13 and 14 November are still in <code>/var/log/storefront</code>, as <code>FB9</code> shows. The job archives only yesterday's log, so it will never reach them. Where and how to archive them is for the operator on duty to settle with <code>anovak</code>; together they will take about 0.9 gigabytes of the free space.</p>
+<p>The empty archive in <code>2026-11-12</code> and the partial archive in <code>2026-11-13</code> fall outside the 14 days on 26 and 27 November. Once they are removed, nothing at all remains of the storefront logs of 11 and 12 November. <code>shaddad</code> already knows those two days are not fully archived, and should confirm that removing what is left of them is acceptable.</p>
+
+  </section>
+</div>
+<script>
+const CHECKS = {
+  clarity: [
+    ["Your pack holds all four files, each named for its part and followed by your name or initials, and a reader can tell from the names which to open first.",
+     "<code>OHP-1_Architecture-Diagram</code>, <code>OHP-2_Configuration-and-Access-Summary</code>, <code>OHP-3_Monitoring-and-Automation-Evidence</code> and <code>OHP-4_Troubleshooting-Runbook</code>. A starter file you used counts once it is renamed and its note is deleted."],
+    ["Your diagram shows both servers with name, address, platform and role, the one network they share with no gateway between them, and the ports each answers on and does not.",
+     "<code>cld-lnx-01</code> at 192.168.56.20 answers on TCP 22 and 80 and not on 9090; <code>hq-win-01</code> at 192.168.56.10 answers on TCP 445 and not on 3389. Both sit on 192.168.56.0/24, and each finds the other through its own hosts file."],
+    ["Your diagram or its notes show the three shares on <code>hq-win-01</code>, and on <code>cld-lnx-01</code> the archive disk, the nightly job and the collector.",
+     "<code>Finance$</code>, <code>Warehouse</code> and <code>Public</code>; <code>/data/archive</code> on its own 10 GB disk; <code>archive-logs.sh</code> at 03:00 with its run log; <code>sysstat</code>, one reading an hour."],
+    ["Your connections table gives all five connections, each as permitted or refused, with what decides it and the latest record that shows it, and the drawing does not rely on colour alone.",
+     "445 from <code>cld-lnx-01</code> permitted (<code>FA8</code>); 3389 refused (<code>D2-after</code>); 22 and 80 from <code>hq-win-01</code> permitted (<code>D3-after</code>, <code>D4-after</code>); 9090 refused (<code>D5-after</code>). \u201cNothing listens on 3389\u201d is a reason; \u201cblocked\u201d on its own is not yet."],
+    ["Each runbook entry restates its report as one exact check, and lists the tests with what each reaches, the record, and the result, before it names a cause.",
+     "For the first fault, five tests from <code>cld-lnx-01</code>: tests 1 to 3 in <code>FA2</code> to <code>FA4</code> pass, test 4 in <code>FA5</code> fails, and test 5 is the original check in <code>FA1</code>. The entry says why there is no gateway test, and names the name as the link both failing tests cross."],
+    ["Each entry names the located cause from the record that shows it, gives the one change as an exact command, and repeats the original check afterwards.",
+     "The first: the line <code>192.168.56.11 hq-win-01</code> in <code>FA6</code>, corrected in <code>FA7</code>, checked again in <code>FA8</code>. The second: a full archive disk in <code>FB2</code> and <code>FB3</code>, the folders past 14 days listed and removed in <code>FB5</code> and <code>FB6</code>, and a started and finished line in <code>FB8</code>."],
+    ["Every item left open, in the runbook and in your updated OHP-3, says why it matters and names who decides it, and the full-disk item in OHP-3 is now closed.",
+     "The 14-day period from <code>shaddad</code> closes the full disk; regular removal and a free-space alert go to <code>anovak</code>; the logs of 13 and 14 November go to the operator on duty; the lost logs of 11 and 12 November and Tuesday afternoon's slow hour stay open with their owners."],
+    ["Every figure, name and label that appears in two files reads the same in both, and every record is cited as a record, by its label, never as your own run.",
+     "If OHP-1 says 445 is permitted, OHP-4 shows the record that proves it. \u201c<code>FB2</code> shows the disk full\u201d is right; \u201cI ran <code>df</code> and saw\u201d is not, because you did not run it."]
+  ]
+};
+
+const answers = {};
+
+function build() {
+  for (const [dim, list] of Object.entries(CHECKS)) {
+    const ol = document.querySelector(`ol[data-dim="${dim}"]`);
+    list.forEach(([q, how], i) => {
+      const id = `${dim}-${i}`;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <p class="q" id="q-${id}">${q}</p>
+        <p class="how"><strong>How to tell.</strong> ${how}</p>
+        <div class="choice" role="radiogroup" aria-labelledby="q-${id}">
+          <input type="radio" name="${id}" id="${id}-y" value="yes"><label class="yes" for="${id}-y">Yes</label>
+          <input type="radio" name="${id}" id="${id}-n" value="no"><label class="no" for="${id}-n">Not yet</label>
+        </div>`;
+      ol.appendChild(li);
+    });
+  }
+  document.addEventListener("change", (e) => {
+    if (e.target.matches(".choice input")) { answers[e.target.name] = e.target.value; render(); }
+  });
+}
+
+function levelFor(dim) {
+  const n = CHECKS[dim].length;
+  let answered = 0; const misses = [];
+  for (let i = 0; i < n; i++) {
+    const a = answers[`${dim}-${i}`];
+    if (a) answered++;
+    if (a === "no") misses.push(i);
+  }
+  if (answered < n) return { level: "pending", text: `${answered} of ${n} answered`, misses, done: false };
+  if (misses.length === 0) return { level: "strong", text: "Strong", misses, done: true };
+  if (misses.length <= 2) return { level: "adequate", text: "Adequate", misses, done: true };
+  return { level: "notyet", text: "Not yet ready", misses, done: true };
+}
+
+function render() {
+  let allDone = true;
+  for (const dim of Object.keys(CHECKS)) {
+    const r = levelFor(dim);
+    if (!r.done) allDone = false;
+    const lv = document.getElementById(`lv-${dim}`);
+    lv.dataset.level = r.level;
+    lv.textContent = r.text;
+    const ul = document.getElementById(`rv-${dim}`);
+    ul.innerHTML = "";
+    r.misses.forEach((i) => {
+      const li = document.createElement("li");
+      li.textContent = `Revisit question ${i + 1}: ${CHECKS[dim][i][0]}`;
+      ul.appendChild(li);
+    });
+  }
+  const btn = document.getElementById("show-example");
+  btn.disabled = !allDone;
+  document.getElementById("gate").hidden = allDone;
+  if (!allDone) {
+    document.getElementById("example").hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    btn.textContent = "Compare with a worked example";
+  }
+}
+
+document.getElementById("show-example").addEventListener("click", (e) => {
+  const ex = document.getElementById("example");
+  ex.hidden = !ex.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!ex.hidden));
+  e.currentTarget.textContent = ex.hidden ? "Compare with a worked example" : "Hide the worked example";
+  if (!ex.hidden) ex.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+document.getElementById("reset").addEventListener("click", () => {
+  for (const k of Object.keys(answers)) delete answers[k];
+  document.querySelectorAll(".choice input").forEach((i) => (i.checked = false));
+  render();
+});
+
+build();
+render();
+</script>
+</body>
+</html>

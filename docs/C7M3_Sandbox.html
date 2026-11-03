@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting Sandbox</title>
+<style>
+/* Layout: an intro, the target statement, a five-position selector, the report line, the four links, the five tests, and the located line. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #55625e;
+  --rule: #d6dedb;
+  --accent: #1d6a72;
+  --accent-soft: #e2eef0;
+  --strong: #2c7a4b;
+  --adequate: #9a6a0c;
+  --notyet: #a1432f;
+  --ok: #2c7a4b;
+  --ok-soft: #e3f1e8;
+  --alert: #a1432f;
+  --alert-soft: #f7e6e1;
+  --code-bg: #eef2f1;
+  --d-ground: #ffffff;
+  --d-ink: #161616;
+  --d-secondary: #525252;
+  --d-muted: #6f6f6f;
+  --d-line: #8d8d8d;
+  --d-node-fill: #f4f4f4;
+  --d-node-stroke: #a8a8a8;
+  --d-accent: #0f62fe;
+  --d-permit: #198038;
+  --d-refuse: #da1e28;
+  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-diagram: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-diagram-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+    --ok: #6cc48f; --ok-soft: #1c3226; --alert: #ec8a72; --alert-soft: #3a231d; --code-bg: #222b29;
+    --d-ground: #1a2220; --d-ink: #e4ebe8; --d-secondary: #b9c4c0; --d-muted: #9aa8a3; --d-line: #7d8a86;
+    --d-node-fill: #222b29; --d-node-stroke: #5a6864; --d-accent: #78a9ff; --d-permit: #42be65; --d-refuse: #ff8389;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a3; --rule: #2f3a37;
+    --accent: #6cbac3; --accent-soft: #1d3135; --strong: #6cc48f; --adequate: #e0b04d; --notyet: #ec8a72;
+    --ok: #6cc48f; --ok-soft: #1c3226; --alert: #ec8a72; --alert-soft: #3a231d; --code-bg: #222b29;
+    --d-ground: #1a2220; --d-ink: #e4ebe8; --d-secondary: #b9c4c0; --d-muted: #9aa8a3; --d-line: #7d8a86;
+    --d-node-fill: #222b29; --d-node-stroke: #5a6864; --d-accent: #78a9ff; --d-permit: #42be65; --d-refuse: #ff8389;
+    color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2rem 4rem;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.25; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.9rem; font-weight: 600; }
+h2 { font-size: 1.3rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.4rem; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
+.intro { display: grid; gap: 0.8rem; }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.page { max-width: 46rem; margin: 0 auto; display: grid; gap: 1.6rem; }
+.target { background: var(--accent-soft); border-radius: 6px; padding: 0.9rem 1.1rem; font-family: var(--font-display); font-size: 0.96rem; }
+.switch { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.switch-label { font-family: var(--font-display); font-size: 0.9rem; color: var(--muted); width: 100%; }
+.switch button {
+  font-family: var(--font-display); font-size: 0.92rem; padding: 0.45rem 0.9rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent); text-align: left;
+}
+.switch button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.report { font-family: var(--font-display); font-size: 0.95rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.7rem 0.9rem; }
+.links { display: grid; gap: 0.35rem; }
+.links h2, .tests h2 { font-size: 1.05rem; }
+ul.linklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+ul.linklist li { font-family: var(--font-display); font-size: 0.92rem; padding: 0.4rem 0.7rem; border: 1px solid var(--rule); border-radius: 5px; background: var(--surface); overflow-wrap: anywhere; }
+ul.linklist li[data-broken="true"] { border-color: var(--alert); background: var(--alert-soft); color: var(--alert); font-weight: 600; }
+.tests { display: grid; gap: 0.5rem; }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+ol.steps li { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.7rem 0.9rem; display: grid; gap: 0.2rem; min-width: 0; }
+ol.steps li[data-state="fails"] { border-color: var(--alert); }
+ol.steps li[data-first="true"] { box-shadow: inset 4px 0 0 var(--alert); }
+.step-title { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; overflow-wrap: anywhere; }
+.step-cross { font-size: 0.88rem; color: var(--muted); }
+.step-result { font-size: 0.93rem; font-family: var(--font-display); }
+.step-result[data-v="passes"] { color: var(--ok); }
+.step-result[data-v="fails"] { color: var(--alert); }
+.marker { font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--alert); }
+.status { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.85rem 1rem; }
+.status .big { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+@media (prefers-reduced-motion: no-preference) { ol.steps li, ul.linklist li { transition: background-color 0.25s ease, border-color 0.25s ease; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Troubleshooting</p>
+    <h1>Move the break, and watch which tests still pass</h1>
+  </header>
+
+  <p class="target" id="target">A connection from the storefront server <code>cld-lnx-01</code> to file sharing on <code>hq-win-01</code>, by name, on TCP 445, depends on four links: this server's own address, the way across the shared network to <code>hq-win-01</code>, file sharing answering on port 445, and the name <code>hq-win-01</code>, which this server looks up in its own hosts file. The two servers share one network with no gateway between them, so there is no gateway link. You choose where the break is, and nothing is hidden. Five tests each cross a different set of links, and the last is the original check, which needs all four. Every test that crosses the broken link will fail, and every test that does not will pass, so the break is the one link every failing test crosses and no passing test does. Test 4 reads a file on this server and crosses only the name, so it can pass while earlier tests fail. The report will read the same wherever you put the break. In the troubleshooting records, the break is at the name. This panel is a model: it works each result out from the break you chose and probes no real network. Nothing here is scored.</p>
+
+  <div class="switch" role="group" aria-labelledby="sw-l">
+    <span class="switch-label" id="sw-l">Put the break at:</span>
+  </div>
+
+  <p class="report" id="report" aria-live="polite"></p>
+
+  <section class="links" aria-labelledby="links-h">
+    <h2 id="links-h">The four links</h2>
+    <ul class="linklist" id="links"></ul>
+  </section>
+
+  <section class="tests" aria-labelledby="tests-h">
+    <h2 id="tests-h">The five tests</h2>
+    <ol class="steps" id="steps"></ol>
+  </section>
+
+  <div class="status" aria-live="polite"><p class="big" id="located"></p></div>
+</div>
+<script>
+// Pure model, so the same code runs in the page and in tests.
+const LINKS = [
+  { id: "own",  label: "This server's own address, 192.168.56.20" },
+  { id: "far",  label: "The way across the network to hq-win-01 at 192.168.56.10" },
+  { id: "svc",  label: "File sharing answering on TCP 445" },
+  { id: "name", label: "The name hq-win-01, looked up in this server's hosts file" }
+];
+const TESTS = [
+  { n: 1, title: "Test 1 reaches: this server's own address", crosses: ["own"] },
+  { n: 2, title: "Test 2 reaches: hq-win-01 by its address", crosses: ["own", "far"] },
+  { n: 3, title: "Test 3 reaches: file sharing on hq-win-01, by address", crosses: ["own", "far", "svc"] },
+  { n: 4, title: "Test 4 reaches: the name hq-win-01, looked up on this server", crosses: ["name"] },
+  { n: 5, title: "Test 5 is the original check: file sharing on hq-win-01, by name", crosses: ["name", "own", "far", "svc"] }
+];
+const POSITIONS = [
+  { id: "none", label: "nowhere" },
+  { id: "own",  label: "this server's own address" },
+  { id: "far",  label: "the way to hq-win-01" },
+  { id: "svc",  label: "file sharing on port 445" },
+  { id: "name", label: "the name" }
+];
+const LOCATED = {
+  none: "No break. All five tests pass, and the original check connects.",
+  own:  "The break is this server's own address. Nothing leaves cld-lnx-01, yet the name still looks up, because the lookup reads a file on this server.",
+  far:  "The break is on the way to hq-win-01, or at that server. This server has its address, and the far server does not answer it.",
+  svc:  "The break is file sharing on hq-win-01, or the rule that admits port 445. The server answers by address, and port 445 does not.",
+  name: "The break is the name. Everything works by address, and only what goes by name fails. This is where the troubleshooting records put the first fault."
+};
+const REPORT_OK = "What the report says: nothing. The connection opens.";
+const REPORT_BROKEN = "What the report says: the connection from cld-lnx-01 to hq-win-01 on TCP 445 does not open.";
+
+function evaluate(brk) {
+  const results = TESTS.map((t) => ({ ...t, passes: brk === "none" || !t.crosses.includes(brk) }));
+  const firstFail = results.findIndex((r) => !r.passes);
+  let adds = null;
+  if (firstFail >= 0) {
+    // the break is the link every failing test crosses and no passing test does
+    const cleared = new Set(results.filter((r) => r.passes).flatMap((r) => r.crosses));
+    const fails = results.filter((r) => !r.passes);
+    const common = fails[0].crosses.filter((l) => fails.every((f) => f.crosses.includes(l)) && !cleared.has(l));
+    adds = common.length === 1 ? common[0] : common;
+  }
+  return {
+    results, firstFail, adds,
+    report: brk === "none" ? REPORT_OK : REPORT_BROKEN,
+    located: LOCATED[brk]
+  };
+}
+
+if (typeof module !== "undefined") module.exports = { LINKS, TESTS, POSITIONS, evaluate };
+
+// ---- Page ----------------------------------------------------------------
+if (typeof document !== "undefined") {
+  let brk = "none";
+  const group = document.querySelector(".switch");
+  POSITIONS.forEach((p) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = `brk-${p.id}`; b.textContent = p.label;
+    b.addEventListener("click", () => { brk = p.id; render(); });
+    group.appendChild(b);
+  });
+
+  function render() {
+    const r = evaluate(brk);
+    POSITIONS.forEach((p) => document.getElementById(`brk-${p.id}`).setAttribute("aria-pressed", String(p.id === brk)));
+    document.getElementById("report").textContent = r.report;
+    const ul = document.getElementById("links");
+    ul.innerHTML = "";
+    LINKS.forEach((l) => {
+      const li = document.createElement("li");
+      li.dataset.broken = String(l.id === brk);
+      li.textContent = l.label + (l.id === brk ? " — broken" : " — holds");
+      ul.appendChild(li);
+    });
+    const ol = document.getElementById("steps");
+    ol.innerHTML = "";
+    r.results.forEach((t, i) => {
+      const li = document.createElement("li");
+      li.dataset.state = t.passes ? "passes" : "fails";
+      li.dataset.first = String(i === r.firstFail);
+      const crossed = t.crosses.map((c) => ((s) => s[0].toLowerCase() + s.slice(1))(LINKS.find((l) => l.id === c).label)).join("; ");
+      li.innerHTML = `<span class="step-title"></span><span class="step-cross"></span><span class="step-result"></span>`;
+      li.querySelector(".step-title").textContent = t.title;
+      li.querySelector(".step-cross").textContent = "Crosses: " + crossed + ".";
+      const res = li.querySelector(".step-result");
+      res.dataset.v = t.passes ? "passes" : "fails";
+      res.textContent = t.passes ? "passes: every link it crosses holds" : "fails: it has to cross the break";
+      if (i === r.firstFail) {
+        const m = document.createElement("span");
+        m.className = "marker"; m.textContent = "first test to fail";
+        li.appendChild(m);
+      }
+      ol.appendChild(li);
+    });
+    document.getElementById("located").textContent = r.located;
+  }
+  render();
+}
+</script>
+</body>
+</html>
